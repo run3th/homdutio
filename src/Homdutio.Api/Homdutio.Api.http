@@ -1,0 +1,6 @@
+@Homdutio.Api_HostAddress = http://localhost:5252
+
+GET {{Homdutio.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
