@@ -489,3 +489,6 @@ $RECYCLE.BIN/
 skills-lock.json
 idea-notes.md
 
+# Deploy artifacts (publish/ is already ignored above; the zip is not)
+publish.zip
+
