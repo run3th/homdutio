@@ -12,9 +12,9 @@ tech_stack:
 
 ## Recommendation
 
-**Deploy on Azure App Service (Linux, .NET 9), with a co-located managed database (Azure SQL serverless free tier).**
+**Deploy on Azure App Service (Linux, .NET 9), with a co-located managed database (Azure SQL Database, provisioned Basic tier).**
 
-Homdutio is a single .NET artifact — the Angular SPA is built into ASP.NET's `wwwroot/` and served by the same process — so the only real question is where one long-running ASP.NET Core process lives. Azure App Service scores Pass on all five agent-friendly criteria, is the platform the stack already named (`tech-stack.md` → `deployment_target: azure-app-service`), and is the one you already know (interview Q3), which is the decisive tie-break for a solo, after-hours, 3-week MVP. Co-location (Q5) is satisfied by same-vendor managed SQL, and single-region (Q4) matches the PRD's explicit no-multi-region non-goal. The one genuine tension is cost (Q2): the F1 free tier is unusable for a daily-use app, so the realistic floor is **B1 (~$13/mo)** compute plus a free serverless database — cheap, but not zero. That tension is recorded in full in the risk register below rather than hidden.
+Homdutio is a single .NET artifact — the Angular SPA is built into ASP.NET's `wwwroot/` and served by the same process — so the only real question is where one long-running ASP.NET Core process lives. Azure App Service scores Pass on all five agent-friendly criteria, is the platform the stack already named (`tech-stack.md` → `deployment_target: azure-app-service`), and is the one you already know (interview Q3), which is the decisive tie-break for a solo, after-hours, 3-week MVP. Co-location (Q5) is satisfied by same-vendor managed SQL, and single-region (Q4) matches the PRD's explicit no-multi-region non-goal. The one genuine tension is cost (Q2): the F1 free tier is unusable for a daily-use app, so the realistic floor is **B1 (~$13/mo)** compute plus a **provisioned Basic SQL database (~$5/mo)** — a combined ~$18/mo. The provisioned (non-serverless) database is a deliberate choice over the serverless free tier: it is always-warm (no auto-pause cold starts), billed at a flat, predictable rate, and not metered in vCore-seconds — at the cost of giving up the serverless free grant. That trade is recorded in the risk register below rather than hidden.
 
 ## Platform Comparison
 
@@ -50,7 +50,7 @@ Because the Angular SPA is bundled into `wwwroot/` and served by ASP.NET, there 
 
 #### 1. Azure App Service (Recommended)
 
-Only platform at 5/5 on the criteria. Decisive factors for *this* project: you already know it (Q3), it is the target the stack contract already committed to (no foundation drift), it offers same-vendor co-located managed SQL (Q5), and single-region operation matches the PRD non-goal (Q4). A forever-free Azure SQL serverless database (100k vCore-seconds/mo, 32 GB) keeps the data layer at $0 indefinitely, so the only unavoidable spend is ~$13/mo B1 compute.
+Only platform at 5/5 on the criteria. Decisive factors for *this* project: you already know it (Q3), it is the target the stack contract already committed to (no foundation drift), it offers same-vendor co-located managed SQL (Q5), and single-region operation matches the PRD non-goal (Q4). The data layer is a **provisioned Azure SQL Database Basic tier (~$5/mo, 2 GB, 5 DTU, always-on)** — chosen over the serverless free grant for predictable flat pricing and no auto-pause cold starts — so the combined unavoidable spend is ~$18/mo (B1 compute + Basic SQL).
 
 #### 2. Railway
 
@@ -65,18 +65,19 @@ Cheapest nominal entry and Docker-native, but its free tier has two disqualifyin
 ### Devil's Advocate — Weaknesses
 
 1. **The F1 free tier is a trap for this app.** 60 CPU-minutes/day, no Always On (cold starts), and no custom-domain SSL. A daily-use household board hits the quota and feels broken — the realistic floor is **B1 (~$13/mo)** from day one, so the "free Azure" framing collapses.
-2. **The polling design fights the free database.** Polling (chosen to meet NFR-1's 5s freshness without WebSockets) generates steady query load; Azure SQL serverless *free* is metered in vCore-seconds (~100k/mo ≈ 28h of 1 vCore) with auto-pause, so steady polling can exhaust the grant before month-end and silently tip into billing, while auto-pause adds multi-second cold starts on the first action after idle.
+2. **The provisioned database is a flat cost with no scale-to-zero.** Choosing provisioned Basic over serverless removes the auto-pause cold-start and vCore-second-exhaustion failure modes, but the DB now bills ~$5/mo continuously whether or not the single household touches it — there is no idle savings, and the Basic tier caps at **2 GB / 5 DTU**, a ceiling that arrives without warning if data or query concurrency grows (Standard S0 at ~$15/mo is the next step).
 3. **No safe rollback on the cheap tier.** Deployment slots (blue-green swap) require **Standard (~$70/mo)**, not Basic. On B1, rollback is "redeploy the previous build by hand."
 4. **`az` CLI defaults are not the cheap ones.** `az postgres flexible-server create` / Azure SQL create default to *paid* SKUs; the free path requires explicit flags. An agent provisioning resources can easily create a silently-billed resource.
 5. **Single coupled artifact.** Angular-in-`wwwroot` means one bad `ng build` takes down API + UI together — there is no independent frontend rollback.
 
 ### Pre-Mortem — How This Could Fail
 
-The build started on F1 free, hit the 60-min/day CPU quota within days once the household actually used the board, got throttled, and felt broken. It moved to B1 ($13/mo, no slots). Azure SQL serverless "free forever" looked perfect — but the SPA's 5-second polling generated steady query load that, with serverless auto-resume churn, chewed through the 100k vCore-second monthly grant by the third week of each month; the DB began billing and auto-pausing mid-day, causing 10-second stalls on the first action after lunch. With no deployment slots on Basic, a botched EF migration during an 11pm after-hours deploy took the whole single-artifact app down, and recovery meant manually redeploying the prior build. Worse, an `az` command the agent ran months earlier had defaulted one resource to a paid SKU that nobody caught until the invoice arrived. The "cheap Azure" plan quietly became ~$40/mo of half-understood resources — the opposite of the cost-minimizing intent.
+The build started on F1 free, hit the 60-min/day CPU quota within days once the household actually used the board, got throttled, and felt broken. It moved to B1 ($13/mo, no slots) plus a provisioned Basic SQL database ($5/mo). The provisioned DB behaved predictably — no auto-pause surprises — but the Basic tier's 2 GB / 5 DTU ceiling crept up: as the audit trail accumulated (NFR-3 keeps every closed task's record for the lifetime of the household) and a few more households joined, query latency under the 5 DTU cap turned the board sluggish, and the jump to Standard S0 (~$15/mo) was reactive rather than planned. With no deployment slots on Basic, a botched EF migration during an 11pm after-hours deploy took the whole single-artifact app down, and recovery meant manually redeploying the prior build. Worse, an `az` command the agent ran months earlier had defaulted one resource to an oversized SKU that nobody caught until the invoice arrived. The "cheap Azure" plan quietly became ~$45/mo of half-understood resources — more than the predictable-cost intent assumed.
 
 ### Unknown Unknowns
 
-- The Azure SQL "free serverless" math assumes *idle-heavy* usage; a polling frontend changes it fundamentally — not obvious from the "free forever" headline.
+- Provisioned Basic SQL has **no free tier** — unlike the serverless free grant, you pay ~$5/mo from the first day; the trade you bought is predictability and no cold starts, not zero cost.
+- The Basic tier's **2 GB / 5 DTU** ceiling is low; NFR-3's "keep the audit record for the lifetime of the household" means data only grows, so plan the Standard S0 step before the cap bites.
 - Deployment slots are Standard-tier only; the cheap tier you will actually run has **no blue-green rollback**.
 - `az ... create` commands default to **non-free SKUs** — "free" requires explicit flags, an easy agent miss that produces a silently-billed resource.
 - Basic App Service has **no scale-to-zero**: you pay ~$13/mo even while the mostly-idle single-household app sits unused, unlike Railway/Render usage-based models.
@@ -95,9 +96,9 @@ The build started on F1 free, hit the 60-min/day CPU quota within days once the 
 | Risk | Source | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | F1 free tier throttles a daily-use app (60 CPU-min/day, cold starts, no SSL) | Devil's advocate | H | M | Provision **B1 (~$13/mo) from day one** with Always On; never run production on F1. |
-| Polling exhausts Azure SQL serverless free vCore-second grant → silent billing / auto-pause stalls | Pre-mortem | M | M | Set a budget alert; tune polling interval to the full 5s (NFR-1 ceiling); monitor vCore-seconds; consider a min-compute floor or moving to a small fixed-price DB if the grant is consistently blown. |
+| Provisioned Basic SQL bills ~$5/mo flat with no scale-to-zero and a 2 GB / 5 DTU ceiling | Devil's advocate | M | M | Accept the flat ~$5/mo as the price of predictability + no cold starts; set a budget alert; watch DTU/storage and plan the Standard S0 (~$15/mo) step before the 2 GB / 5 DTU cap bites (NFR-3 means data only grows). |
 | No blue-green rollback on Basic (slots are Standard-only) | Unknown unknowns | M | M | Keep prior artifact retrievable; make EF migrations backward-compatible; rollback = redeploy prior build. Do not upgrade to Standard just for slots at MVP. |
-| `az` CLI defaults to paid SKUs → silently-billed resource | Devil's advocate | M | H | Always pass explicit free/burstable flags (`--sku B1`, DB `--tier Burstable --sku-name Standard_B1ms` or the SQL free-offer flag); set a subscription **budget alert** as a backstop; review the resource group SKUs after any agent provisioning. |
+| `az` CLI defaults to larger/pricier SKUs → silently-billed resource | Devil's advocate | M | H | Pass explicit SKU flags (`--sku B1` for compute, `--service-objective Basic` for SQL); set a subscription **budget alert** as a backstop; review the resource group SKUs after any agent provisioning. |
 | Coupled single artifact — bad `ng build` breaks API + UI together | Devil's advocate | M | M | Validate `dotnet publish -c Release` (which runs the Angular build) in CI before deploy; gate deploy on a successful build + smoke test. |
 | Data-protection key ring not persisted → cookie auth breaks if scaled out / on restart | Unknown unknowns | L (now) / M (later) | H | Single-instance is fine for MVP; before any scale-out or if restarts log users out, persist keys to Blob/Key Vault via `PersistKeysToAzureBlobStorage` + `ProtectKeysWithAzureKeyVault`. |
 | EF migrations do not auto-roll-back on revert | Research finding | M | M | Author backward-compatible migrations; keep a tested down-script; never couple a breaking schema change with an irreversible deploy. |
@@ -114,10 +115,11 @@ Versions confirmed against the repo: **.NET 9** (`Homdutio.Api.csproj` → `net9
    `az group create --name homdutio-rg --location <region>`
    `az webapp up --name homdutio --resource-group homdutio-rg --runtime "DOTNETCORE:9.0" --sku B1 --os-type Linux`
    (Run from the project so it picks up the published output, or follow with `az webapp deploy --src-path ./publish.zip`.)
-3. **Provision the co-located free database** (pick one; Azure SQL serverless free is the forever-free path):
-   - Azure SQL serverless free: create via the free-offer flag, max 32 GB, 100k vCore-sec/mo. Set the connection string in App Service settings.
-   - *or* Azure Database for PostgreSQL flexible server, **`--tier Burstable --sku-name Standard_B1ms` ≤ 32 GB** (free 12 months on a free account).
-   `az webapp config connection-string set` (or an Application Setting) to wire it; never commit the string.
+3. **Provision the co-located provisioned (non-serverless) database** — Azure SQL Database Basic, always-on, flat ~$5/mo:
+   `az sql server create --name homdutio-sql --resource-group homdutio-rg --location <region> --admin-user <admin> --admin-password <pwd>`
+   `az sql db create --name homdutio-db --server homdutio-sql --resource-group homdutio-rg --service-objective Basic`
+   (Basic = 2 GB / 5 DTU; step up with `--service-objective S0` for ~$15/mo / 250 GB if the cap is reached. Do **not** pass serverless `--compute-model Serverless`.)
+   Wire the connection string via `az webapp config connection-string set` (or an Application Setting); never commit the string.
 4. **Apply EF Core migrations** against the provisioned DB (backward-compatible only): `dotnet ef database update` with the production connection string supplied out-of-band.
 5. **Wire GitHub Actions auto-deploy on merge to main** (matches the stack's `ci_default_flow`): use `azure/webapps-deploy@v3` with an OIDC federated credential (preferred) or a publish profile stored in GitHub Secrets. Add a **budget alert** on the subscription before the first deploy.
 
