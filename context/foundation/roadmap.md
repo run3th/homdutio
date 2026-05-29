@@ -1,0 +1,282 @@
+---
+project: Homdutio
+version: 1
+status: draft
+created: 2026-05-29
+updated: 2026-05-29
+prd_version: 1
+main_goal: market-feedback
+top_blocker: capacity
+---
+
+# Roadmap: Homdutio
+
+> Derived from `context/foundation/prd.md` (v1) + auto-researched codebase baseline (2026-05-29).
+> Edit-in-place; archive when superseded.
+> Slices below are listed in dependency order. The "At a glance" table is the index.
+
+## Vision recap
+
+Homdutio is a shared-household chore board where every action — create, claim, mark done, confirm — is attributed to a named member with a timestamp, and a "Done" task only closes once an admin confirms it. The core hypothesis (the single belief the whole product rides on) is *accountability via record*: making who-did-what socially visible, with admin confirmation as the felt moment, is what stops the same person quietly carrying the visible work. v1 is built for the builder's own household first; multi-household, child roles, and aggregation views are deliberately v2.
+
+## North star
+
+**S-03: a household member runs a task from creation through admin-confirmed closure, leaving a durable record** — admin confirmation is the felt accountability event, so a working create → claim → done → confirm loop is the validation milestone for the entire product.
+
+> "North star" here means the smallest end-to-end slice whose successful delivery would prove the core product hypothesis — placed as early as its prerequisites allow, because everything else only matters if this loop works. It sits behind the auth + household + board chain (S-01 → S-02), so those come first; the loop is then sequenced immediately, ahead of secondary task operations, per the `market-feedback` goal.
+
+## At a glance
+
+| ID    | Change ID                     | Outcome (user can …)                                                  | Prerequisites | PRD refs                                          | Status   |
+| ----- | ----------------------------- | --------------------------------------------------------------------- | ------------- | ------------------------------------------------- | -------- |
+| F-01  | persistence-baseline          | (foundation) EF Core + provisioned Azure SQL wired; data persists     | —             | NFR-3                                             | ready    |
+| F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + cookie auth pipeline issuing sessions  | F-01          | Access Control                                    | proposed |
+| F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | blocked  |
+| F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | ready    |
+| S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | proposed |
+| S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | proposed |
+| S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | proposed |
+| S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | proposed |
+| S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | proposed |
+| S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | blocked  |
+| S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
+| S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
+| S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
+
+## Streams
+
+Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
+
+| Stream | Theme                  | Chain                                                       | Note                                                                          |
+| ------ | ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| A      | Accountability spine   | `F-01` → `F-02` → `S-01` → `S-02` → `S-03` → `S-04` / `S-05` | The critical path to the north star (`S-03`); `S-04`/`S-05` branch off `S-03`. |
+| B      | Multiplayer & freshness| `F-03` → `S-06` → `S-09`                                     | Branches off `S-02`'s board; blocked until the transport decision resolves.    |
+| C      | Hardening & recovery   | `S-07` / `S-08`                                             | `S-07` hardens `S-03`; `S-08` extends `S-01`. Both run parallel to the spine.  |
+| D      | Delivery automation    | `F-04`                                                      | Standalone infra; parallel with everything, gates no slice.                    |
+
+## Baseline
+
+What's already in place in the codebase as of 2026-05-29 (auto-researched + user-confirmed).
+Foundations below assume these are present and do NOT re-scaffold them.
+
+- **Frontend:** present — Angular 21 SPA in `web/`, built into `wwwroot/` via the `BuildAngularSpa` MSBuild target; router wired but only the default shell (no feature UI, no component/drag-reorder libs). Tests: vitest.
+- **Backend / API:** partial — ASP.NET Core .NET 9 minimal API (`src/Homdutio.Api/Program.cs`); only the template `/weatherforecast` endpoint + SPA fallback. No `/api` controllers or domain routes.
+- **Data:** absent — no EF Core package, no DbContext, no migrations, no connection string; DB deliberately deferred per `deploy-plan.md`.
+- **Auth:** absent — no ASP.NET Core Identity package, no auth middleware, no cookie/JWT config (tech-stack plans Identity + cookie auth, unwired).
+- **Deploy / infra:** partial — Azure App Service live (B1, Poland Central, HTTPS-only) at `homdutio.azurewebsites.net`, scaffold zip-deployed manually. No GitHub Actions workflow, no DB provisioned, no budget alert.
+- **Observability:** absent — default ASP.NET console logging only; no error tracking, structured logging, metrics, or dashboards.
+
+## Foundations
+
+### F-01: Persistence baseline
+
+- **Outcome:** (foundation) EF Core and an `ApplicationDbContext` are wired to a provisioned Azure SQL database, with a runnable migration workflow and the connection string supplied via App Service settings — data persists.
+- **Change ID:** persistence-baseline
+- **PRD refs:** NFR-3 (a durable audit record requires a real database, not in-memory state)
+- **Unlocks:** F-02 (Identity needs an EF store), S-01, and every data-bearing slice (S-02–S-09); satisfies NFR-3's durability precondition.
+- **Prerequisites:** —
+- **Parallel with:** F-04
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Sequenced first because nothing persists without it. Provisioned Basic SQL caps at 2 GB / 5 DTU (infra risk register) and EF migrations do not auto-roll-back — keep migrations backward-compatible from day one. Scope is the DbContext + DB plumbing only; domain entities arrive with the slices that need them.
+- **Status:** ready
+
+### F-02: Auth + identity plumbing
+
+- **Outcome:** (foundation) ASP.NET Core Identity is mounted on the EF store and a same-origin cookie-auth pipeline issues and verifies sessions — no user-facing pages yet, just the middleware and Identity tables.
+- **Change ID:** auth-identity-plumbing
+- **PRD refs:** Access Control (email + password, cookie sessions, one account per person)
+- **Unlocks:** S-01 (register/login/logout flow) and the household-scoped authorization that S-07 hardens.
+- **Prerequisites:** F-01
+- **Parallel with:** F-04
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Cookie auth on a same-origin SPA is the least-friction path (per tech-stack). The data-protection key ring is fine in-memory at single-instance MVP, but becomes a logout-on-restart footgun if scaled out — note it, don't solve it now (infra risk register). Scope is the auth pipeline only; it completes no user-facing capability on its own.
+- **Status:** proposed
+
+### F-03: Live-update transport
+
+- **Outcome:** (foundation) a chosen transport (polling or SignalR) propagates board mutations to other household members within 5 seconds without manual refresh.
+- **Change ID:** live-update-transport
+- **PRD refs:** NFR-1 (cross-device freshness ≤ 5s)
+- **Unlocks:** the live-board experience in S-06 (two members observing the same state); reduces the NFR-1 transport unknown for every board mutation.
+- **Prerequisites:** —
+- **Parallel with:** F-01, F-02, F-04
+- **Blockers:** —
+- **Unknowns:**
+  - Polling vs SignalR for the 5s freshness contract — `deploy-plan.md` flags a contradiction (a re-run interview said SignalR; `tech-stack.md` declares `has_realtime: false`). Owner: user. Block: yes.
+- **Risk:** SignalR adds a stateful connection plus a scale-out backplane/key concern; polling is simpler for the single-instance MVP but chattier. The decision is load-bearing for the multiplayer slice, so it is surfaced as blocking rather than guessed. Off the north-star critical path — the loop (S-03) is verifiable on one device.
+- **Status:** blocked
+
+### F-04: CI auto-deploy
+
+- **Outcome:** (foundation) a merge to main runs the Release build (which bundles the Angular SPA) behind a build + smoke-test gate, then deploys to App Service — replacing the manual Windows zip step.
+- **Change ID:** ci-auto-deploy
+- **PRD refs:** tech-stack.md `ci_default_flow: auto-deploy-on-merge`; infra risk register (coupled single artifact, botched-manual-deploy)
+- **Unlocks:** a gated build + smoke-test verification path before every subsequent slice deploys — mitigates the single-coupled-artifact risk (a bad `ng build` taking API + UI down) and the `Compress-Archive` zip gotcha from `deploy-plan.md`.
+- **Prerequisites:** —
+- **Parallel with:** F-01, F-02, F-03, and all slices
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Low — manual zip deploy already works, so this is hygiene, not a gate. Without it, every after-hours ship is a hand-built zip with a known forward-slash pitfall on Windows; automating it removes that footgun. Use OIDC over a stored publish profile.
+- **Status:** ready
+
+## Slices
+
+### S-01: Account access
+
+- **Outcome:** A person can register an account with email + password, log in, and log out.
+- **Change ID:** account-access
+- **PRD refs:** FR-001, FR-002, FR-003
+- **Prerequisites:** F-01, F-02
+- **Parallel with:** F-03, F-04
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** The onboarding entry point — Success Criteria step 1 depends on it. Conventional Identity flow on the cookie pipeline from F-02; low novelty.
+- **Status:** proposed
+
+### S-02: Household and board
+
+- **Outcome:** A logged-in user with no household can create one (becoming its first admin) and see the empty three-column kanban board, fully usable on a ≤ 400px phone screen.
+- **Change ID:** household-and-board
+- **PRD refs:** FR-004, FR-017, NFR-2
+- **Prerequisites:** S-01
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Establishes the board surface the north star renders into. NFR-2 (mobile-first, no horizontal scroll at ≤ 400px) is set here and inherited by every later board slice; getting the responsive column layout right early avoids reworking it under the task cards.
+- **Status:** proposed
+
+### S-03: Accountability loop  *(north star)*
+
+- **Outcome:** A household member can create a task, claim it, mark it done, and an admin can confirm it — closing the task off the board while a durable record (creator, claimer, confirmer, timestamps, `self-attested` flag) persists.
+- **Change ID:** accountability-loop
+- **PRD refs:** US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3
+- **Prerequisites:** S-02
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** The assumption most likely to be wrong — whether the confirm step actually changes household behaviour — lives here, so it is sequenced as early as the auth + board chain allows (`market-feedback` goal). FR-015's cross-member confirm is only fully exercised once a second member exists (S-06); meanwhile FR-016's self-attested path lets a single admin verify the whole loop end-to-end on one device. NFR-3 means the record must outlive the visible card — design closure as a state transition, not a delete.
+- **Status:** proposed
+
+### S-04: Task management and priority
+
+- **Outcome:** A member can edit a task's title/description/category and delete it while in "To do", and reorder tasks within a column so the top of "To do" reads as the priority.
+- **Change ID:** task-management-and-priority
+- **PRD refs:** FR-011, FR-012, FR-021
+- **Prerequisites:** S-03
+- **Parallel with:** S-05, S-07
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** FR-021 drag-reorder is the *only* priority surface in v1 (no priority field, by Non-Goal), and the shared order must be consistent across members. Drag-and-drop at ≤ 400px (NFR-2) is the fiddly part; edit/delete are constrained to "To do" so they stay simple.
+- **Status:** proposed
+
+### S-05: Loop recovery
+
+- **Outcome:** The claimer of an in-progress task can unclaim it back to "To do", and an admin reviewing a "Done" task can send it back to "In progress" with a short comment, keeping the original claimer attached.
+- **Change ID:** loop-recovery
+- **PRD refs:** FR-022, FR-023
+- **Prerequisites:** S-03
+- **Parallel with:** S-04, S-07
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Closes the two failure modes the lifecycle creates — stuck-in-progress (unclaim) and sloppy-work disputes (send-back). Both transitions must extend, not overwrite, the audit trail (NFR-3). Off the north-star path but needed before real-household use to keep the board honest.
+- **Status:** proposed
+
+### S-06: Invite and multiplayer board
+
+- **Outcome:** A member can generate a single-use invite link; a second adult opening it joins the household (creating an account in the same flow if needed, bound to exactly one household), and both members see the shared board update within 5 seconds.
+- **Change ID:** invite-and-multiplayer-board
+- **PRD refs:** US-02, FR-005, FR-006, FR-007, NFR-1
+- **Prerequisites:** S-02, F-03
+- **Parallel with:** S-04, S-05
+- **Blockers:** —
+- **Unknowns:**
+  - Live-update transport (inherited from F-03): polling vs SignalR. Owner: user. Block: yes.
+- **Risk:** Turns the loop genuinely multiplayer — a real second member makes FR-015's cross-member confirm verifiable and delivers NFR-1 freshness. Blocked until the F-03 transport decision resolves; single-use link invalidation (FR-005) and one-household-per-user (FR-007) are the correctness-sensitive parts.
+- **Status:** blocked
+
+### S-07: Household data isolation
+
+- **Outcome:** A user can view, create, claim, or confirm only their own household's tasks; a request for a foreign household's task returns not-found (no existence leak) and invite tokens grant access to exactly one household.
+- **Change ID:** household-data-isolation
+- **PRD refs:** US-02, FR-019
+- **Prerequisites:** S-03
+- **Parallel with:** S-04, S-05, S-06
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Cross-household leakage is the worst-possible bug per the PRD guardrails. Scoping must be built into every query and endpoint from the first one in S-03 — this slice exists to *harden and verify* that boundary across all surfaces (foreign-ID not-found, invite-token scoping from S-06), not to add it as an afterthought.
+- **Status:** proposed
+
+### S-08: Password reset
+
+- **Outcome:** A registered user can request a password-reset email and set a new password from the emailed link.
+- **Change ID:** password-reset
+- **PRD refs:** FR-020
+- **Prerequisites:** S-01
+- **Parallel with:** S-02, S-03, S-04, S-05, S-06, S-07
+- **Blockers:** —
+- **Unknowns:**
+  - Which transactional email provider for the single permitted email use? None is named in `tech-stack.md` or `deploy-plan.md`. Owner: user. Block: no.
+- **Risk:** The only email pipeline in v1 (every other path is out-of-band by Non-Goal) — keep it to one provider, reset-only, so it does not balloon into a general email surface. Provider choice is a low-effort plan-time decision, not a roadmap blocker.
+- **Status:** proposed
+
+### S-09: Member administration
+
+- **Outcome:** An admin can promote an adult member to admin and remove an adult member from the household.
+- **Change ID:** member-administration
+- **PRD refs:** FR-008, FR-009
+- **Prerequisites:** S-06
+- **Parallel with:** S-07
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Both FRs are nice-to-have, so this is sequenced last and gates nothing on the north-star path. Needs members to manage, hence the S-06 prerequisite.
+- **Status:** proposed
+
+## Backlog Handoff
+
+| Roadmap ID | Change ID                     | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
+| ---------- | ----------------------------- | ---------------------------------------------------------- | --------------------- | ----- |
+| F-01       | persistence-baseline          | Wire EF Core + provisioned Azure SQL persistence baseline   | yes                   | Recommended first move — unlocks the north-star path |
+| F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + cookie-auth pipeline               | no                    | Needs F-01 |
+| F-03       | live-update-transport         | Establish 5s live-update transport (polling vs SignalR)     | no                    | Blocked: transport decision (Open Q #1) |
+| F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | yes                   | Parallel infra; gates no slice |
+| S-01       | account-access                | Register, log in, log out                                   | no                    | Needs F-01, F-02 |
+| S-02       | household-and-board           | Create household + empty mobile-first kanban board          | no                    | Needs S-01 |
+| S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | no                    | North star; needs S-02 |
+| S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | no                    | Needs S-03 |
+| S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | no                    | Needs S-03 |
+| S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | no                    | Blocked: transport decision (Open Q #1) |
+| S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | no                    | Needs S-03; worst-bug guardrail |
+| S-08       | password-reset                | Password reset via emailed link                             | no                    | Needs S-01; pick email provider (Open Q #2) |
+| S-09       | member-administration         | Admin promote / remove member                               | no                    | Nice-to-have; needs S-06 |
+
+This table is the clean handoff to Jira/Linear or any MCP-backed backlog. One row per `F-NN` and `S-NN`.
+
+## Open Roadmap Questions
+
+The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward. These are cross-cutting decisions surfaced during sequencing:
+
+1. **Live-update transport — polling vs SignalR for the NFR-1 5s freshness contract.** `deploy-plan.md` records a contradiction (a re-run interview said SignalR; `tech-stack.md` declares `has_realtime: false`). Owner: user. Block: F-03, S-06.
+2. **Transactional email provider for password reset (FR-020).** The single permitted email use in v1; no provider named in `tech-stack.md` or `deploy-plan.md`. Owner: user. Block: S-08 (non-blocking — resolvable at plan time).
+
+## Parked
+
+- **Built-in priority / urgency algorithm** — Non-Goal: column order (FR-021) is the only priority surface; keeps the rule frozen on accountability.
+- **Aggregation / reporting views ("who did what this week")** — Non-Goal: v2 surface; the audit trail is durable (NFR-3) but unaggregated in v1.
+- **Invite emails / broader email pipeline** — Non-Goal: invite links shared out-of-band; password reset (S-08) is the only email.
+- **Multi-household membership + switcher** — Non-Goal + FR-007: one household per user in v1; switcher is v2.
+- **Child role and parent-managed accounts** — Non-Goal: two roles only in v1; child role + ownership-transfer flow is v2.
+- **Notifications (push / in-app / email)** — Non-Goal: a v2 conversation.
+- **Comments / multimedia / chat on tasks** — Non-Goal: turns tasks into messages; off-charter.
+- **Recurring / scheduled tasks** — Non-Goal: adds a scheduler + template model that doubles scope.
+- **AI-generated tasks or AI ranking** — Non-Goal: not part of the v1 accountability rule.
+- **Gamification / points / leaderboard** — Non-Goal: engagement feature that doesn't serve accountability.
+- **Native mobile app** — Non-Goal: browser-only; NFR-2 covers mobile use at ≤ 400px.
+- **Offline mode** — Non-Goal: connectivity assumed; the 5s freshness NFR presumes a live connection.
+- **Multi-region / HA commitment** — Non-Goal: single-region, single-instance is acceptable for one household.
+- **Compliance certifications beyond GDPR hygiene** — Non-Goal: no SOC 2 / ISO / HIPAA attestation in v1.
+
+## Done
+
+(Empty on first generation. `/10x-archive` appends an entry here — and flips that item's `Status` to `done` — when a change whose `Change ID` matches the item is archived. Do NOT pre-populate.)
