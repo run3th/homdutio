@@ -376,23 +376,23 @@ backward-compatible; never couple a breaking schema change with an irreversible 
 
 #### Automated
 
-- [x] 3.1 Tests pass: `dotnet test Homdutio.sln`
-- [x] 3.2 Test leaves no residual database (clean re-run)
+- [x] 3.1 Tests pass: `dotnet test Homdutio.sln` — 1ffb1de
+- [x] 3.2 Test leaves no residual database (clean re-run) — 1ffb1de
 
 #### Manual
 
-- [x] 3.3 Test reads as a clear template for later provider-real tests
+- [x] 3.3 Test reads as a clear template for later provider-real tests — 1ffb1de
 
 ### Phase 4: Provision Azure SQL + Wire + Apply (Prod)
 
 #### Automated
 
-- [ ] 4.1 Migration applies cleanly to Azure SQL (prod connection, exit 0)
-- [ ] 4.2 `GET https://homdutio.azurewebsites.net/health` returns `Healthy`
+- [x] 4.1 Migration applies cleanly to Azure SQL (prod connection, exit 0)
+- [ ] 4.2 `GET https://homdutio.azurewebsites.net/health` returns `Healthy` — DEFERRED (live artifact predates /health code; verify after F-04 CI or a manual redeploy)
 
 #### Manual
 
-- [ ] 4.3 Azure portal shows `homdutio-db` at Basic service objective
-- [ ] 4.4 No connection string / admin password in any tracked file
-- [ ] 4.5 Budget-alert follow-up recorded
-- [ ] 4.6 Deployed `/health` reflects real Azure SQL connectivity
+- [x] 4.3 Azure portal shows `homdutio-db` at Basic service objective
+- [x] 4.4 No connection string / admin password in any tracked file
+- [x] 4.5 Budget-alert follow-up recorded
+- [ ] 4.6 Deployed `/health` reflects real Azure SQL connectivity — DEFERRED (paired with 4.2; needs prod redeploy)

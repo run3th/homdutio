@@ -2,7 +2,7 @@
 deployed_at: 2026-05-29
 platform: Azure App Service (Linux)
 status: live
-scope: scaffold-only (no database yet)
+scope: scaffold + persistence baseline (Azure SQL Basic provisioned 2026-05-30)
 live_url: https://homdutio.azurewebsites.net
 ---
 
@@ -88,3 +88,39 @@ but any manual Windows deploy must avoid `Compress-Archive`.
 3. Add **GitHub Actions auto-deploy on merge** (`azure/webapps-deploy@v3` + OIDC) per the
    stack's `ci_default_flow`, replacing manual deploys.
 4. Add a **budget alert** on the personal subscription (infra risk-register mitigation).
+
+## Update 2026-05-30 — Persistence baseline (F-01) provisioned
+
+Change `persistence-baseline` wired EF Core 9 + `ApplicationDbContext` and provisioned the database
+(the DB deliberately deferred at first deploy is now live).
+
+### Resources added (Azure)
+
+| Resource | Name | Detail |
+|---|---|---|
+| SQL logical server | `homdutio-sql` | `homdutio-sql.database.windows.net`, Poland Central, SQL auth (admin `homdutioadmin`) |
+| SQL database | `homdutio-db` | **Basic** (provisioned, non-serverless), 2 GB / 5 DTU, ~$5/mo flat, status **Online** |
+| Firewall rule | `AllowAzureServices` | `0.0.0.0` — lets the App Service reach the server |
+
+- **Connection string**: wired as App Service connection-string `DefaultConnection` (type `SQLAzure`),
+  read by the app as `ConnectionStrings:DefaultConnection`. Never committed (admin password held by the
+  builder; locally it lives in user-secrets).
+- **Migration**: `InitialCreate` (creates `__EFMigrationsHistory` + the throwaway `SchemaProbes` table)
+  applied to Azure SQL via `dotnet ef database update`, out-of-band and backward-compatible per
+  `src/Homdutio.Data/MIGRATIONS.md`. A temporary local-IP firewall rule was used for the apply and
+  removed afterward.
+
+### Verified
+- `az sql db show` → service objective **Basic**, status **Online**, max size 2 GB.
+- Azure SQL migration history present (`database update` reports already up to date).
+- No connection string / admin password in any tracked repo file.
+
+### Deferred / follow-ups
+- **Deployed `/health` not yet verified against Azure SQL** (F-01 plan items 4.2/4.6): the live
+  artifact predates the `/health` + DbContext code. Verify after the next deploy — via F-04 CI
+  auto-deploy or a manual `dotnet publish` → `tar.exe` zip → `az webapp deploy` (mind the
+  `Compress-Archive` backslash gotcha above).
+- **Budget alert still not configured** — now recommended, since a flat ~$5/mo DB cost is live.
+  Combined run-rate ≈ ~$18/mo (B1 compute + Basic SQL).
+- **Watch the Basic 2 GB / 5 DTU ceiling** — plan the Standard S0 step before audit-trail growth
+  bites (NFR-3 keeps records for the lifetime of the household).
