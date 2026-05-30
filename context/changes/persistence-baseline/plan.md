@@ -361,27 +361,27 @@ backward-compatible; never couple a breaking schema change with an irreversible 
 
 #### Automated
 
-- [x] 2.1 Build still clean: `dotnet build Homdutio.sln`
-- [x] 2.2 Migration applies to LocalDB: `dotnet ef database update ...`
-- [x] 2.3 No connection string in tracked files: `git grep -i "Server=" -- '*.json'` empty
-- [x] 2.4 `GET /health` returns `Healthy` against LocalDB
+- [x] 2.1 Build still clean: `dotnet build Homdutio.sln` — 013bba2
+- [x] 2.2 Migration applies to LocalDB: `dotnet ef database update ...` — 013bba2
+- [x] 2.3 No connection string in tracked files: `git grep -i "Server=" -- '*.json'` empty — 013bba2
+- [x] 2.4 `GET /health` returns `Healthy` against LocalDB — 013bba2
 
 #### Manual
 
-- [x] 2.5 `SchemaProbe` write/read round-trip verified
-- [x] 2.6 `MIGRATIONS.md` revert recipe accurate for the split-project layout
-- [x] 2.7 `/health` not shadowed by the SPA fallback
+- [x] 2.5 `SchemaProbe` write/read round-trip verified — 013bba2
+- [x] 2.6 `MIGRATIONS.md` revert recipe accurate for the split-project layout — 013bba2
+- [x] 2.7 `/health` not shadowed by the SPA fallback — 013bba2
 
 ### Phase 3: xUnit Smoke Test
 
 #### Automated
 
-- [ ] 3.1 Tests pass: `dotnet test Homdutio.sln`
-- [ ] 3.2 Test leaves no residual database (clean re-run)
+- [x] 3.1 Tests pass: `dotnet test Homdutio.sln`
+- [x] 3.2 Test leaves no residual database (clean re-run)
 
 #### Manual
 
-- [ ] 3.3 Test reads as a clear template for later provider-real tests
+- [x] 3.3 Test reads as a clear template for later provider-real tests
 
 ### Phase 4: Provision Azure SQL + Wire + Apply (Prod)
 
