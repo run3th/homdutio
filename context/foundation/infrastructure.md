@@ -81,7 +81,7 @@ The build started on F1 free, hit the 60-min/day CPU quota within days once the 
 - Deployment slots are Standard-tier only; the cheap tier you will actually run has **no blue-green rollback**.
 - `az ... create` commands default to **non-free SKUs** — "free" requires explicit flags, an easy agent miss that produces a silently-billed resource.
 - Basic App Service has **no scale-to-zero**: you pay ~$13/mo even while the mostly-idle single-household app sits unused, unlike Railway/Render usage-based models.
-- ASP.NET Identity cookie auth depends on the **data-protection key ring**; the day you scale past one instance, keys must persist to Blob/Key Vault or every restart logs everyone out — invisible at single-instance MVP, a footgun later.
+- Auth is stateless **JWT bearer tokens** (roadmap decision 2026-05-30, superseding cookie sessions), so the data-protection key-ring scale-out/restart footgun does not apply. The replacement concern is the **JWT signing key/secret**: store it in App Service settings or Key Vault (never the repo), and on rotation expect in-flight tokens to invalidate. Token lifetime + refresh strategy lives in the SPA.
 
 ## Operational Story
 
@@ -100,7 +100,7 @@ The build started on F1 free, hit the 60-min/day CPU quota within days once the 
 | No blue-green rollback on Basic (slots are Standard-only) | Unknown unknowns | M | M | Keep prior artifact retrievable; make EF migrations backward-compatible; rollback = redeploy prior build. Do not upgrade to Standard just for slots at MVP. |
 | `az` CLI defaults to larger/pricier SKUs → silently-billed resource | Devil's advocate | M | H | Pass explicit SKU flags (`--sku B1` for compute, `--service-objective Basic` for SQL); set a subscription **budget alert** as a backstop; review the resource group SKUs after any agent provisioning. |
 | Coupled single artifact — bad `ng build` breaks API + UI together | Devil's advocate | M | M | Validate `dotnet publish -c Release` (which runs the Angular build) in CI before deploy; gate deploy on a successful build + smoke test. |
-| Data-protection key ring not persisted → cookie auth breaks if scaled out / on restart | Unknown unknowns | L (now) / M (later) | H | Single-instance is fine for MVP; before any scale-out or if restarts log users out, persist keys to Blob/Key Vault via `PersistKeysToAzureBlobStorage` + `ProtectKeysWithAzureKeyVault`. |
+| JWT signing key/secret leaked or hard-coded → tokens forgeable | Auth decision (JWT, 2026-05-30) | L | H | Keep the signing secret in App Service settings / Key Vault, never the repo; use a strong key; rotate on suspected exposure (accepting in-flight tokens invalidate). Stateless JWT removes the prior cookie data-protection key-ring scale-out footgun. |
 | EF migrations do not auto-roll-back on revert | Research finding | M | M | Author backward-compatible migrations; keep a tested down-script; never couple a breaking schema change with an irreversible deploy. |
 | Render-style trap avoided, but Azure idle cost on Basic (no scale-to-zero) | Unknown unknowns | H | L | Accept ~$13/mo as the cost of an always-warm single-household app; if cost becomes the dominant concern, swap to runner-up Railway (scale-to-usage). |
 

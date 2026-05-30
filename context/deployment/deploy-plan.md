@@ -81,8 +81,10 @@ but any manual Windows deploy must avoid `Compress-Archive`.
 1. `/10x-implement` — build the data layer (Identity, households, tasks, board); then provision
    the **provisioned Basic Azure SQL** DB per `infrastructure.md` and wire the connection string
    into App Service settings / Key Vault.
-2. Resolve the **WebSockets-vs-polling** contract question (re-run interview said SignalR;
-   `tech-stack.md` says `has_realtime: false`) before building the freshness/realtime path.
+2. ✅ Resolved (2026-05-30): the **WebSockets-vs-polling** contract question landed on **polling**
+   (short-interval client refresh meets the NFR-1 ≤5s freshness contract on the single-instance B1
+   MVP without a stateful connection or scale-out backplane; aligns with `tech-stack.md`
+   `has_realtime: false`). SignalR is the reversible post-validation upgrade. See `roadmap.md` F-03.
 3. Add **GitHub Actions auto-deploy on merge** (`azure/webapps-deploy@v3` + OIDC) per the
    stack's `ci_default_flow`, replacing manual deploys.
 4. Add a **budget alert** on the personal subscription (infra risk-register mitigation).

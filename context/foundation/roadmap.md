@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-05-30
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -30,15 +30,15 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | ID    | Change ID                     | Outcome (user can …)                                                  | Prerequisites | PRD refs                                          | Status   |
 | ----- | ----------------------------- | --------------------------------------------------------------------- | ------------- | ------------------------------------------------- | -------- |
 | F-01  | persistence-baseline          | (foundation) EF Core + provisioned Azure SQL wired; data persists     | —             | NFR-3                                             | ready    |
-| F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + cookie auth pipeline issuing sessions  | F-01          | Access Control                                    | proposed |
-| F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | blocked  |
+| F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + JWT bearer pipeline issuing tokens     | F-01          | Access Control                                    | proposed |
+| F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | ready    |
 | F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | ready    |
 | S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | proposed |
 | S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | proposed |
 | S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | proposed |
 | S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | proposed |
 | S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | proposed |
-| S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | blocked  |
+| S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | proposed |
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
@@ -50,7 +50,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                  | Chain                                                       | Note                                                                          |
 | ------ | ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | A      | Accountability spine   | `F-01` → `F-02` → `S-01` → `S-02` → `S-03` → `S-04` / `S-05` | The critical path to the north star (`S-03`); `S-04`/`S-05` branch off `S-03`. |
-| B      | Multiplayer & freshness| `F-03` → `S-06` → `S-09`                                     | Branches off `S-02`'s board; blocked until the transport decision resolves.    |
+| B      | Multiplayer & freshness| `F-03` → `S-06` → `S-09`                                     | Branches off `S-02`'s board; transport decided (polling), so F-03 is buildable.|
 | C      | Hardening & recovery   | `S-07` / `S-08`                                             | `S-07` hardens `S-03`; `S-08` extends `S-01`. Both run parallel to the spine.  |
 | D      | Delivery automation    | `F-04`                                                      | Standalone infra; parallel with everything, gates no slice.                    |
 
@@ -62,7 +62,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Frontend:** present — Angular 21 SPA in `web/`, built into `wwwroot/` via the `BuildAngularSpa` MSBuild target; router wired but only the default shell (no feature UI, no component/drag-reorder libs). Tests: vitest.
 - **Backend / API:** partial — ASP.NET Core .NET 9 minimal API (`src/Homdutio.Api/Program.cs`); only the template `/weatherforecast` endpoint + SPA fallback. No `/api` controllers or domain routes.
 - **Data:** absent — no EF Core package, no DbContext, no migrations, no connection string; DB deliberately deferred per `deploy-plan.md`.
-- **Auth:** absent — no ASP.NET Core Identity package, no auth middleware, no cookie/JWT config (tech-stack plans Identity + cookie auth, unwired).
+- **Auth:** absent — no ASP.NET Core Identity package, no auth middleware, no JWT config (roadmap decision: Identity user store + JWT bearer tokens — supersedes `tech-stack.md`'s cookie-auth note; unwired).
 - **Deploy / infra:** partial — Azure App Service live (B1, Poland Central, HTTPS-only) at `homdutio.azurewebsites.net`, scaffold zip-deployed manually. No GitHub Actions workflow, no DB provisioned, no budget alert.
 - **Observability:** absent — default ASP.NET console logging only; no error tracking, structured logging, metrics, or dashboards.
 
@@ -83,30 +83,31 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-02: Auth + identity plumbing
 
-- **Outcome:** (foundation) ASP.NET Core Identity is mounted on the EF store and a same-origin cookie-auth pipeline issues and verifies sessions — no user-facing pages yet, just the middleware and Identity tables.
+- **Outcome:** (foundation) ASP.NET Core Identity is mounted on the EF store as the user store, and a JWT bearer pipeline issues and validates signed tokens — no user-facing pages yet, just the token endpoints, JWT validation middleware, and Identity tables.
 - **Change ID:** auth-identity-plumbing
-- **PRD refs:** Access Control (email + password, cookie sessions, one account per person)
+- **PRD refs:** Access Control (email + password, JWT bearer tokens, one account per person)
 - **Unlocks:** S-01 (register/login/logout flow) and the household-scoped authorization that S-07 hardens.
 - **Prerequisites:** F-01
 - **Parallel with:** F-04
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Cookie auth on a same-origin SPA is the least-friction path (per tech-stack). The data-protection key ring is fine in-memory at single-instance MVP, but becomes a logout-on-restart footgun if scaled out — note it, don't solve it now (infra risk register). Scope is the auth pipeline only; it completes no user-facing capability on its own.
+- **Decision (2026-05-30):** JWT bearer tokens, not cookie sessions. Keeps the first-party Identity user store but makes the API stateless — sidestepping the data-protection key-ring logout-on-restart/scale-out footgun the cookie path carried (infra risk register). This supersedes `tech-stack.md`'s cookie-auth recommendation; the trade is that the Angular SPA now owns token storage and refresh.
+- **Risk:** Stateless JWT removes the key-ring concern but moves responsibility to two new places: a **signing key/secret** (store in App Service settings / Key Vault, never the repo) and **SPA token handling** (storage + refresh, and avoiding XSS-exposed tokens). Logout becomes client-side token discard plus short token lifetimes (optionally a server-side revocation/refresh-token store if instant invalidation is needed — defer unless required). Scope is the auth pipeline only; it completes no user-facing capability on its own.
 - **Status:** proposed
 
 ### F-03: Live-update transport
 
-- **Outcome:** (foundation) a chosen transport (polling or SignalR) propagates board mutations to other household members within 5 seconds without manual refresh.
+- **Outcome:** (foundation) client-side polling refreshes the board on a short interval so mutations propagate to other household members within 5 seconds without manual refresh.
 - **Change ID:** live-update-transport
 - **PRD refs:** NFR-1 (cross-device freshness ≤ 5s)
 - **Unlocks:** the live-board experience in S-06 (two members observing the same state); reduces the NFR-1 transport unknown for every board mutation.
 - **Prerequisites:** —
 - **Parallel with:** F-01, F-02, F-04
 - **Blockers:** —
-- **Unknowns:**
-  - Polling vs SignalR for the 5s freshness contract — `deploy-plan.md` flags a contradiction (a re-run interview said SignalR; `tech-stack.md` declares `has_realtime: false`). Owner: user. Block: yes.
-- **Risk:** SignalR adds a stateful connection plus a scale-out backplane/key concern; polling is simpler for the single-instance MVP but chattier. The decision is load-bearing for the multiplayer slice, so it is surfaced as blocking rather than guessed. Off the north-star critical path — the loop (S-03) is verifiable on one device.
-- **Status:** blocked
+- **Unknowns:** —
+- **Decision (2026-05-30):** Polling, not SignalR. The contract is "≤5s freshness," which a short poll interval meets on the single-instance B1 / single-household MVP with near-zero added complexity — no stateful connection and no scale-out backplane/key-ring concern (both deferred per infra risk register). This supersedes the re-run-interview SignalR lean and aligns with `tech-stack.md` `has_realtime: false`. SignalR remains the reversible upgrade path post-validation if freshness/UX demands push.
+- **Risk:** Polling is chattier than push but trivially correct and cheap to run at single-household scale; cap the interval so server load stays bounded. Off the north-star critical path — the loop (S-03) is verifiable on one device.
+- **Status:** ready
 
 ### F-04: CI auto-deploy
 
@@ -132,7 +133,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-03, F-04
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** The onboarding entry point — Success Criteria step 1 depends on it. Conventional Identity flow on the cookie pipeline from F-02; low novelty.
+- **Risk:** The onboarding entry point — Success Criteria step 1 depends on it. Conventional Identity flow on the JWT pipeline from F-02; low novelty. Logout is a client-side token discard (no server session to drop), so keep token lifetimes short.
 - **Status:** proposed
 
 ### S-02: Household and board
@@ -191,10 +192,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Prerequisites:** S-02, F-03
 - **Parallel with:** S-04, S-05
 - **Blockers:** —
-- **Unknowns:**
-  - Live-update transport (inherited from F-03): polling vs SignalR. Owner: user. Block: yes.
-- **Risk:** Turns the loop genuinely multiplayer — a real second member makes FR-015's cross-member confirm verifiable and delivers NFR-1 freshness. Blocked until the F-03 transport decision resolves; single-use link invalidation (FR-005) and one-household-per-user (FR-007) are the correctness-sensitive parts.
-- **Status:** blocked
+- **Unknowns:** —
+- **Risk:** Turns the loop genuinely multiplayer — a real second member makes FR-015's cross-member confirm verifiable and delivers NFR-1 freshness via F-03's polling transport. Single-use link invalidation (FR-005) and one-household-per-user (FR-007) are the correctness-sensitive parts. Still gated on its prerequisites (S-02, F-03), but no longer blocked on an open decision.
+- **Status:** proposed
 
 ### S-07: Household data isolation
 
@@ -216,9 +216,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Prerequisites:** S-01
 - **Parallel with:** S-02, S-03, S-04, S-05, S-06, S-07
 - **Blockers:** —
-- **Unknowns:**
-  - Which transactional email provider for the single permitted email use? None is named in `tech-stack.md` or `deploy-plan.md`. Owner: user. Block: no.
-- **Risk:** The only email pipeline in v1 (every other path is out-of-band by Non-Goal) — keep it to one provider, reset-only, so it does not balloon into a general email surface. Provider choice is a low-effort plan-time decision, not a roadmap blocker.
+- **Unknowns:** —
+- **Decision (2026-05-30):** SendGrid — chosen over Azure Communication Services Email because ACS requires a verified sender *domain*, whereas SendGrid offers single-sender verification (verify one from-address, no domain ownership needed), and its free tier (~100 emails/day) more than covers reset-only v1 volume. The trade is a third-party account + API key to manage (store in App Service settings / Key Vault, never the repo) rather than same-vendor co-location.
+- **Risk:** The only email pipeline in v1 (every other path is out-of-band by Non-Goal) — keep it to one provider, reset-only, so it does not balloon into a general email surface. Single-sender verification is the one setup step; consider domain authentication later only if deliverability needs it.
 - **Status:** proposed
 
 ### S-09: Member administration
@@ -238,27 +238,27 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                     | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
 | ---------- | ----------------------------- | ---------------------------------------------------------- | --------------------- | ----- |
 | F-01       | persistence-baseline          | Wire EF Core + provisioned Azure SQL persistence baseline   | yes                   | Recommended first move — unlocks the north-star path |
-| F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + cookie-auth pipeline               | no                    | Needs F-01 |
-| F-03       | live-update-transport         | Establish 5s live-update transport (polling vs SignalR)     | no                    | Blocked: transport decision (Open Q #1) |
+| F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + JWT bearer pipeline                | no                    | Needs F-01; JWT, not cookie sessions |
+| F-03       | live-update-transport         | Establish 5s live-update transport via polling              | yes                   | Transport decided: polling (Open Q #1 resolved) |
 | F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | yes                   | Parallel infra; gates no slice |
 | S-01       | account-access                | Register, log in, log out                                   | no                    | Needs F-01, F-02 |
 | S-02       | household-and-board           | Create household + empty mobile-first kanban board          | no                    | Needs S-01 |
 | S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | no                    | North star; needs S-02 |
 | S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | no                    | Needs S-03 |
 | S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | no                    | Needs S-03 |
-| S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | no                    | Blocked: transport decision (Open Q #1) |
+| S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | no                    | Needs S-02, F-03 (polling) |
 | S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | no                    | Needs S-03; worst-bug guardrail |
-| S-08       | password-reset                | Password reset via emailed link                             | no                    | Needs S-01; pick email provider (Open Q #2) |
+| S-08       | password-reset                | Password reset via emailed link                             | no                    | Needs S-01; email via SendGrid (Open Q #2 resolved) |
 | S-09       | member-administration         | Admin promote / remove member                               | no                    | Nice-to-have; needs S-06 |
 
 This table is the clean handoff to Jira/Linear or any MCP-backed backlog. One row per `F-NN` and `S-NN`.
 
 ## Open Roadmap Questions
 
-The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward. These are cross-cutting decisions surfaced during sequencing:
+The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward. These are cross-cutting decisions surfaced during sequencing — both now resolved (2026-05-30):
 
-1. **Live-update transport — polling vs SignalR for the NFR-1 5s freshness contract.** `deploy-plan.md` records a contradiction (a re-run interview said SignalR; `tech-stack.md` declares `has_realtime: false`). Owner: user. Block: F-03, S-06.
-2. **Transactional email provider for password reset (FR-020).** The single permitted email use in v1; no provider named in `tech-stack.md` or `deploy-plan.md`. Owner: user. Block: S-08 (non-blocking — resolvable at plan time).
+1. **Live-update transport — polling vs SignalR for the NFR-1 5s freshness contract.** ✅ RESOLVED (2026-05-30): **Polling.** A short poll interval meets the ≤5s contract on the single-instance B1 / single-household MVP without a stateful connection or scale-out backplane/key-ring concern, and aligns with `tech-stack.md` `has_realtime: false`. Supersedes the re-run-interview SignalR lean; SignalR is the reversible post-validation upgrade if push is later warranted. Unblocked: F-03, S-06.
+2. **Transactional email provider for password reset (FR-020).** ✅ RESOLVED (2026-05-30): **SendGrid.** Initially set to Azure Communication Services Email for co-location, but ACS requires a verified sender *domain*; SendGrid's single-sender verification (one from-address, no domain ownership) and ~100/day free tier fit reset-only v1 better. Trade: a third-party account + API key (store in App Service settings / Key Vault). Affects: S-08.
 
 ## Parked
 
