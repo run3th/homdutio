@@ -348,29 +348,29 @@ backward-compatible; never couple a breaking schema change with an irreversible 
 
 #### Automated
 
-- [x] 1.1 Solution restores: `dotnet restore Homdutio.sln`
-- [x] 1.2 Solution builds clean (Debug): `dotnet build Homdutio.sln`
-- [x] 1.3 `dotnet ef dbcontext info` resolves the context — deferred to Phase 2 (DI-dependent; subsumed by 2.2 migration apply)
+- [x] 1.1 Solution restores: `dotnet restore Homdutio.sln` — 73970be
+- [x] 1.2 Solution builds clean (Debug): `dotnet build Homdutio.sln` — 73970be
+- [x] 1.3 `dotnet ef dbcontext info` resolves the context — deferred to Phase 2 (DI-dependent; subsumed by 2.2 migration apply) — 73970be
 
 #### Manual
 
-- [x] 1.4 Both projects in the solution; API references the data library
-- [x] 1.5 No change to `BuildAngularSpa` Release behavior
+- [x] 1.4 Both projects in the solution; API references the data library — 73970be
+- [x] 1.5 No change to `BuildAngularSpa` Release behavior — 73970be
 
 ### Phase 2: DI Wiring, Config, Health Check & First Migration (LocalDB)
 
 #### Automated
 
-- [ ] 2.1 Build still clean: `dotnet build Homdutio.sln`
-- [ ] 2.2 Migration applies to LocalDB: `dotnet ef database update ...`
-- [ ] 2.3 No connection string in tracked files: `git grep -i "Server=" -- '*.json'` empty
-- [ ] 2.4 `GET /health` returns `Healthy` against LocalDB
+- [x] 2.1 Build still clean: `dotnet build Homdutio.sln`
+- [x] 2.2 Migration applies to LocalDB: `dotnet ef database update ...`
+- [x] 2.3 No connection string in tracked files: `git grep -i "Server=" -- '*.json'` empty
+- [x] 2.4 `GET /health` returns `Healthy` against LocalDB
 
 #### Manual
 
-- [ ] 2.5 `SchemaProbe` write/read round-trip verified
-- [ ] 2.6 `MIGRATIONS.md` revert recipe accurate for the split-project layout
-- [ ] 2.7 `/health` not shadowed by the SPA fallback
+- [x] 2.5 `SchemaProbe` write/read round-trip verified
+- [x] 2.6 `MIGRATIONS.md` revert recipe accurate for the split-project layout
+- [x] 2.7 `/health` not shadowed by the SPA fallback
 
 ### Phase 3: xUnit Smoke Test
 
