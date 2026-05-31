@@ -2,7 +2,7 @@
 change_id: ci-auto-deploy
 roadmap_id: F-04
 title: CI auto-deploy (GitHub Actions build+test gate → OIDC deploy)
-status: planned
+status: implementing
 created: 2026-05-31
 updated: 2026-05-31
 prerequisites: []

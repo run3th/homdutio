@@ -124,3 +124,16 @@ Change `persistence-baseline` wired EF Core 9 + `ApplicationDbContext` and provi
   Combined run-rate ≈ ~$18/mo (B1 compute + Basic SQL).
 - **Watch the Basic 2 GB / 5 DTU ceiling** — plan the Standard S0 step before audit-trail growth
   bites (NFR-3 keeps records for the lifetime of the household).
+
+## Update 2026-05-31 — CI auto-deploy introduced (F-04, in progress)
+
+Change `ci-auto-deploy` replaces the manual Windows `dotnet publish` → `tar.exe` zip →
+`az webapp deploy` ritual with a GitHub Actions pipeline (`.github/workflows/deploy.yml`): PRs
+and pushes to `main` run a build + test gate; merges to `main` then (behind a human-approved
+`production` environment) migrate Azure SQL, deploy the single artifact to `homdutio` via
+**OIDC** (no long-lived secret in the repo), and smoke-test `/health`. The manual ritual above
+is retained only as the documented break-glass rollback (no slots on B1).
+
+The reproducible out-of-band setup (Entra app + federated credentials, role assignments, GitHub
+secrets, the protected `production` environment, and the prod `Jwt__SigningKey` app setting) is
+recorded in **`.github/DEPLOY_SETUP.md`** — run once, no secret values committed.

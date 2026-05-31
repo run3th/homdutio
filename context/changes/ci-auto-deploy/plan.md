@@ -250,8 +250,8 @@ pipeline path (out of scope here unless quick).
 
 #### Automated
 
-- [ ] 1.1 Setup doc exists: `.github/DEPLOY_SETUP.md` present
-- [ ] 1.2 No secret values committed (`git grep` placeholders only)
+- [x] 1.1 Setup doc exists: `.github/DEPLOY_SETUP.md` present
+- [x] 1.2 No secret values committed (`git grep` placeholders only)
 
 #### Manual
 
