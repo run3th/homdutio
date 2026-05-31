@@ -361,9 +361,9 @@ F-01's deferred prod verification.
 
 #### Automated
 
-- [x] 3.1 Full suite passes: `dotnet test Homdutio.sln`
-- [x] 3.2 Test run leaves no residual database (clean re-run)
+- [x] 3.1 Full suite passes: `dotnet test Homdutio.sln` — 2fd1860
+- [x] 3.2 Test run leaves no residual database (clean re-run) — 2fd1860
 
 #### Manual
 
-- [x] 3.3 Test reads as a clear template for later authorized-slice tests
+- [x] 3.3 Test reads as a clear template for later authorized-slice tests — 2fd1860
