@@ -67,7 +67,7 @@ Azure). Build inside-out and local-first; all cost/prod actions isolated in the 
 | 3. xUnit smoke test                  | Automated migration + round-trip regression net               | Test-DB isolation/teardown leaving residue                   |
 | 4. Provision Azure SQL + wire + apply | Provisioned Basic DB, wired secret, prod migration, `Healthy` | `az` defaulting to a pricier/serverless SKU; first prod migration with no rollback |
 
-**Prerequisites:** Azure CLI logged into the `<user>` subscription; LocalDB available on the dev
+**Prerequisites:** Azure CLI logged into the target subscription; LocalDB available on the dev
 machine; .NET 9 SDK + `dotnet-ef` tool. No upstream change blocks this (F-01 has no prerequisites).
 **Estimated effort:** ~2–3 after-hours sessions across 4 phases; Phase 4 gated on human approval for cost.
 

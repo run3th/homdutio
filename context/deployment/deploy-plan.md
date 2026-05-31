@@ -25,7 +25,7 @@ idle DB.
 
 | Resource | Name | Detail |
 |---|---|---|
-| Subscription | `<user>` (<user>) | id `<SUBSCRIPTION_ID>` |
+| Subscription | _redacted_ | id held locally (`az account show`); not committed |
 | Resource group | `homdutio-rg` | region **Poland Central** (`polandcentral`) |
 | App Service plan | `homdutio-plan` | Linux, **B1** |
 | Web app | `homdutio` | runtime `DOTNETCORE:9.0`, **HTTPS-only**, `SCM_DO_BUILD_DURING_DEPLOYMENT=false` |

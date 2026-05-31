@@ -24,7 +24,7 @@
 | Thing | Value |
 |---|---|
 | GitHub repo | `run3th/homdutio` |
-| Subscription id | `<SUBSCRIPTION_ID>` |
+| Subscription id | `<SUBSCRIPTION_ID>` (see `az account show`; not committed) |
 | Resource group | `homdutio-rg` (region `polandcentral`) |
 | Web app | `homdutio` |
 | SQL logical server | `homdutio-sql` |
@@ -33,7 +33,7 @@
 Set shell variables once (PowerShell or bash — examples below use bash):
 
 ```bash
-SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
+SUBSCRIPTION_ID="<your-subscription-id>"   # az account show --query id -o tsv
 RG="homdutio-rg"
 WEBAPP="homdutio"
 SQL_SERVER="homdutio-sql"
@@ -184,6 +184,33 @@ az webapp config appsettings set --name "$WEBAPP" --resource-group "$RG" \
 
 Once all four are checked, Phase 3's deploy job has everything it needs. Phase 2 (the
 build-test gate) does **not** depend on any of this — it contacts no Azure resource.
+
+## Provisioning notes — actual run (2026-05-31)
+
+The out-of-band setup was executed against the live subscription. What deviated from the
+idealized CLI steps above, and why:
+
+- **App registration + the 3 federated credentials were created in the Azure Portal**, not the
+  CLI. The tenant's **Conditional Access policy blocks Microsoft Graph token issuance for the
+  Azure CLI** (`AADSTS53003`), and interactive device-code / browser re-auth would not complete
+  on the build machine. ARM operations from the CLI are unaffected. (App registration display
+  name: `homdutio-github-oidc`; client id stored only in the `AZURE_CLIENT_ID` GitHub secret.)
+- **Role assignments were done via the Portal IAM blade** (`homdutio` → Website Contributor;
+  `homdutio-sql` → SQL Server Contributor), targeting the app's **service principal**. CLI role
+  assignment was not viable: the service-principal lookup is a Graph call (blocked), and this
+  CLI build's `az role assignment create` returns a spurious `MissingSubscription` (an `az rest`
+  PUT works but needs the SP object id, which Graph would have to resolve).
+- **GitHub repo secrets and the prod `Jwt__SigningKey`** were set via `gh` / `az` (ARM + GitHub
+  APIs are not Graph-gated).
+- **Approval gate limitation.** This is a **private repo on the GitHub Free plan**, where
+  environment **required-reviewer** protection rules are unavailable (HTTP 422). The
+  `production` environment exists and still scopes the `AZURE_SQL_CONNECTION_STRING` secret to
+  deploy-only and satisfies the `environment:production` OIDC subject — but it does **not**
+  enforce a human approval pause. Decision (2026-05-31): **proceed without the environment
+  approval gate.** On a solo repo, the deliberate `merge/push to main` is itself the deploy
+  decision; remaining safety = deploy-only-on-main, migrate-before-deploy, backward-compatible
+  migrations, and the `/health` smoke. To restore a hard gate later: make the repo public, or
+  upgrade to GitHub Pro/Team, then add the required reviewer to the `production` environment.
 
 ## Rotation / teardown notes
 

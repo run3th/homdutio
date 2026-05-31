@@ -131,7 +131,7 @@ web/
 
 ### NuGet feed isolation (applied during this run)
 
-The first audit attempt failed because the user-level NuGet config at `C:\Users\<user>\AppData\Roaming\NuGet\NuGet.Config` included a private Azure Artifacts feed (`private-feed`) at `<private-feed-url>` that returned HTTP 401 (Unauthorized) for the active credential context. `dotnet restore` would not complete and the audit had no resolved graph to query.
+The first audit attempt failed because the user-level NuGet config at `C:\Users\<user>\AppData\Roaming\NuGet\NuGet.Config` included a private Azure Artifacts feed that returned HTTP 401 (Unauthorized) for the active credential context. `dotnet restore` would not complete and the audit had no resolved graph to query.
 
 Resolution (user-approved): wrote a project-local `NuGet.Config` at the repository root that clears parent sources and enables only `nuget.org`:
 
@@ -145,7 +145,7 @@ Resolution (user-approved): wrote a project-local `NuGet.Config` at the reposito
 </configuration>
 ```
 
-The user-level config is unchanged; other projects on this machine continue to see the private-feed feed normally. With the project-local file in place, `dotnet restore` succeeded in 723 ms, `dotnet build` succeeded (0 warnings, 0 errors), and the vulnerability audit ran cleanly.
+The user-level config is unchanged; other projects on this machine continue to see the private feed normally. With the project-local file in place, `dotnet restore` succeeded in 723 ms, `dotnet build` succeeded (0 warnings, 0 errors), and the vulnerability audit ran cleanly.
 
 ### Build verification
 
