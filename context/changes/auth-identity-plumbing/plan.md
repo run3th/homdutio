@@ -346,24 +346,24 @@ F-01's deferred prod verification.
 
 #### Automated
 
-- [x] 2.1 Build clean: `dotnet build Homdutio.sln`
-- [x] 2.2 No signing key value in tracked files: `git grep -i "SigningKey" -- '*.json'`
-- [x] 2.3 App starts without DI/auth configuration errors
+- [x] 2.1 Build clean: `dotnet build Homdutio.sln` — c24bb81
+- [x] 2.2 No signing key value in tracked files: `git grep -i "SigningKey" -- '*.json'` — c24bb81
+- [x] 2.3 App starts without DI/auth configuration errors — c24bb81
 
 #### Manual
 
-- [x] 2.4 `register` returns 200 (new) / 400 (duplicate or weak password)
-- [x] 2.5 `login` returns a JWT for valid creds, 401 for invalid
-- [x] 2.6 `/me` returns claims (200) with a bearer token, 401 without
-- [x] 2.7 `/health` still `Healthy`, not shadowed by auth or SPA fallback
+- [x] 2.4 `register` returns 200 (new) / 400 (duplicate or weak password) — c24bb81
+- [x] 2.5 `login` returns a JWT for valid creds, 401 for invalid — c24bb81
+- [x] 2.6 `/me` returns claims (200) with a bearer token, 401 without — c24bb81
+- [x] 2.7 `/health` still `Healthy`, not shadowed by auth or SPA fallback — c24bb81
 
 ### Phase 3: Integration Test Project
 
 #### Automated
 
-- [ ] 3.1 Full suite passes: `dotnet test Homdutio.sln`
-- [ ] 3.2 Test run leaves no residual database (clean re-run)
+- [x] 3.1 Full suite passes: `dotnet test Homdutio.sln`
+- [x] 3.2 Test run leaves no residual database (clean re-run)
 
 #### Manual
 
-- [ ] 3.3 Test reads as a clear template for later authorized-slice tests
+- [x] 3.3 Test reads as a clear template for later authorized-slice tests
