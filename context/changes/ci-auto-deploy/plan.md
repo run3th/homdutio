@@ -250,8 +250,8 @@ pipeline path (out of scope here unless quick).
 
 #### Automated
 
-- [x] 1.1 Setup doc exists: `.github/DEPLOY_SETUP.md` present
-- [x] 1.2 No secret values committed (`git grep` placeholders only)
+- [x] 1.1 Setup doc exists: `.github/DEPLOY_SETUP.md` present — de7aca4
+- [x] 1.2 No secret values committed (`git grep` placeholders only) — de7aca4
 
 #### Manual
 
@@ -265,8 +265,8 @@ pipeline path (out of scope here unless quick).
 #### Automated
 
 - [ ] 2.1 PR/branch push triggers `build-test` and it completes green
-- [ ] 2.2 Gate runs `dotnet test` and `npm test` (both execute + pass in logs)
-- [ ] 2.3 Release publish runs `BuildAngularSpa` and uploads the artifact
+- [x] 2.2 Gate runs `dotnet test` and `npm test` (both execute + pass in logs)
+- [x] 2.3 Release publish runs `BuildAngularSpa` and uploads the artifact
 
 #### Manual
 

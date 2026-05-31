@@ -1,0 +1,76 @@
+name: build-test-deploy
+
+# Build + test gate on every PR and push to main (Phase 2).
+# A gated, OIDC-authenticated deploy job is appended in Phase 3.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# id-token:write is required by the Phase 3 deploy job's OIDC login (azure/login).
+# Declared at the top level so both jobs inherit it; build-test only reads contents.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-test:
+    name: Build + Test
+    # windows-latest ships MSSQLLocalDB, which the xUnit suites hardcode
+    # (Server=(localdb)\MSSQLLocalDB) — preserves test parity, zero test changes.
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # Angular 21 requires Node >=20.19 / 22.12; use 22. The Release build/publish
+      # triggers the BuildAngularSpa MSBuild target (npm ci + ng build), so Node must
+      # be present before any dotnet build/publish, not just for the npm test step.
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Start LocalDB
+        run: sqllocaldb start MSSQLLocalDB
+
+      - name: Restore
+        run: dotnet restore Homdutio.sln
+
+      # Release build runs BuildAngularSpa (npm ci where node_modules is absent, then
+      # ng build) — a broken ng build fails the gate here.
+      - name: Build (Release)
+        run: dotnet build Homdutio.sln -c Release --no-restore
+
+      # xUnit suites run against LocalDB with no config overrides (parity with local).
+      - name: Test (.NET, LocalDB)
+        run: dotnet test Homdutio.sln -c Release --no-build
+
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+
+      # ng test -> Vitest (jsdom). Runs once and exits in CI's non-interactive runner.
+      - name: Test (Angular / Vitest)
+        working-directory: web
+        run: npm test
+
+      # The single portable artifact: dotnet publish triggers BuildAngularSpa, bundling
+      # the SPA into wwwroot. Framework-dependent output runs on the Linux App Service.
+      - name: Publish (Release)
+        run: dotnet publish src/Homdutio.Api/Homdutio.Api.csproj -c Release -o ./publish
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: ./publish
+          retention-days: 7
