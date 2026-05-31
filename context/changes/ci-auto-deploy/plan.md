@@ -265,8 +265,8 @@ pipeline path (out of scope here unless quick).
 #### Automated
 
 - [ ] 2.1 PR/branch push triggers `build-test` and it completes green
-- [x] 2.2 Gate runs `dotnet test` and `npm test` (both execute + pass in logs)
-- [x] 2.3 Release publish runs `BuildAngularSpa` and uploads the artifact
+- [x] 2.2 Gate runs `dotnet test` and `npm test` (both execute + pass in logs) — 8e13f4c
+- [x] 2.3 Release publish runs `BuildAngularSpa` and uploads the artifact — 8e13f4c
 
 #### Manual
 

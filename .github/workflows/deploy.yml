@@ -74,3 +74,105 @@ jobs:
           name: app
           path: ./publish
           retention-days: 7
+
+  deploy:
+    name: Deploy (production)
+    needs: build-test
+    # Deploy only on merges/pushes to main — never on pull_request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    # Human approval gate: the production environment requires a reviewer.
+    # The environment:production OIDC subject (DEPLOY_SETUP.md) authorizes the token.
+    environment:
+      name: production
+      url: https://homdutio.azurewebsites.net
+    # Serialize deploys so two rapid merges can't race migrate+deploy on the
+    # single-instance B1 app. Do not cancel an in-flight production deploy.
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      # Source is needed for `dotnet ef` (the artifact is the published app, not
+      # the EF tooling / migration assemblies).
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # OIDC — no long-lived secret in the repo. Requires id-token:write (top level).
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # The GitHub runner can't reach Azure SQL through AllowAzureServices, so open a
+      # temporary rule for this runner's public IP. Rule name is run-scoped so the
+      # always() removal below targets exactly this run's rule.
+      - name: Open temporary SQL firewall rule
+        run: |
+          $ip = (Invoke-RestMethod -Uri https://api.ipify.org)
+          Write-Host "Runner public IP: $ip"
+          az sql server firewall-rule create `
+            --resource-group homdutio-rg --server homdutio-sql `
+            --name "gha-runner-$env:GITHUB_RUN_ID" `
+            --start-ip-address $ip --end-ip-address $ip --only-show-errors
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 9.0.*
+
+      # Migrate BEFORE deploying code (expand pattern). If this fails, the job stops
+      # before the code swap, leaving the prior working build live. The connection
+      # string is the production-environment admin secret, used only here.
+      - name: Apply EF migrations
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        run: >-
+          dotnet ef database update
+          --project src/Homdutio.Data
+          --startup-project src/Homdutio.Api
+
+      # MUST run even on a failed migration so the runner IP is never left allowlisted.
+      - name: Remove temporary SQL firewall rule
+        if: always()
+        run: |
+          az sql server firewall-rule delete `
+            --resource-group homdutio-rg --server homdutio-sql `
+            --name "gha-runner-$env:GITHUB_RUN_ID" --only-show-errors
+          exit 0
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+          path: ./publish
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: homdutio
+          package: ./publish
+
+      # Post-deploy smoke. Poll /health (the app cold-starts after a deploy) and fail
+      # the job if it never returns 200/Healthy — no auto-rollback, the run fails loudly.
+      - name: Smoke test /health
+        run: |
+          $url = "https://homdutio.azurewebsites.net/health"
+          $ok = $false
+          for ($i = 1; $i -le 10; $i++) {
+            try {
+              $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15
+              if ($r.StatusCode -eq 200 -and $r.Content -match "Healthy") {
+                $ok = $true; Write-Host "Smoke OK ($i): /health -> Healthy"; break
+              }
+              Write-Host "Attempt $i: status $($r.StatusCode), body '$($r.Content)'"
+            } catch {
+              Write-Host "Attempt $i: $($_.Exception.Message)"
+            }
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { Write-Error "Smoke test failed: /health did not return Healthy"; exit 1 }

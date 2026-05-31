@@ -137,3 +137,18 @@ is retained only as the documented break-glass rollback (no slots on B1).
 The reproducible out-of-band setup (Entra app + federated credentials, role assignments, GitHub
 secrets, the protected `production` environment, and the prod `Jwt__SigningKey` app setting) is
 recorded in **`.github/DEPLOY_SETUP.md`** — run once, no secret values committed.
+
+### Pipeline now owns deploy (gated `deploy` job authored)
+
+`.github/workflows/deploy.yml` carries a `build-test` gate (PR + push to `main`) and a gated
+`deploy` job (push to `main` only, behind the human-approved `production` environment). The
+deploy job: logs in via **OIDC**; opens a temporary `homdutio-sql` firewall rule for the
+runner IP (removed `if: always()`); applies EF migrations **before** the code swap (expand
+pattern); deploys the single artifact to `homdutio` via `azure/webapps-deploy@v3`; and
+smoke-tests `/health`.
+
+**First approved run will close these carry-overs** (verify after that run; pending until
+then): applies `AddIdentity` to Azure SQL via the pipeline; the prod `Jwt__SigningKey` setting
+takes effect for live `register`/`login` (F-02); and deployed `/health` is verified against
+Azure SQL (closes F-01 plan items 4.2/4.6). The live artifact before this run is the original
+scaffold, so `AddIdentity` applies safely (live code touches no tables). No secrets in the repo.
