@@ -1,5 +1,11 @@
+using System.Text;
+using Homdutio.Api.Auth;
 using Homdutio.Data;
+using Homdutio.Data.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +24,43 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ApplicationDbContext>();
 
+// Identity user store mounted on the existing context (no cookies/UI — JWT bearer only).
+// RequireConfirmedAccount=false: the only permitted v1 transactional email is password reset (S-08),
+// so account-confirmation email is out of scope. SignInManager gives password check + lockout.
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddSignInManager();
+
+builder.Services.AddHttpContextAccessor();
+
+// Stateless JWT bearer (roadmap 2026-05-30, superseding cookie sessions). Issuer/Audience/lifetime are
+// non-secret config; the signing key comes from user-secrets locally / App Service settings in prod —
+// never the repo. MapInboundClaims=false keeps the raw "sub"/"email" claim names on the principal.
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+        };
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<JwtTokenService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -31,33 +74,16 @@ app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseAuthentication();
+app.UseAuthorization();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-// Mapped before the SPA fallback so /health returns the health payload, not index.html.
+// Mapped before the SPA fallback so these routes return their payloads, not index.html.
 app.MapHealthChecks("/health");
+app.MapAuthEndpoints();
 
 app.MapFallbackToFile("index.html");
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+// Exposed so the integration-test project (Homdutio.Api.Tests) can drive the host via WebApplicationFactory<Program>.
+public partial class Program;

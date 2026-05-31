@@ -332,30 +332,30 @@ F-01's deferred prod verification.
 
 #### Automated
 
-- [x] 1.1 Build clean: `dotnet build Homdutio.sln`
-- [x] 1.2 Migration applies to LocalDB: `dotnet ef database update ...`
-- [x] 1.3 Data-layer tests pass: `dotnet test tests/Homdutio.Data.Tests/...`
-- [x] 1.4 No `SchemaProbe` reference remains: `git grep -i "SchemaProbe"` empty
+- [x] 1.1 Build clean: `dotnet build Homdutio.sln` — ec86a78
+- [x] 1.2 Migration applies to LocalDB: `dotnet ef database update ...` — ec86a78
+- [x] 1.3 Data-layer tests pass: `dotnet test tests/Homdutio.Data.Tests/...` — ec86a78
+- [x] 1.4 No `SchemaProbe` reference remains: `git grep -i "SchemaProbe"` empty — ec86a78
 
 #### Manual
 
-- [x] 1.5 `AddIdentity` `Up` creates `AspNet*` tables and drops `SchemaProbes`
-- [x] 1.6 LocalDB shows `AspNetUsers` after `database update`
+- [x] 1.5 `AddIdentity` `Up` creates `AspNet*` tables and drops `SchemaProbes` — ec86a78
+- [x] 1.6 LocalDB shows `AspNetUsers` after `database update` — ec86a78
 
 ### Phase 2: JWT Pipeline + Auth Endpoints
 
 #### Automated
 
-- [ ] 2.1 Build clean: `dotnet build Homdutio.sln`
-- [ ] 2.2 No signing key value in tracked files: `git grep -i "SigningKey" -- '*.json'`
-- [ ] 2.3 App starts without DI/auth configuration errors
+- [x] 2.1 Build clean: `dotnet build Homdutio.sln`
+- [x] 2.2 No signing key value in tracked files: `git grep -i "SigningKey" -- '*.json'`
+- [x] 2.3 App starts without DI/auth configuration errors
 
 #### Manual
 
-- [ ] 2.4 `register` returns 200 (new) / 400 (duplicate or weak password)
-- [ ] 2.5 `login` returns a JWT for valid creds, 401 for invalid
-- [ ] 2.6 `/me` returns claims (200) with a bearer token, 401 without
-- [ ] 2.7 `/health` still `Healthy`, not shadowed by auth or SPA fallback
+- [x] 2.4 `register` returns 200 (new) / 400 (duplicate or weak password)
+- [x] 2.5 `login` returns a JWT for valid creds, 401 for invalid
+- [x] 2.6 `/me` returns claims (200) with a bearer token, 401 without
+- [x] 2.7 `/health` still `Healthy`, not shadowed by auth or SPA fallback
 
 ### Phase 3: Integration Test Project
 
