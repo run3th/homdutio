@@ -332,15 +332,15 @@ F-01's deferred prod verification.
 
 #### Automated
 
-- [ ] 1.1 Build clean: `dotnet build Homdutio.sln`
-- [ ] 1.2 Migration applies to LocalDB: `dotnet ef database update ...`
-- [ ] 1.3 Data-layer tests pass: `dotnet test tests/Homdutio.Data.Tests/...`
-- [ ] 1.4 No `SchemaProbe` reference remains: `git grep -i "SchemaProbe"` empty
+- [x] 1.1 Build clean: `dotnet build Homdutio.sln`
+- [x] 1.2 Migration applies to LocalDB: `dotnet ef database update ...`
+- [x] 1.3 Data-layer tests pass: `dotnet test tests/Homdutio.Data.Tests/...`
+- [x] 1.4 No `SchemaProbe` reference remains: `git grep -i "SchemaProbe"` empty
 
 #### Manual
 
-- [ ] 1.5 `AddIdentity` `Up` creates `AspNet*` tables and drops `SchemaProbes`
-- [ ] 1.6 LocalDB shows `AspNetUsers` after `database update`
+- [x] 1.5 `AddIdentity` `Up` creates `AspNet*` tables and drops `SchemaProbes`
+- [x] 1.6 LocalDB shows `AspNetUsers` after `database update`
 
 ### Phase 2: JWT Pipeline + Auth Endpoints
 

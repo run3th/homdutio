@@ -2,7 +2,7 @@
 change_id: auth-identity-plumbing
 roadmap_id: F-02
 title: Auth + identity plumbing (ASP.NET Identity + JWT bearer)
-status: planned
+status: implementing
 created: 2026-05-31
 updated: 2026-05-31
 prerequisites: [persistence-baseline]

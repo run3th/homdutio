@@ -5,9 +5,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Homdutio.Data.Tests;
 
 /// <summary>
-/// Proves the persistence wiring end-to-end against the real SqlServer provider (LocalDB): migrations
-/// apply and a <see cref="SchemaProbe"/> survives a write on one context then a read on a fresh one.
-/// Each run uses a uniquely-named throwaway database that is dropped on teardown so runs are isolated.
+/// Proves the persistence wiring end-to-end against the real SqlServer provider (LocalDB): the
+/// Identity migration applies and an <see cref="ApplicationUser"/> survives a write on one context
+/// then a read on a fresh one. Each run uses a uniquely-named throwaway database that is dropped on
+/// teardown so runs are isolated.
 /// </summary>
 public class PersistenceSmokeTests : IDisposable
 {
@@ -25,32 +26,31 @@ public class PersistenceSmokeTests : IDisposable
     }
 
     [Fact]
-    public void Migrations_apply_and_SchemaProbe_round_trips()
+    public void Migrations_apply_and_ApplicationUser_round_trips()
     {
-        int newId;
-        var note = $"round-trip-{Guid.NewGuid():N}";
-        var createdAtUtc = DateTime.UtcNow;
+        string newId;
+        var email = $"smoke-{Guid.NewGuid():N}@example.test";
 
         // Apply migrations and write on one context instance.
         using (var write = new ApplicationDbContext(_options))
         {
             write.Database.Migrate();
 
-            var probe = new SchemaProbe { CreatedAtUtc = createdAtUtc, Note = note };
-            write.SchemaProbes.Add(probe);
+            var user = new ApplicationUser { UserName = email, Email = email };
+            write.Users.Add(user);
             write.SaveChanges();
 
-            newId = probe.Id;
+            newId = user.Id;
         }
 
-        Assert.True(newId > 0, "SaveChanges should assign an identity key.");
+        Assert.False(string.IsNullOrEmpty(newId), "Identity should assign a key.");
 
         // Read back on a fresh context instance to prove it actually persisted.
         using var read = new ApplicationDbContext(_options);
-        var loaded = read.SchemaProbes.Single();
+        var loaded = read.Users.Single();
 
         Assert.Equal(newId, loaded.Id);
-        Assert.Equal(note, loaded.Note);
+        Assert.Equal(email, loaded.Email);
     }
 
     public void Dispose()
