@@ -2,6 +2,8 @@ import { computed, Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
+import { HouseholdService } from '../household/household.service';
+
 /** Request body shared by register and login (matches the F-02 endpoints). */
 export interface AuthRequest {
   email: string;
@@ -24,6 +26,7 @@ export interface LoginResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly households = inject(HouseholdService);
 
   /** The in-memory access token; `null` when logged out. */
   private readonly _token = signal<string | null>(null);
@@ -57,9 +60,13 @@ export class AuthService {
       );
   }
 
-  /** Clears the in-memory token + email. No API call — the caller handles navigation. */
+  /**
+   * Clears the in-memory token + email and resets household state so a logout/login as a different
+   * user on the same page load doesn't leak the prior household. No API call — the caller navigates.
+   */
   logout(): void {
     this._token.set(null);
     this._email.set(null);
+    this.households.clearOnLogout();
   }
 }

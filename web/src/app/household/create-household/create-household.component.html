@@ -1,0 +1,26 @@
+<div class="page">
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <h1>Create your household</h1>
+    <p class="intro">Name your household to get started — you'll be its first admin.</p>
+
+    @if (errors().length) {
+      <div class="form-error" role="alert">
+        @for (message of errors(); track message) {
+          <p>{{ message }}</p>
+        }
+      </div>
+    }
+
+    <div class="field">
+      <label for="name">Household name</label>
+      <input id="name" type="text" formControlName="name" autocomplete="off" />
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <span class="field-error">A household name is required.</span>
+      }
+    </div>
+
+    <button type="submit" [disabled]="pending()">
+      {{ pending() ? 'Creating…' : 'Create household' }}
+    </button>
+  </form>
+</div>

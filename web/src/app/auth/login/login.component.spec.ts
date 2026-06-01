@@ -32,7 +32,7 @@ describe('LoginComponent', () => {
     expect(login).not.toHaveBeenCalled();
   });
 
-  it('navigates to /home on a successful login', () => {
+  it('navigates to /board on a successful login', () => {
     login.mockReturnValue(of({ accessToken: 'jwt', expiresAtUtc: '2099-01-01T00:00:00Z' }));
     const fixture = create();
     fixture.componentInstance.form.setValue({ email: 'a@b.com', password: 'Passw0rd!' });
@@ -40,7 +40,7 @@ describe('LoginComponent', () => {
     fixture.componentInstance.submit();
 
     expect(login).toHaveBeenCalledWith('a@b.com', 'Passw0rd!');
-    expect(navSpy).toHaveBeenCalledWith(['/home']);
+    expect(navSpy).toHaveBeenCalledWith(['/board']);
   });
 
   it('shows a single generic message on 401 without navigating', () => {

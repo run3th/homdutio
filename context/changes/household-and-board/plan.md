@@ -439,30 +439,30 @@ data backfill is needed; existing users simply have no `HouseholdMember` row unt
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 Migration is additive only (no `AspNet*` table changes)
-- [x] 1.3 API integration tests pass: `dotnet test`
-- [x] 1.4 Migration applies cleanly to a fresh DB (via test run)
+- [x] 1.1 Solution builds: `dotnet build` — b2173c2
+- [x] 1.2 Migration is additive only (no `AspNet*` table changes) — b2173c2
+- [x] 1.3 API integration tests pass: `dotnet test` — b2173c2
+- [x] 1.4 Migration applies cleanly to a fresh DB (via test run) — b2173c2
 
 #### Manual
 
-- [x] 1.5 Create → second-create 409 verified with a bearer token
-- [x] 1.6 `GET /me` returns household for a member, 404/204 for a fresh user
-- [x] 1.7 No/invalid token → 401
+- [x] 1.5 Create → second-create 409 verified with a bearer token — b2173c2
+- [x] 1.6 `GET /me` returns household for a member, 404/204 for a fresh user — b2173c2
+- [x] 1.7 No/invalid token → 401 — b2173c2
 
 ### Phase 2: Frontend household service, routing & create flow
 
 #### Automated
 
-- [ ] 2.1 Frontend builds: `npm run build`
-- [ ] 2.2 Existing + updated vitest specs pass: `npm test`
+- [x] 2.1 Frontend builds: `npm run build`
+- [x] 2.2 Existing + updated vitest specs pass: `npm test`
 
 #### Manual
 
-- [ ] 2.3 New user logging in is routed to `/create-household`
-- [ ] 2.4 Submitting a name creates the household and lands on `/board` with the name
-- [ ] 2.5 Reload on `/board` redirects to `/login`; re-login returns to the board
-- [ ] 2.6 Visiting `/create-household` while in a household redirects to `/board`
+- [x] 2.3 New user logging in is routed to `/create-household`
+- [x] 2.4 Submitting a name creates the household and lands on `/board` with the name
+- [x] 2.5 Reload on `/board` redirects to `/login`; re-login returns to the board
+- [x] 2.6 Visiting `/create-household` while in a household redirects to `/board`
 
 ### Phase 3: Empty board UI
 

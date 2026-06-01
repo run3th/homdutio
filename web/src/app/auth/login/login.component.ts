@@ -58,7 +58,7 @@ export class LoginComponent {
     this.auth.login(email, password).subscribe({
       next: () => {
         this.pending.set(false);
-        void this.router.navigate(['/home']);
+        void this.router.navigate(['/board']);
       },
       error: () => {
         this.pending.set(false);
