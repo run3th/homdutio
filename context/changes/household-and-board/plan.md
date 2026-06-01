@@ -468,14 +468,14 @@ data backfill is needed; existing users simply have no `HouseholdMember` row unt
 
 #### Automated
 
-- [x] 3.1 Frontend builds: `npm run build`
-- [x] 3.2 All vitest specs pass: `npm test`
-- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [x] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` — d027b35
+- [x] 3.2 All vitest specs pass: `npm test` — d027b35
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release` — d027b35
+- [x] 3.4 Full backend suite still green: `dotnet test` — d027b35
 
 #### Manual
 
-- [x] 3.5 At 400px the board shows three columns with no horizontal scroll
-- [x] 3.6 Header shows household name and the correct role badge (Admin for creator)
-- [x] 3.7 Columns side-by-side above the breakpoint, stacked below
-- [x] 3.8 No references to the removed placeholder home; full flow works end-to-end
+- [x] 3.5 At 400px the board shows three columns with no horizontal scroll — d027b35
+- [x] 3.6 Header shows household name and the correct role badge (Admin for creator) — d027b35
+- [x] 3.7 Columns side-by-side above the breakpoint, stacked below — d027b35
+- [x] 3.8 No references to the removed placeholder home; full flow works end-to-end — d027b35
