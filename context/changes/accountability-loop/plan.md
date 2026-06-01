@@ -536,10 +536,10 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Automated
 
-- [x] 3.1 Frontend builds: `npm run build` (in `web/`)
-- [x] 3.2 All vitest specs pass: `npm test` (in `web/`)
-- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [x] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` (in `web/`) — 9a3e3a2
+- [x] 3.2 All vitest specs pass: `npm test` (in `web/`) — 9a3e3a2
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release` — 9a3e3a2
+- [x] 3.4 Full backend suite still green: `dotnet test` — 9a3e3a2
 
 #### Manual
 
