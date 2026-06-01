@@ -5,8 +5,18 @@ name: build-test-deploy
 on:
   pull_request:
     branches: [main]
+    # Docs/planning-only changes never affect the build artifact — skip the pipeline.
+    # A commit touching any non-ignored path still triggers normally.
+    paths-ignore:
+      - 'context/**'
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [main]
+    paths-ignore:
+      - 'context/**'
+      - 'docs/**'
+      - '**/*.md'
 
 # id-token:write is required by the Phase 3 deploy job's OIDC login (azure/login).
 # Declared at the top level so both jobs inherit it; build-test only reads contents.
