@@ -1,5 +1,6 @@
 using System.Text;
 using Homdutio.Api.Auth;
+using Homdutio.Api.Households;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -90,6 +91,7 @@ app.UseAuthorization();
 // Mapped before the SPA fallback so these routes return their payloads, not index.html.
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
+app.MapHouseholdEndpoints();
 
 app.MapFallbackToFile("index.html");
 

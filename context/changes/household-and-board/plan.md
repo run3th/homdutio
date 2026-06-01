@@ -439,16 +439,16 @@ data backfill is needed; existing users simply have no `HouseholdMember` row unt
 
 #### Automated
 
-- [ ] 1.1 Solution builds: `dotnet build`
-- [ ] 1.2 Migration is additive only (no `AspNet*` table changes)
-- [ ] 1.3 API integration tests pass: `dotnet test`
-- [ ] 1.4 Migration applies cleanly to a fresh DB (via test run)
+- [x] 1.1 Solution builds: `dotnet build`
+- [x] 1.2 Migration is additive only (no `AspNet*` table changes)
+- [x] 1.3 API integration tests pass: `dotnet test`
+- [x] 1.4 Migration applies cleanly to a fresh DB (via test run)
 
 #### Manual
 
-- [ ] 1.5 Create → second-create 409 verified with a bearer token
-- [ ] 1.6 `GET /me` returns household for a member, 404/204 for a fresh user
-- [ ] 1.7 No/invalid token → 401
+- [x] 1.5 Create → second-create 409 verified with a bearer token
+- [x] 1.6 `GET /me` returns household for a member, 404/204 for a fresh user
+- [x] 1.7 No/invalid token → 401
 
 ### Phase 2: Frontend household service, routing & create flow
 
