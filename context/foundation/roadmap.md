@@ -42,6 +42,7 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
+| S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | proposed |
 
 ## Streams
 
@@ -51,7 +52,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | ------ | ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | A      | Accountability spine   | `F-01` → `F-02` → `S-01` → `S-02` → `S-03` → `S-04` / `S-05` | The critical path to the north star (`S-03`); `S-04`/`S-05` branch off `S-03`. |
 | B      | Multiplayer & freshness| `F-03` → `S-06` → `S-09`                                     | Branches off `S-02`'s board; transport decided (polling), so F-03 is buildable.|
-| C      | Hardening & recovery   | `S-07` / `S-08`                                             | `S-07` hardens `S-03`; `S-08` extends `S-01`. Both run parallel to the spine.  |
+| C      | Hardening & recovery   | `S-07` / `S-08` / `S-10`                                    | `S-07` hardens `S-03`; `S-08` and `S-10` extend `S-01`. All run parallel to the spine. |
 | D      | Delivery automation    | `F-04`                                                      | Standalone infra; parallel with everything, gates no slice.                    |
 
 ## Baseline
@@ -237,6 +238,18 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Both FRs are nice-to-have, so this is sequenced last and gates nothing on the north-star path. Needs members to manage, hence the S-06 prerequisite.
 - **Status:** proposed
 
+### S-10: Session persistence (refresh-token flow)
+
+- **Outcome:** A logged-in user stays authenticated across a full page reload instead of being bounced to `/login`. The SPA keeps the access token in memory (no XSS-exposed storage) but, on startup, silently re-mints a short-lived access token from a persisted refresh credential — so a refresh, a reopened tab, or a returning session resumes without re-entering the password.
+- **Change ID:** session-persistence
+- **PRD refs:** Access Control (un-defers the refresh/revocation F-02 explicitly postponed)
+- **Prerequisites:** S-01 (builds on the SPA in-memory-token auth layer — `AuthService`, bearer/401 interceptors, guard — and the F-02 token pipeline)
+- **Parallel with:** S-02, S-03, S-04, S-05, S-06, S-07, S-08 (off the north-star path)
+- **Blockers:** —
+- **Unknowns:** Refresh-token transport + storage — **httpOnly cookie** (XSS-safe, but needs CSRF defense and a same-site/path decision) vs a refresh token in web storage (reintroduces the exact XSS exposure F-02 flagged). Lean httpOnly cookie; confirm during `/10x-plan`.
+- **Risk:** F-02 deliberately deferred refresh/revocation and S-01 kept the access token in memory only, accepting logout-on-reload as the v1 trade. This slice removes that UX cost **without** reintroducing XSS exposure: the access token stays in memory; a server-side `refresh` endpoint plus an httpOnly refresh cookie and a startup silent-refresh restore the session. It also adds the server-side token store F-02 noted as optional, which turns logout into real server-side revocation rather than a client-only token discard. Pure UX + security hardening; gates nothing on the north star. Watch token-rotation/replay handling and a clean expiry path (refresh expired → land on `/login`, no redirect loop).
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                     | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
@@ -254,6 +267,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | no                    | Needs S-03; worst-bug guardrail |
 | S-08       | password-reset                | Password reset via emailed link                             | no                    | Needs S-01; email via SendGrid (Open Q #2 resolved) |
 | S-09       | member-administration         | Admin promote / remove member                               | no                    | Nice-to-have; needs S-06 |
+| S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | yes                   | Needs S-01 (done); un-defers F-02 refresh/revocation; lean httpOnly cookie |
 
 This table is the clean handoff to Jira/Linear or any MCP-backed backlog. One row per `F-NN` and `S-NN`.
 
