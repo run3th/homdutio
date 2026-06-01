@@ -454,28 +454,28 @@ data backfill is needed; existing users simply have no `HouseholdMember` row unt
 
 #### Automated
 
-- [x] 2.1 Frontend builds: `npm run build`
-- [x] 2.2 Existing + updated vitest specs pass: `npm test`
+- [x] 2.1 Frontend builds: `npm run build` — 9523d78
+- [x] 2.2 Existing + updated vitest specs pass: `npm test` — 9523d78
 
 #### Manual
 
-- [x] 2.3 New user logging in is routed to `/create-household`
-- [x] 2.4 Submitting a name creates the household and lands on `/board` with the name
-- [x] 2.5 Reload on `/board` redirects to `/login`; re-login returns to the board
-- [x] 2.6 Visiting `/create-household` while in a household redirects to `/board`
+- [x] 2.3 New user logging in is routed to `/create-household` — 9523d78
+- [x] 2.4 Submitting a name creates the household and lands on `/board` with the name — 9523d78
+- [x] 2.5 Reload on `/board` redirects to `/login`; re-login returns to the board — 9523d78
+- [x] 2.6 Visiting `/create-household` while in a household redirects to `/board` — 9523d78
 
 ### Phase 3: Empty board UI
 
 #### Automated
 
-- [ ] 3.1 Frontend builds: `npm run build`
-- [ ] 3.2 All vitest specs pass: `npm test`
-- [ ] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [ ] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build`
+- [x] 3.2 All vitest specs pass: `npm test`
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
+- [x] 3.4 Full backend suite still green: `dotnet test`
 
 #### Manual
 
-- [ ] 3.5 At 400px the board shows three columns with no horizontal scroll
-- [ ] 3.6 Header shows household name and the correct role badge (Admin for creator)
-- [ ] 3.7 Columns side-by-side above the breakpoint, stacked below
-- [ ] 3.8 No references to the removed placeholder home; full flow works end-to-end
+- [x] 3.5 At 400px the board shows three columns with no horizontal scroll
+- [x] 3.6 Header shows household name and the correct role badge (Admin for creator)
+- [x] 3.7 Columns side-by-side above the breakpoint, stacked below
+- [x] 3.8 No references to the removed placeholder home; full flow works end-to-end

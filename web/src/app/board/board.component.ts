@@ -3,9 +3,10 @@ import { Component, inject } from '@angular/core';
 import { HouseholdService } from '../household/household.service';
 
 /**
- * The household board. Phase 2 ships a minimal placeholder so the membership guard has a redirect
- * target and the create flow is verifiable end-to-end; Phase 3 replaces the template with the real
- * header (name + role badge) and the three responsive columns.
+ * The household board (S-02). Renders the household identity (name + role badge) and three empty,
+ * responsive columns. There is no task data yet — the columns are static markup whose layout (mobile
+ * stack → side-by-side above a breakpoint, no horizontal scroll at ≤ 400px per NFR-2) is inherited by
+ * every later board slice.
  */
 @Component({
   selector: 'app-board',
@@ -17,4 +18,7 @@ export class BoardComponent {
   private readonly households = inject(HouseholdService);
 
   readonly household = this.households.current;
+
+  /** The three fixed board columns (English labels; no i18n in v1). */
+  readonly columns = ['To do', 'In progress', 'Done'] as const;
 }

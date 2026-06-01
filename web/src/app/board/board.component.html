@@ -1,6 +1,17 @@
-<div class="page">
-  <div class="card">
+<div class="board">
+  <header class="board-header">
     <h1>{{ household()?.name }}</h1>
-    <p class="placeholder-note">Your board is coming together — columns arrive next.</p>
+    @if (household(); as h) {
+      <span class="role-badge" [class.role-badge--admin]="h.role === 'Admin'">{{ h.role }}</span>
+    }
+  </header>
+
+  <div class="columns">
+    @for (column of columns; track column) {
+      <section class="column">
+        <h2 class="column-title">{{ column }}</h2>
+        <p class="column-empty">No tasks yet</p>
+      </section>
+    }
   </div>
 </div>
