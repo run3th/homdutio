@@ -172,9 +172,9 @@ jobs:
               if ($r.StatusCode -eq 200 -and $r.Content -match "Healthy") {
                 $ok = $true; Write-Host "Smoke OK ($i): /health -> Healthy"; break
               }
-              Write-Host "Attempt $i: status $($r.StatusCode), body '$($r.Content)'"
+              Write-Host "Attempt ${i}: status $($r.StatusCode), body '$($r.Content)'"
             } catch {
-              Write-Host "Attempt $i: $($_.Exception.Message)"
+              Write-Host "Attempt ${i}: $($_.Exception.Message)"
             }
             Start-Sleep -Seconds 15
           }
