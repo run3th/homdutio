@@ -2,7 +2,7 @@
 change_id: account-access
 roadmap_id: S-01
 title: Account access (register, log in, log out)
-status: implementing
+status: implemented
 created: 2026-06-01
 updated: 2026-06-01
 prerequisites: [persistence-baseline, auth-identity-plumbing]

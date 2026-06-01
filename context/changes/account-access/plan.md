@@ -438,24 +438,24 @@ without migration concern.
 
 #### Manual
 
-- [x] 1.4 Interceptor wiring compiles/registers; protected-call 401 redirect path confirmed (with Phase 2 routes)
+- [x] 1.4 Interceptor wiring compiles/registers; protected-call 401 redirect path confirmed (with Phase 2 routes) — a3f3800
 - [x] 1.5 Token held only in memory (not in localStorage/sessionStorage) — 315b307
 
 ### Phase 2: Auth UI, Routing & Placeholder Home
 
 #### Automated
 
-- [x] 2.1 Build clean: `npm run build` (from `web/`)
-- [x] 2.2 Release build exercises SPA bundle: `dotnet build Homdutio.sln -c Release` succeeds
-- [x] 2.3 Unit/component tests pass: `npm test` — login, register (auto-login + error mapping), home/logout, updated app.spec
-- [x] 2.4 No starter content remains: `git grep -i "Congratulations" web/src` and welcome-pills grep empty
+- [x] 2.1 Build clean: `npm run build` (from `web/`) — a3f3800
+- [x] 2.2 Release build exercises SPA bundle: `dotnet build Homdutio.sln -c Release` succeeds — a3f3800
+- [x] 2.3 Unit/component tests pass: `npm test` — login, register (auto-login + error mapping), home/logout, updated app.spec — a3f3800
+- [x] 2.4 No starter content remains: `git grep -i "Congratulations" web/src` and welcome-pills grep empty — a3f3800
 
 #### Manual
 
-- [x] 2.5 Register valid → `/login` with notice + prefilled email; log in → `/home` shows email; logout → `/login`
-- [x] 2.6 Register weak password / duplicate email → server's mapped message shown; rules visible pre-submit
-- [x] 2.7 Login valid → `/home`; login wrong creds → generic "invalid email or password"
-- [x] 2.8 Logged out, direct nav to `/home` → redirect to `/login`
-- [x] 2.9 Protected-call 401 (expiry/tamper) → discard auth + redirect to `/login`
-- [x] 2.10 Login/register/home usable at ≤ 400px, no horizontal scroll (NFR-2)
-- [x] 2.11 `/health` and `/api/auth/*` unaffected; SPA fallback serves Angular routes
+- [x] 2.5 Register valid → `/login` with notice + prefilled email; log in → `/home` shows email; logout → `/login` — a3f3800
+- [x] 2.6 Register weak password / duplicate email → server's mapped message shown; rules visible pre-submit — a3f3800
+- [x] 2.7 Login valid → `/home`; login wrong creds → generic "invalid email or password" — a3f3800
+- [x] 2.8 Logged out, direct nav to `/home` → redirect to `/login` — a3f3800
+- [x] 2.9 Protected-call 401 (expiry/tamper) → discard auth + redirect to `/login` — a3f3800
+- [x] 2.10 Login/register/home usable at ≤ 400px, no horizontal scroll (NFR-2) — a3f3800
+- [x] 2.11 `/health` and `/api/auth/*` unaffected; SPA fallback serves Angular routes — a3f3800
