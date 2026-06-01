@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
 import { HouseholdService } from '../household/household.service';
+import { TaskService } from '../board/task.service';
 
 /** Request body shared by register and login (matches the F-02 endpoints). */
 export interface AuthRequest {
@@ -27,6 +28,7 @@ export interface LoginResponse {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly households = inject(HouseholdService);
+  private readonly tasks = inject(TaskService);
 
   /** The in-memory access token; `null` when logged out. */
   private readonly _token = signal<string | null>(null);
@@ -43,9 +45,12 @@ export class AuthService {
     return this._token();
   }
 
-  /** `POST /api/auth/register` — 200 (empty body) on success; 400 ValidationProblem on failure. */
-  register(email: string, password: string): Observable<void> {
-    return this.http.post<void>('/api/auth/register', { email, password } satisfies AuthRequest);
+  /**
+   * `POST /api/auth/register` — 200 (empty body) on success; 400 ValidationProblem on failure.
+   * `displayName` is optional; the backend falls back to the email local-part when it is blank.
+   */
+  register(email: string, password: string, displayName?: string): Observable<void> {
+    return this.http.post<void>('/api/auth/register', { email, password, displayName });
   }
 
   /** `POST /api/auth/login` — stores the token + email on success; 401 on bad credentials. */
@@ -68,5 +73,6 @@ export class AuthService {
     this._token.set(null);
     this._email.set(null);
     this.households.clearOnLogout();
+    this.tasks.clearOnLogout();
   }
 }

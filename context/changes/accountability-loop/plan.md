@@ -506,10 +506,10 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 Migration is additive only (two new tables + `DisplayName` column) — confirmed by reviewing the generated `Up`
-- [x] 1.3 API integration tests pass: `dotnet test`
-- [x] 1.4 Migration applies cleanly to a fresh DB (via test run)
+- [x] 1.1 Solution builds: `dotnet build` — d0b3b71
+- [x] 1.2 Migration is additive only (two new tables + `DisplayName` column) — confirmed by reviewing the generated `Up` — d0b3b71
+- [x] 1.3 API integration tests pass: `dotnet test` — d0b3b71
+- [x] 1.4 Migration applies cleanly to a fresh DB (via test run) — d0b3b71
 
 #### Manual
 
@@ -522,8 +522,8 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Automated
 
-- [ ] 2.1 Frontend builds: `npm run build` (in `web/`)
-- [ ] 2.2 Existing + updated vitest specs pass: `npm test` (in `web/`)
+- [x] 2.1 Frontend builds: `npm run build` (in `web/`)
+- [x] 2.2 Existing + updated vitest specs pass: `npm test` (in `web/`)
 
 #### Manual
 

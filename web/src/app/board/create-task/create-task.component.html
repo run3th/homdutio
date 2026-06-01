@@ -1,0 +1,33 @@
+<form class="create-task" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <h2 class="create-task-title">Add a task</h2>
+
+  @if (errors().length) {
+    <div class="form-error" role="alert">
+      @for (message of errors(); track message) {
+        <p>{{ message }}</p>
+      }
+    </div>
+  }
+
+  <div class="field">
+    <label for="task-title">Title</label>
+    <input id="task-title" type="text" formControlName="title" autocomplete="off" />
+    @if (form.controls.title.touched && form.controls.title.invalid) {
+      <span class="field-error">A task title is required.</span>
+    }
+  </div>
+
+  <div class="field">
+    <label for="task-description">Description <span class="optional">(optional)</span></label>
+    <input id="task-description" type="text" formControlName="description" autocomplete="off" />
+  </div>
+
+  <div class="field">
+    <label for="task-category">Category <span class="optional">(optional)</span></label>
+    <input id="task-category" type="text" formControlName="category" autocomplete="off" />
+  </div>
+
+  <button type="submit" [disabled]="pending()">
+    {{ pending() ? 'Adding…' : 'Add task' }}
+  </button>
+</form>

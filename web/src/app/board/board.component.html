@@ -6,11 +6,44 @@
     }
   </header>
 
+  <app-create-task />
+
   <div class="columns">
-    @for (column of columns; track column) {
+    @for (column of columns; track column.status) {
+      @let columnTasks = tasksFor(column.status);
       <section class="column">
-        <h2 class="column-title">{{ column }}</h2>
-        <p class="column-empty">No tasks yet</p>
+        <h2 class="column-title">{{ column.label }}</h2>
+        @if (columnTasks.length === 0) {
+          <p class="column-empty">No tasks yet</p>
+        } @else {
+          @for (task of columnTasks; track task.id) {
+            <article class="task-card">
+              <h3 class="task-title">{{ task.title }}</h3>
+              @if (task.category) {
+                <span class="task-category">{{ task.category }}</span>
+              }
+              @if (task.description) {
+                <p class="task-description">{{ task.description }}</p>
+              }
+              <dl class="task-meta">
+                <div class="task-meta-row">
+                  <dt>Created by</dt>
+                  <dd>{{ task.createdByName }}</dd>
+                </div>
+                @if (task.claimerName) {
+                  <div class="task-meta-row">
+                    <dt>Claimed by</dt>
+                    <dd>{{ task.claimerName }}</dd>
+                  </div>
+                }
+                <div class="task-meta-row">
+                  <dt>Created</dt>
+                  <dd>{{ task.createdAtUtc | date: 'short' }}</dd>
+                </div>
+              </dl>
+            </article>
+          }
+        }
       </section>
     }
   </div>

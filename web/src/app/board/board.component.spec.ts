@@ -1,16 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 
 import { BoardComponent } from './board.component';
 import { Household, HouseholdService } from '../household/household.service';
+import { Task, TaskService } from './task.service';
 
 describe('BoardComponent', () => {
   const current = signal<Household | null>({ id: 'h1', name: 'The Burrow', role: 'Admin' });
+  const tasks = signal<Task[]>([]);
 
   beforeEach(() => {
+    tasks.set([]);
     TestBed.configureTestingModule({
       imports: [BoardComponent],
-      providers: [{ provide: HouseholdService, useValue: { current } }],
+      providers: [
+        { provide: HouseholdService, useValue: { current } },
+        { provide: TaskService, useValue: { current: tasks.asReadonly(), load: () => of(tasks()) } },
+      ],
     });
   });
 

@@ -46,6 +46,8 @@ export class RegisterComponent {
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
+    // Optional: the backend defaults DisplayName from the email local-part when blank (S-03).
+    displayName: [''],
     password: ['', [Validators.required, passwordPolicyValidator]],
   });
 
@@ -62,8 +64,8 @@ export class RegisterComponent {
     this.serverErrors.set([]);
     this.pending.set(true);
 
-    const { email, password } = this.form.getRawValue();
-    this.auth.register(email, password).subscribe({
+    const { email, displayName, password } = this.form.getRawValue();
+    this.auth.register(email, password, displayName.trim() || undefined).subscribe({
       next: () => {
         this.pending.set(false);
         // No auto-login: send the user to /login to authenticate explicitly, carrying a

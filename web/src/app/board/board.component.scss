@@ -63,6 +63,68 @@
   font-size: 0.875rem;
 }
 
+/* Task cards: full-width within their column so they never force horizontal scroll at ≤ 400px (NFR-2). */
+.task-card {
+  background: #f9fafb;
+  border: 1px solid #eceef1;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.task-card:last-child {
+  margin-bottom: 0;
+}
+
+.task-title {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.task-category {
+  display: inline-block;
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.375rem;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.task-description {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: #444;
+  overflow-wrap: anywhere;
+}
+
+.task-meta {
+  margin: 0.625rem 0 0;
+  font-size: 0.8125rem;
+  color: #555;
+}
+
+.task-meta-row {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.task-meta-row dt {
+  font-weight: 600;
+}
+
+.task-meta-row dt::after {
+  content: ':';
+}
+
+.task-meta-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 /* Wider screens: three columns side by side. */
 @media (min-width: 640px) {
   .columns {

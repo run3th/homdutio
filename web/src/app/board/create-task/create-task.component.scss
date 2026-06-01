@@ -1,0 +1,28 @@
+:host {
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+/* A compact panel on the board (not a full-page card). Full-width so it never overflows at ≤ 400px. */
+.create-task {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.create-task-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.optional {
+  font-weight: 400;
+  color: #888;
+}
+
+/* The submit button is auto-width here rather than full-bleed, but still a comfortable tap target. */
+.create-task button[type='submit'] {
+  width: auto;
+  min-width: 8rem;
+}
