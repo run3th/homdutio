@@ -30,10 +30,10 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | ID    | Change ID                     | Outcome (user can …)                                                  | Prerequisites | PRD refs                                          | Status   |
 | ----- | ----------------------------- | --------------------------------------------------------------------- | ------------- | ------------------------------------------------- | -------- |
 | F-01  | persistence-baseline          | (foundation) EF Core + provisioned Azure SQL wired; data persists     | —             | NFR-3                                             | done     |
-| F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + JWT bearer pipeline issuing tokens     | F-01          | Access Control                                    | proposed |
+| F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + JWT bearer pipeline issuing tokens     | F-01          | Access Control                                    | done     |
 | F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | ready    |
 | F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | done     |
-| S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | proposed |
+| S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | done     |
 | S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | proposed |
 | S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | proposed |
 | S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | proposed |
@@ -62,7 +62,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Frontend:** present — Angular 21 SPA in `web/`, built into `wwwroot/` via the `BuildAngularSpa` MSBuild target; router wired but only the default shell (no feature UI, no component/drag-reorder libs). Tests: vitest.
 - **Backend / API:** partial — ASP.NET Core .NET 9 minimal API (`src/Homdutio.Api/Program.cs`); only the template `/weatherforecast` endpoint + SPA fallback. No `/api` controllers or domain routes.
 - **Data:** present (F-01, 2026-05-30) — EF Core 9 + `ApplicationDbContext` in a `Homdutio.Data` library, `InitialCreate` migration applied to LocalDB + Azure SQL Basic (`homdutio-db`), connection string via user-secrets (local) / App Service connection-strings (prod). Schema is plumbing only (throwaway `SchemaProbe`); real domain tables arrive with their slices.
-- **Auth:** absent — no ASP.NET Core Identity package, no auth middleware, no JWT config (roadmap decision: Identity user store + JWT bearer tokens — supersedes `tech-stack.md`'s cookie-auth note; unwired).
+- **Auth:** present — ASP.NET Core Identity on the EF store + HS256 JWT bearer pipeline (F-02, 2026-05-31): `register`/`login`/`me` endpoints in `src/Homdutio.Api/Auth/`, stateless tokens, Identity default password policy, signing key via App Service settings. SPA auth layer wired on top (S-01, 2026-06-01): in-memory token, bearer/401 interceptors, guard, login/register/home UI. JWT bearer supersedes `tech-stack.md`'s cookie-auth note. No refresh/revocation yet (deferred).
 - **Deploy / infra:** present — Azure App Service live (B1, Poland Central, HTTPS-only) at `homdutio.azurewebsites.net`. Azure SQL Basic provisioned + wired (F-01, 2026-05-30). GitHub Actions pipeline live (F-04, 2026-06-01): push to `main` → build + test gate → migrate-first → deploy → `/health` smoke test, OIDC auth, replacing the manual zip step. Budget alert still pending (combined run-rate ≈ $18/mo).
 - **Observability:** absent — default ASP.NET console logging only; no error tracking, structured logging, metrics, or dashboards.
 
@@ -94,7 +94,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:** —
 - **Decision (2026-05-30):** JWT bearer tokens, not cookie sessions. Keeps the first-party Identity user store but makes the API stateless — sidestepping the data-protection key-ring logout-on-restart/scale-out footgun the cookie path carried (infra risk register). This supersedes `tech-stack.md`'s cookie-auth recommendation; the trade is that the Angular SPA now owns token storage and refresh.
 - **Risk:** Stateless JWT removes the key-ring concern but moves responsibility to two new places: a **signing key/secret** (store in App Service settings / Key Vault, never the repo) and **SPA token handling** (storage + refresh, and avoiding XSS-exposed tokens). Logout becomes client-side token discard plus short token lifetimes (optionally a server-side revocation/refresh-token store if instant invalidation is needed — defer unless required). Scope is the auth pipeline only; it completes no user-facing capability on its own.
-- **Status:** proposed
+- **Delivered (2026-05-31):** ASP.NET Core Identity mounted on the EF store + HS256 JWT bearer pipeline (`src/Homdutio.Api/Auth/` — `AuthEndpoints.cs`, `JwtTokenService.cs`, `JwtOptions.cs`). Endpoints: `POST /api/auth/register` (200 / 400 `ValidationProblem`), `POST /api/auth/login` (200 `{ accessToken, expiresAtUtc }` / 401), JWT-protected `GET /api/auth/me`. Stateless, `MapInboundClaims=false`, Identity default password policy; lazy JWT/DB config with xUnit integration tests (`AuthEndpointsTests.cs`). 3 phases + epilogue, commit `c4e7059`. Consumed by S-01 with no backend changes.
+- **Status:** done
 
 ### F-03: Live-update transport
 
@@ -136,7 +137,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** The onboarding entry point — Success Criteria step 1 depends on it. Conventional Identity flow on the JWT pipeline from F-02; low novelty. Logout is a client-side token discard (no server session to drop), so keep token lifetimes short.
-- **Status:** proposed
+- **Delivered (2026-06-01):** Angular SPA auth layer on the F-02 backend — `provideHttpClient` + bearer/401 functional interceptors, `AuthService` (in-memory token signal, no persistent storage), functional `authGuard`, dev proxy. Reactive-form login/register with client validation + mapped `ValidationProblem` errors; **after register the user is routed to `/login`** with a success notice + prefilled email (explicit login, no auto-login — decided during planning); placeholder guarded home with client-side logout; starter shell removed. Mobile-first ≤400px (NFR-2); 25 vitest specs; Release build exercises `BuildAngularSpa`. 2 phases + epilogue, commit `3b318e2`. Not yet archived.
+- **Status:** done
 
 ### S-02: Household and board
 
@@ -240,10 +242,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                     | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
 | ---------- | ----------------------------- | ---------------------------------------------------------- | --------------------- | ----- |
 | F-01       | persistence-baseline          | Wire EF Core + provisioned Azure SQL persistence baseline   | done                  | Delivered 2026-05-30 (`74225da`); prod `/health` verify deferred to F-04 |
-| F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + JWT bearer pipeline                | no                    | Needs F-01; JWT, not cookie sessions |
+| F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + JWT bearer pipeline                | done                  | Delivered 2026-05-31 (`c4e7059`); JWT, not cookie sessions; consumed by S-01 |
 | F-03       | live-update-transport         | Establish 5s live-update transport via polling              | yes                   | Transport decided: polling (Open Q #1 resolved) |
 | F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | done                  | Delivered 2026-06-01; prod `/health` green against Azure SQL |
-| S-01       | account-access                | Register, log in, log out                                   | no                    | Needs F-01, F-02 |
+| S-01       | account-access                | Register, log in, log out                                   | done                  | Delivered 2026-06-01 (`3b318e2`); not yet archived |
 | S-02       | household-and-board           | Create household + empty mobile-first kanban board          | no                    | Needs S-01 |
 | S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | no                    | North star; needs S-02 |
 | S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | no                    | Needs S-03 |
