@@ -41,6 +41,24 @@
                   <dd>{{ task.createdAtUtc | date: 'short' }}</dd>
                 </div>
               </dl>
+
+              @if (task.canClaim || task.canMarkDone || task.canConfirm) {
+                <div class="task-actions">
+                  @if (task.canClaim) {
+                    <button type="button" class="task-action" (click)="claim(task)">Claim</button>
+                  }
+                  @if (task.canMarkDone) {
+                    <button type="button" class="task-action" (click)="markDone(task)">
+                      Mark done
+                    </button>
+                  }
+                  @if (task.canConfirm) {
+                    <button type="button" class="task-action" (click)="confirm(task)">
+                      {{ task.willSelfAttest ? 'Confirm (self-attested)' : 'Confirm' }}
+                    </button>
+                  }
+                </div>
+              }
             </article>
           }
         }

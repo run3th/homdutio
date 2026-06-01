@@ -9,33 +9,124 @@ import { Task, TaskService } from './task.service';
 describe('BoardComponent', () => {
   const current = signal<Household | null>({ id: 'h1', name: 'The Burrow', role: 'Admin' });
   const tasks = signal<Task[]>([]);
+  let load: ReturnType<typeof vi.fn>;
+  let claim: ReturnType<typeof vi.fn>;
+  let markDone: ReturnType<typeof vi.fn>;
+  let confirm: ReturnType<typeof vi.fn>;
+
+  function baseTask(overrides: Partial<Task>): Task {
+    return {
+      id: 't1',
+      title: 'Take out bins',
+      description: null,
+      category: null,
+      status: 'ToDo',
+      createdByName: 'Molly',
+      claimerName: null,
+      createdAtUtc: '2026-06-01T10:00:00Z',
+      canClaim: false,
+      canMarkDone: false,
+      canConfirm: false,
+      willSelfAttest: false,
+      ...overrides,
+    };
+  }
 
   beforeEach(() => {
     tasks.set([]);
+    load = vi.fn(() => of(tasks()));
+    claim = vi.fn(() => of(tasks()));
+    markDone = vi.fn(() => of(tasks()));
+    confirm = vi.fn(() => of(tasks()));
     TestBed.configureTestingModule({
       imports: [BoardComponent],
       providers: [
         { provide: HouseholdService, useValue: { current } },
-        { provide: TaskService, useValue: { current: tasks.asReadonly(), load: () => of(tasks()) } },
+        {
+          provide: TaskService,
+          useValue: { current: tasks.asReadonly(), load, claim, markDone, confirm },
+        },
       ],
     });
   });
 
-  function render(): HTMLElement {
+  function render() {
     const fixture = TestBed.createComponent(BoardComponent);
     fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
+    return fixture;
   }
 
   it('renders the household name and role badge', () => {
-    const el = render();
+    const el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.board-header h1')?.textContent).toContain('The Burrow');
     expect(el.querySelector('.role-badge')?.textContent).toContain('Admin');
   });
 
-  it('renders the three column labels', () => {
-    const el = render();
+  it('renders the three column labels and loads on init', () => {
+    const el = render().nativeElement as HTMLElement;
     const titles = Array.from(el.querySelectorAll('.column-title')).map((n) => n.textContent?.trim());
     expect(titles).toEqual(['To do', 'In progress', 'Done']);
+    expect(load).toHaveBeenCalled();
+  });
+
+  it('groups tasks into the correct columns', () => {
+    tasks.set([
+      baseTask({ id: 'a', status: 'ToDo' }),
+      baseTask({ id: 'b', status: 'InProgress' }),
+      baseTask({ id: 'c', status: 'Done' }),
+    ]);
+    const el = render().nativeElement as HTMLElement;
+    const columns = el.querySelectorAll('.column');
+    expect(columns[0].querySelectorAll('.task-card').length).toBe(1);
+    expect(columns[1].querySelectorAll('.task-card').length).toBe(1);
+    expect(columns[2].querySelectorAll('.task-card').length).toBe(1);
+  });
+
+  it('renders only the affordance-permitted buttons', () => {
+    tasks.set([baseTask({ id: 'a', status: 'ToDo', canClaim: true })]);
+    const el = render().nativeElement as HTMLElement;
+    const labels = Array.from(el.querySelectorAll('.task-action')).map((b) => b.textContent?.trim());
+    expect(labels).toEqual(['Claim']);
+  });
+
+  it('labels a self-attested confirm distinctly', () => {
+    tasks.set([baseTask({ id: 'a', status: 'Done', canConfirm: true, willSelfAttest: true })]);
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.task-action')?.textContent?.trim()).toBe('Confirm (self-attested)');
+  });
+
+  it('a plain confirm (not self-attested) has no hint', () => {
+    tasks.set([baseTask({ id: 'a', status: 'Done', canConfirm: true, willSelfAttest: false })]);
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.task-action')?.textContent?.trim()).toBe('Confirm');
+  });
+
+  it('clicking Claim calls the service', () => {
+    tasks.set([baseTask({ id: 'a', status: 'ToDo', canClaim: true })]);
+    const fixture = render();
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '.task-action',
+    ) as HTMLButtonElement;
+
+    button.click();
+
+    expect(claim).toHaveBeenCalledWith('a');
+  });
+
+  it('a confirmed task drops off the board after the refetch', () => {
+    tasks.set([baseTask({ id: 'a', status: 'Done', canConfirm: true })]);
+    // The service's confirm refetches; simulate the closed task no longer returning.
+    confirm.mockImplementation(() => {
+      tasks.set([]);
+      return of(tasks());
+    });
+    const fixture = render();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.task-card').length).toBe(1);
+
+    fixture.componentInstance.confirm(baseTask({ id: 'a', status: 'Done', canConfirm: true }));
+    fixture.detectChanges();
+
+    expect(el.querySelectorAll('.task-card').length).toBe(0);
   });
 });

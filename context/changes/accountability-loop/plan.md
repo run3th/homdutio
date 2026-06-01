@@ -522,8 +522,8 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Automated
 
-- [x] 2.1 Frontend builds: `npm run build` (in `web/`)
-- [x] 2.2 Existing + updated vitest specs pass: `npm test` (in `web/`)
+- [x] 2.1 Frontend builds: `npm run build` (in `web/`) — 8e4a601
+- [x] 2.2 Existing + updated vitest specs pass: `npm test` (in `web/`) — 8e4a601
 
 #### Manual
 
@@ -536,10 +536,10 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Automated
 
-- [ ] 3.1 Frontend builds: `npm run build` (in `web/`)
-- [ ] 3.2 All vitest specs pass: `npm test` (in `web/`)
-- [ ] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [ ] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` (in `web/`)
+- [x] 3.2 All vitest specs pass: `npm test` (in `web/`)
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
+- [x] 3.4 Full backend suite still green: `dotnet test`
 
 #### Manual
 
