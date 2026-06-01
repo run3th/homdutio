@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-05-30
+updated: 2026-06-01
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -32,7 +32,7 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | F-01  | persistence-baseline          | (foundation) EF Core + provisioned Azure SQL wired; data persists     | —             | NFR-3                                             | done     |
 | F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + JWT bearer pipeline issuing tokens     | F-01          | Access Control                                    | proposed |
 | F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | ready    |
-| F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | ready    |
+| F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | done     |
 | S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | proposed |
 | S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | proposed |
 | S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | proposed |
@@ -63,7 +63,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Backend / API:** partial — ASP.NET Core .NET 9 minimal API (`src/Homdutio.Api/Program.cs`); only the template `/weatherforecast` endpoint + SPA fallback. No `/api` controllers or domain routes.
 - **Data:** present (F-01, 2026-05-30) — EF Core 9 + `ApplicationDbContext` in a `Homdutio.Data` library, `InitialCreate` migration applied to LocalDB + Azure SQL Basic (`homdutio-db`), connection string via user-secrets (local) / App Service connection-strings (prod). Schema is plumbing only (throwaway `SchemaProbe`); real domain tables arrive with their slices.
 - **Auth:** absent — no ASP.NET Core Identity package, no auth middleware, no JWT config (roadmap decision: Identity user store + JWT bearer tokens — supersedes `tech-stack.md`'s cookie-auth note; unwired).
-- **Deploy / infra:** partial — Azure App Service live (B1, Poland Central, HTTPS-only) at `homdutio.azurewebsites.net`, scaffold zip-deployed manually. Azure SQL Basic now provisioned + wired (F-01, 2026-05-30). Still no GitHub Actions workflow and no budget alert (combined run-rate ≈ $18/mo).
+- **Deploy / infra:** present — Azure App Service live (B1, Poland Central, HTTPS-only) at `homdutio.azurewebsites.net`. Azure SQL Basic provisioned + wired (F-01, 2026-05-30). GitHub Actions pipeline live (F-04, 2026-06-01): push to `main` → build + test gate → migrate-first → deploy → `/health` smoke test, OIDC auth, replacing the manual zip step. Budget alert still pending (combined run-rate ≈ $18/mo).
 - **Observability:** absent — default ASP.NET console logging only; no error tracking, structured logging, metrics, or dashboards.
 
 ## Foundations
@@ -79,8 +79,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Sequenced first because nothing persists without it. Provisioned Basic SQL caps at 2 GB / 5 DTU (infra risk register) and EF migrations do not auto-roll-back — keep migrations backward-compatible from day one. Scope is the DbContext + DB plumbing only; domain entities arrive with the slices that need them.
-- **Delivered (2026-05-30):** EF Core 9 + `ApplicationDbContext` wired (split `Homdutio.Data` library); `InitialCreate` migration applied to both LocalDB and the provisioned Azure SQL **Basic** `homdutio-db`; `/health` DB-connectivity check + xUnit smoke test in place; connection string lives only in user-secrets (local) and App Service connection-strings (prod). Provisioning recorded in `deploy-plan.md` (commit `74225da`). **Carry-over:** deployed `/health` not yet verified against Azure SQL — the live artifact predates the `/health` + DbContext code; verify after F-04 CI or a manual redeploy. Budget alert still pending (now recommended; combined run-rate ≈ $18/mo).
-- **Status:** done (prod `/health` verification deferred — see carry-over)
+- **Delivered (2026-05-30):** EF Core 9 + `ApplicationDbContext` wired (split `Homdutio.Data` library); `InitialCreate` migration applied to both LocalDB and the provisioned Azure SQL **Basic** `homdutio-db`; `/health` DB-connectivity check + xUnit smoke test in place; connection string lives only in user-secrets (local) and App Service connection-strings (prod). Provisioning recorded in `deploy-plan.md` (commit `74225da`). **Carry-over RESOLVED (2026-06-01):** prod `/health` now verified `Healthy` against Azure SQL via the F-04 CI deploy (App Service ↔ SQL DbContext connectivity confirmed). Budget alert still pending (now recommended; combined run-rate ≈ $18/mo).
+- **Status:** done
 
 ### F-02: Auth + identity plumbing
 
@@ -121,7 +121,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Low — manual zip deploy already works, so this is hygiene, not a gate. Without it, every after-hours ship is a hand-built zip with a known forward-slash pitfall on Windows; automating it removes that footgun. Use OIDC over a stored publish profile.
-- **Status:** ready
+- **Delivered (2026-06-01):** `.github/workflows/deploy.yml` runs the full pipeline on push to `main` — Release build (bundling the Angular SPA) + .NET/Vitest tests → gated `Deploy (production)` job that opens a temporary SQL firewall rule, applies EF migrations (migrate-first, before code swap), deploys to App Service, and smoke-tests `/health`. Auth is OIDC (no stored publish profile). Shakeout fixed four issues in sequence: local `dotnet-ef` tool restore (manifest pin 9.0.9, not a global install), the prod Azure SQL connection-string secret, a PowerShell `${i}` parser bug in the smoke step, and App Service ↔ Azure SQL connectivity for the DbContext health check. End-to-end green: prod `/health` reports `Healthy` against Azure SQL.
+- **Status:** done
 
 ## Slices
 
@@ -241,7 +242,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-01       | persistence-baseline          | Wire EF Core + provisioned Azure SQL persistence baseline   | done                  | Delivered 2026-05-30 (`74225da`); prod `/health` verify deferred to F-04 |
 | F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + JWT bearer pipeline                | no                    | Needs F-01; JWT, not cookie sessions |
 | F-03       | live-update-transport         | Establish 5s live-update transport via polling              | yes                   | Transport decided: polling (Open Q #1 resolved) |
-| F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | yes                   | Parallel infra; gates no slice |
+| F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | done                  | Delivered 2026-06-01; prod `/health` green against Azure SQL |
 | S-01       | account-access                | Register, log in, log out                                   | no                    | Needs F-01, F-02 |
 | S-02       | household-and-board           | Create household + empty mobile-first kanban board          | no                    | Needs S-01 |
 | S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | no                    | North star; needs S-02 |
