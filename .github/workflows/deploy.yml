@@ -123,7 +123,11 @@ jobs:
             --start-ip-address $ip --end-ip-address $ip --only-show-errors
 
       - name: Install dotnet-ef
-        run: dotnet tool install --global dotnet-ef --version 9.0.*
+        # Global tools land in %USERPROFILE%\.dotnet\tools, which is NOT on PATH for
+        # later steps by default — add it to GITHUB_PATH so `dotnet ef` resolves.
+        run: |
+          dotnet tool install --global dotnet-ef --version 9.0.*
+          echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
 
       # Migrate BEFORE deploying code (expand pattern). If this fails, the job stops
       # before the code swap, leaving the prior working build live. The connection
