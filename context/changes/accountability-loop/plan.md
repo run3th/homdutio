@@ -506,10 +506,10 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Automated
 
-- [ ] 1.1 Solution builds: `dotnet build`
-- [ ] 1.2 Migration is additive only (two new tables + `DisplayName` column) — confirmed by reviewing the generated `Up`
-- [ ] 1.3 API integration tests pass: `dotnet test`
-- [ ] 1.4 Migration applies cleanly to a fresh DB (via test run)
+- [x] 1.1 Solution builds: `dotnet build`
+- [x] 1.2 Migration is additive only (two new tables + `DisplayName` column) — confirmed by reviewing the generated `Up`
+- [x] 1.3 API integration tests pass: `dotnet test`
+- [x] 1.4 Migration applies cleanly to a fresh DB (via test run)
 
 #### Manual
 

@@ -16,7 +16,13 @@ public static class AuthEndpoints
 
         group.MapPost("/register", async (RegisterRequest request, UserManager<ApplicationUser> users) =>
         {
-            var user = new ApplicationUser { UserName = request.Email, Email = request.Email };
+            // DisplayName powers task cards (S-03). Falls back to the email local-part when left blank,
+            // so every account has a card-ready name from day one.
+            var displayName = string.IsNullOrWhiteSpace(request.DisplayName)
+                ? LocalPartOf(request.Email)
+                : request.DisplayName.Trim();
+
+            var user = new ApplicationUser { UserName = request.Email, Email = request.Email, DisplayName = displayName };
             var result = await users.CreateAsync(user, request.Password);
 
             return result.Succeeded
@@ -55,9 +61,21 @@ public static class AuthEndpoints
 
         return app;
     }
+
+    /// <summary>The portion of an email before the <c>@</c> — the display-name fallback. Returns the input unchanged when there is no <c>@</c>.</summary>
+    private static string LocalPartOf(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            return string.Empty;
+        }
+
+        var at = email.IndexOf('@');
+        return at <= 0 ? email : email[..at];
+    }
 }
 
-public sealed record RegisterRequest(string Email, string Password);
+public sealed record RegisterRequest(string Email, string Password, string? DisplayName = null);
 
 public sealed record LoginRequest(string Email, string Password);
 

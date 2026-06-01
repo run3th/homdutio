@@ -1,6 +1,7 @@
 using System.Text;
 using Homdutio.Api.Auth;
 using Homdutio.Api.Households;
+using Homdutio.Api.Tasks;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -92,6 +93,7 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapHouseholdEndpoints();
+app.MapTaskEndpoints();
 
 app.MapFallbackToFile("index.html");
 
