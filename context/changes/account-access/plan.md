@@ -432,30 +432,30 @@ without migration concern.
 
 #### Automated
 
-- [x] 1.1 Build clean: `npm run build` (from `web/`)
-- [x] 1.2 Unit tests pass: `npm test` — AuthService, bearer interceptor, unauthorized interceptor, guard
-- [x] 1.3 No `localStorage`/`sessionStorage` reference in `web/src/app/auth/**`
+- [x] 1.1 Build clean: `npm run build` (from `web/`) — 315b307
+- [x] 1.2 Unit tests pass: `npm test` — AuthService, bearer interceptor, unauthorized interceptor, guard — 315b307
+- [x] 1.3 No `localStorage`/`sessionStorage` reference in `web/src/app/auth/**` — 315b307
 
 #### Manual
 
-- [ ] 1.4 Interceptor wiring compiles/registers; protected-call 401 redirect path confirmed (with Phase 2 routes)
-- [x] 1.5 Token held only in memory (not in localStorage/sessionStorage)
+- [x] 1.4 Interceptor wiring compiles/registers; protected-call 401 redirect path confirmed (with Phase 2 routes)
+- [x] 1.5 Token held only in memory (not in localStorage/sessionStorage) — 315b307
 
 ### Phase 2: Auth UI, Routing & Placeholder Home
 
 #### Automated
 
-- [ ] 2.1 Build clean: `npm run build` (from `web/`)
-- [ ] 2.2 Release build exercises SPA bundle: `dotnet build Homdutio.sln -c Release` succeeds
-- [ ] 2.3 Unit/component tests pass: `npm test` — login, register (auto-login + error mapping), home/logout, updated app.spec
-- [ ] 2.4 No starter content remains: `git grep -i "Congratulations" web/src` and welcome-pills grep empty
+- [x] 2.1 Build clean: `npm run build` (from `web/`)
+- [x] 2.2 Release build exercises SPA bundle: `dotnet build Homdutio.sln -c Release` succeeds
+- [x] 2.3 Unit/component tests pass: `npm test` — login, register (auto-login + error mapping), home/logout, updated app.spec
+- [x] 2.4 No starter content remains: `git grep -i "Congratulations" web/src` and welcome-pills grep empty
 
 #### Manual
 
-- [ ] 2.5 Register valid → `/login` with notice + prefilled email; log in → `/home` shows email; logout → `/login`
-- [ ] 2.6 Register weak password / duplicate email → server's mapped message shown; rules visible pre-submit
-- [ ] 2.7 Login valid → `/home`; login wrong creds → generic "invalid email or password"
-- [ ] 2.8 Logged out, direct nav to `/home` → redirect to `/login`
-- [ ] 2.9 Protected-call 401 (expiry/tamper) → discard auth + redirect to `/login`
-- [ ] 2.10 Login/register/home usable at ≤ 400px, no horizontal scroll (NFR-2)
-- [ ] 2.11 `/health` and `/api/auth/*` unaffected; SPA fallback serves Angular routes
+- [x] 2.5 Register valid → `/login` with notice + prefilled email; log in → `/home` shows email; logout → `/login`
+- [x] 2.6 Register weak password / duplicate email → server's mapped message shown; rules visible pre-submit
+- [x] 2.7 Login valid → `/home`; login wrong creds → generic "invalid email or password"
+- [x] 2.8 Logged out, direct nav to `/home` → redirect to `/login`
+- [x] 2.9 Protected-call 401 (expiry/tamper) → discard auth + redirect to `/login`
+- [x] 2.10 Login/register/home usable at ≤ 400px, no horizontal scroll (NFR-2)
+- [x] 2.11 `/health` and `/api/auth/*` unaffected; SPA fallback serves Angular routes
