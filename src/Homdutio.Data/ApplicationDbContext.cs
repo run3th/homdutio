@@ -25,6 +25,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
 
+    public DbSet<HouseholdInvite> HouseholdInvites => Set<HouseholdInvite>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         // Identity needs its configuration applied first.
@@ -92,6 +94,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
 
             // ActorId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
+        });
+
+        builder.Entity<HouseholdInvite>(invite =>
+        {
+            invite.Property(i => i.Token).IsRequired().HasMaxLength(64);
+
+            // The token lookup (preview/accept) hits this; unique so a token maps to exactly one invite.
+            invite.HasIndex(i => i.Token).IsUnique();
+
+            // The optimistic-concurrency guard that makes consume single-use (FR-005): a concurrent second
+            // accept fails the version check rather than creating a second membership.
+            invite.Property(i => i.RowVersion).IsRowVersion();
+
+            invite.HasOne(i => i.Household)
+                .WithMany()
+                .HasForeignKey(i => i.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // CreatedById/ConsumedById are raw AspNetUsers.Id columns with no navigation (see HouseholdTask).
         });
     }
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -76,10 +77,129 @@ public static class HouseholdEndpoints
                 new HouseholdResponse(household.Id, household.Name, member.Role.ToString()));
         });
 
+        // POST /api/households/invites — any member (admin or adult member, FR-005) mints a single-use,
+        // time-expiring invite link to their household.
+        group.MapPost("/invites", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var userId = principal.FindFirstValue("sub");
+
+            var member = await db.HouseholdMembers
+                .AsNoTracking()
+                .SingleOrDefaultAsync(m => m.UserId == userId);
+            if (member is null)
+            {
+                return Results.NotFound();
+            }
+
+            var now = DateTime.UtcNow;
+            var invite = new HouseholdInvite
+            {
+                Id = Guid.NewGuid(),
+                HouseholdId = member.HouseholdId,
+                Token = NewInviteToken(),
+                CreatedById = userId!,
+                CreatedAtUtc = now,
+                ExpiresAtUtc = now.Add(InviteLifetime),
+            };
+
+            db.HouseholdInvites.Add(invite);
+            await db.SaveChangesAsync();
+
+            return Results.Created($"/api/households/invites/{invite.Token}", new InviteResponse(invite.Token, invite.ExpiresAtUtc));
+        });
+
+        // GET /api/households/invites/{token} — public preview so a recipient sees which household they're
+        // joining before they have an account. Leaks only the household name (US-02).
+        group.MapGet("/invites/{token}", async (string token, ApplicationDbContext db) =>
+        {
+            var invite = await db.HouseholdInvites
+                .AsNoTracking()
+                .Include(i => i.Household)
+                .SingleOrDefaultAsync(i => i.Token == token);
+
+            if (invite is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (invite.ConsumedAtUtc is not null || invite.ExpiresAtUtc <= DateTime.UtcNow)
+            {
+                return Results.StatusCode(StatusCodes.Status410Gone);
+            }
+
+            return Results.Ok(new InvitePreviewResponse(invite.Household!.Name));
+        })
+        .AllowAnonymous();
+
+        // POST /api/households/invites/{token}/accept — consume the invite and add the caller as a Member
+        // (FR-006), exactly once (FR-005) and never violating one-household-per-user (FR-007).
+        group.MapPost("/invites/{token}/accept", async (string token, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var userId = principal.FindFirstValue("sub")!;
+
+            var invite = await db.HouseholdInvites.SingleOrDefaultAsync(i => i.Token == token);
+            if (invite is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (invite.ConsumedAtUtc is not null || invite.ExpiresAtUtc <= DateTime.UtcNow)
+            {
+                return Results.StatusCode(StatusCodes.Status410Gone);
+            }
+
+            var alreadyMember = await db.HouseholdMembers.AnyAsync(m => m.UserId == userId);
+            if (alreadyMember)
+            {
+                return Results.Conflict(new { message = "You already belong to a household." });
+            }
+
+            var now = DateTime.UtcNow;
+            invite.ConsumedAtUtc = now;
+            invite.ConsumedById = userId;
+            db.HouseholdMembers.Add(new HouseholdMember
+            {
+                Id = Guid.NewGuid(),
+                HouseholdId = invite.HouseholdId,
+                UserId = userId,
+                Role = HouseholdRole.Member,
+                JoinedAtUtc = now,
+            });
+
+            try
+            {
+                // One atomic SaveChanges: the invite's rowversion makes consume single-use (a concurrent
+                // second accept fails the version check → 410); the UserId unique index guards FR-007 (a
+                // double-accept by the same user fails the insert → 409).
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Results.StatusCode(StatusCodes.Status410Gone);
+            }
+            catch (DbUpdateException)
+            {
+                return Results.Conflict(new { message = "You already belong to a household." });
+            }
+
+            var household = await db.Households.AsNoTracking().SingleAsync(h => h.Id == invite.HouseholdId);
+            return Results.Ok(new HouseholdResponse(household.Id, household.Name, HouseholdRole.Member.ToString()));
+        });
+
         return app;
     }
+
+    /// <summary>An invite is valid for this window after creation (FR-005 time-expiry bound).</summary>
+    private static readonly TimeSpan InviteLifetime = TimeSpan.FromDays(7);
+
+    /// <summary>A 256-bit cryptographically-random, URL-safe (hex) token — unguessable and path-safe.</summary>
+    private static string NewInviteToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 }
 
 public sealed record CreateHouseholdRequest(string Name);
 
 public sealed record HouseholdResponse(Guid Id, string Name, string Role);
+
+public sealed record InviteResponse(string Token, DateTime ExpiresAtUtc);
+
+public sealed record InvitePreviewResponse(string HouseholdName);
