@@ -513,10 +513,10 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Manual
 
-- [ ] 1.5 Full loop create → claim → done → confirm closes the task; `GET /api/tasks` omits it afterward
-- [ ] 1.6 Second `/claim` on a claimed task → 409
-- [ ] 1.7 Non-admin `/confirm` → 403; admin self-confirm records `SelfAttested = true`
-- [ ] 1.8 Foreign-household task id → 404
+- [x] 1.5 Full loop create → claim → done → confirm closes the task; `GET /api/tasks` omits it afterward — d0b3b71
+- [x] 1.6 Second `/claim` on a claimed task → 409 — d0b3b71
+- [x] 1.7 Non-admin `/confirm` → 403; admin self-confirm records `SelfAttested = true` — d0b3b71
+- [x] 1.8 Foreign-household task id → 404 — d0b3b71
 
 ### Phase 2: Frontend task service, display-name & render/create
 
@@ -527,10 +527,10 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Manual
 
-- [ ] 2.3 Registering with a display name; the value reaches the account
-- [ ] 2.4 Creating a task makes it appear in "To do" with creator name + timestamp
-- [ ] 2.5 The board loads existing tasks into the correct columns on navigation
-- [ ] 2.6 Empty columns show the placeholder; non-empty show cards
+- [x] 2.3 Registering with a display name; the value reaches the account — 8e4a601
+- [x] 2.4 Creating a task makes it appear in "To do" with creator name + timestamp — 8e4a601
+- [x] 2.5 The board loads existing tasks into the correct columns on navigation — 8e4a601
+- [x] 2.6 Empty columns show the placeholder; non-empty show cards — 8e4a601
 
 ### Phase 3: Lifecycle actions in the UI & closure
 
@@ -543,7 +543,7 @@ Existing users (pre-S-03) simply have no tasks until they create one.
 
 #### Manual
 
-- [ ] 3.5 Single-device full loop moves the card To do → In progress → Done → gone
-- [ ] 3.6 Only permitted buttons show (Claim / Mark done only for the claimer / Confirm admin-only)
-- [ ] 3.7 Admin self-confirm shows the self-attested hint and closes the card
-- [ ] 3.8 At 400px the cards + buttons fit with no horizontal scroll
+- [x] 3.5 Single-device full loop moves the card To do → In progress → Done → gone — 9a3e3a2
+- [x] 3.6 Only permitted buttons show (Claim / Mark done only for the claimer / Confirm admin-only) — 9a3e3a2
+- [x] 3.7 Admin self-confirm shows the self-attested hint and closes the card — 9a3e3a2
+- [x] 3.8 At 400px the cards + buttons fit with no horizontal scroll — 9a3e3a2

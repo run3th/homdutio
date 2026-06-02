@@ -34,9 +34,9 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | done     |
 | F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | done     |
 | S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | done     |
-| S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | proposed |
-| S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | proposed |
-| S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | proposed |
+| S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | done     |
+| S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | done     |
+| S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | done     |
 | S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | proposed |
 | S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | done     |
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
@@ -152,7 +152,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Establishes the board surface the north star renders into. NFR-2 (mobile-first, no horizontal scroll at ≤ 400px) is set here and inherited by every later board slice; getting the responsive column layout right early avoids reworking it under the task cards.
-- **Status:** proposed
+- **Delivered (2026-06-01):** Household domain + endpoints (`POST /api/households` create→first-admin, `GET /api/households/me`, second-create → 409); Angular create-household flow + membership guard routing a household-less user to `/create-household`; empty three-column, mobile-first (≤ 400px) kanban board at `/board`. 3 phases, commits `b2173c2` (p1) / `9523d78` (p2) / `d027b35` (p3). Not yet archived.
+- **Status:** done
 
 ### S-03: Accountability loop  *(north star)*
 
@@ -164,7 +165,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** The assumption most likely to be wrong — whether the confirm step actually changes household behaviour — lives here, so it is sequenced as early as the auth + board chain allows (`market-feedback` goal). FR-015's cross-member confirm is only fully exercised once a second member exists (S-06); meanwhile FR-016's self-attested path lets a single admin verify the whole loop end-to-end on one device. NFR-3 means the record must outlive the visible card — design closure as a state transition, not a delete.
-- **Status:** proposed
+- **Delivered (2026-06-01):** The full accountability loop — `POST /api/tasks` create + `/claim` → `/done` → `/confirm` lifecycle endpoints persisting a durable record (creator / claimer / confirmer, timestamps, `self-attested` flag) with closure modelled as a state transition, not a delete (NFR-3); double-claim → 409, non-admin confirm → 403, admin self-confirm records `SelfAttested = true`, foreign-household task id → 404. Registration display-name added; the board renders tasks into columns with creator name + timestamp and the lifecycle action buttons. 3 phases + epilogue, commits `d0b3b71` (p1) / `8e4a601` (p2) / `9a3e3a2` (p3) / `07843f8` (epilogue). Not yet archived.
+- **Status:** done
 
 ### S-04: Task management and priority
 
@@ -176,7 +178,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** FR-021 drag-reorder is the *only* priority surface in v1 (no priority field, by Non-Goal), and the shared order must be consistent across members. Drag-and-drop at ≤ 400px (NFR-2) is the fiddly part; edit/delete are constrained to "To do" so they stay simple.
-- **Status:** proposed
+- **Delivered (2026-06-02):** Edit/delete (To-do-only; editing or deleting a claimed task → 409) via a CDK task-detail dialog, and integer-`SortOrder` drag-reorder within all three columns (`PUT /api/tasks/{id}`, `DELETE /api/tasks/{id}`, `PUT /api/tasks/order`); reorder persists on drop + refetch (last-write-wins, consistent with S-03), a foreign-household task id → 404 with no partial reindex, dialog usable at ≤ 400px. 3 phases, commits `9349a6f` (p1) / `34ac8b6` (p2) / `7ce9c22` (p3). Not yet archived.
+- **Status:** done
 
 ### S-05: Loop recovery
 
@@ -261,9 +264,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | live-update-transport         | Establish 5s live-update transport via polling              | done                  | Delivered 2026-06-02 as S-06 Phase 3 (`35a44e1`); not a standalone change |
 | F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | done                  | Delivered 2026-06-01; prod `/health` green against Azure SQL |
 | S-01       | account-access                | Register, log in, log out                                   | done                  | Delivered 2026-06-01 (`3b318e2`); not yet archived |
-| S-02       | household-and-board           | Create household + empty mobile-first kanban board          | no                    | Needs S-01 |
-| S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | no                    | North star; needs S-02 |
-| S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | no                    | Needs S-03 |
+| S-02       | household-and-board           | Create household + empty mobile-first kanban board          | done                  | Delivered 2026-06-01 (`b2173c2`/`9523d78`/`d027b35`); not yet archived |
+| S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | done                  | North star; delivered 2026-06-01 (`d0b3b71`/`8e4a601`/`9a3e3a2`/`07843f8`); not yet archived |
+| S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | done                  | Delivered 2026-06-02 (`9349a6f`/`34ac8b6`/`7ce9c22`); not yet archived |
 | S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | no                    | Needs S-03 |
 | S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | done                  | Delivered 2026-06-02 (`aa1fbba`/`26f2e31`/`35a44e1`/`ff85332`); folds in F-03; not yet archived |
 | S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | no                    | Needs S-03; worst-bug guardrail |
