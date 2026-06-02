@@ -315,6 +315,240 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.False(memberView.WillSelfAttest);
     }
 
+    // --- S-04: ordering + edit/delete/reorder ---------------------------------------------------------
+
+    [Fact]
+    public async Task Created_tasks_append_to_the_bottom_of_to_do_in_creation_order()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("order"), "Molly");
+        await CreateHouseholdAsync(token, "Order House");
+
+        var a = await CreateTaskAsync(token, "First");
+        var b = await CreateTaskAsync(token, "Second");
+        var c = await CreateTaskAsync(token, "Third");
+
+        var board = await GetBoardAsync(token);
+        Assert.Equal(new[] { a.Id, b.Id, c.Id }, board.Select(t => t.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task Reorder_persists_a_new_within_column_order()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("reorder"), "Molly");
+        await CreateHouseholdAsync(token, "Reorder House");
+
+        var a = await CreateTaskAsync(token, "A");
+        var b = await CreateTaskAsync(token, "B");
+        var c = await CreateTaskAsync(token, "C");
+
+        var reorder = await _client.SendAsync(Authed(HttpMethod.Put, "/api/tasks/order", token,
+            new { status = "ToDo", orderedIds = new[] { c.Id, a.Id, b.Id } }));
+        Assert.Equal(HttpStatusCode.NoContent, reorder.StatusCode);
+
+        var board = await GetBoardAsync(token);
+        Assert.Equal(new[] { c.Id, a.Id, b.Id }, board.Select(t => t.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task Reorder_with_a_foreign_household_id_returns_404_and_leaves_order_unchanged()
+    {
+        var aToken = await RegisterAndLoginAsync(NewEmail("ro-a"), "Alice");
+        await CreateHouseholdAsync(aToken, "House A");
+        var foreign = await CreateTaskAsync(aToken, "Belongs to A");
+
+        var bToken = await RegisterAndLoginAsync(NewEmail("ro-b"), "Bob");
+        await CreateHouseholdAsync(bToken, "House B");
+        var b1 = await CreateTaskAsync(bToken, "B1");
+        var b2 = await CreateTaskAsync(bToken, "B2");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, "/api/tasks/order", bToken,
+            new { status = "ToDo", orderedIds = new[] { b2.Id, foreign.Id, b1.Id } }));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+
+        // No partial reindex — B's board keeps its original creation order.
+        var board = await GetBoardAsync(bToken);
+        Assert.Equal(new[] { b1.Id, b2.Id }, board.Select(t => t.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task Reorder_with_a_wrong_status_id_returns_404()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("ro-status"), "Molly");
+        await CreateHouseholdAsync(token, "Status House");
+
+        var todo = await CreateTaskAsync(token, "Stays to do");
+        var claimed = await CreateTaskAsync(token, "Will be claimed");
+        (await ActionAsync(token, claimed.Id, "claim")).EnsureSuccessStatusCode();
+
+        // Asking to reorder "ToDo" but including a now-InProgress task → rejected.
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, "/api/tasks/order", token,
+            new { status = "ToDo", orderedIds = new[] { claimed.Id, todo.Id } }));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Reorder_with_an_unknown_status_returns_400()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("ro-badstatus"), "Molly");
+        await CreateHouseholdAsync(token, "Bad Status House");
+        var a = await CreateTaskAsync(token, "A");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, "/api/tasks/order", token,
+            new { status = "Nonsense", orderedIds = new[] { a.Id } }));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edit_updates_a_to_do_task()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("edit"), "Molly");
+        await CreateHouseholdAsync(token, "Edit House");
+        var task = await CreateTaskAsync(token, "Original");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
+            new { title = "Updated", description = "Now with detail", category = "Kitchen" }));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
+        Assert.Equal("Updated", body.Title);
+        Assert.Equal("Now with detail", body.Description);
+        Assert.Equal("Kitchen", body.Category);
+    }
+
+    [Fact]
+    public async Task Edit_with_a_blank_title_returns_400()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("edit-blank"), "Molly");
+        await CreateHouseholdAsync(token, "Edit Blank House");
+        var task = await CreateTaskAsync(token, "Has a title");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
+            new { title = "   ", description = (string?)null, category = (string?)null }));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Editing_a_claimed_task_returns_409()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("edit-claimed"), "Molly");
+        await CreateHouseholdAsync(token, "Edit Claimed House");
+        var task = await CreateTaskAsync(token, "About to be claimed");
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
+            new { title = "Too late", description = (string?)null, category = (string?)null }));
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Editing_a_foreign_household_task_returns_404()
+    {
+        var aToken = await RegisterAndLoginAsync(NewEmail("edit-a"), "Alice");
+        await CreateHouseholdAsync(aToken, "House A");
+        var task = await CreateTaskAsync(aToken, "Belongs to A");
+
+        var bToken = await RegisterAndLoginAsync(NewEmail("edit-b"), "Bob");
+        await CreateHouseholdAsync(bToken, "House B");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", bToken,
+            new { title = "Hijack", description = (string?)null, category = (string?)null }));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_removes_a_to_do_task_and_its_created_event()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("delete"), "Molly");
+        await CreateHouseholdAsync(token, "Delete House");
+        var task = await CreateTaskAsync(token, "Delete me");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Delete, $"/api/tasks/{task.Id}", token));
+        Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
+
+        var board = await GetBoardAsync(token);
+        Assert.DoesNotContain(board, t => t.Id == task.Id);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.HouseholdTasks.AnyAsync(t => t.Id == task.Id));
+        Assert.False(await db.TaskEvents.AnyAsync(e => e.TaskId == task.Id));
+    }
+
+    [Fact]
+    public async Task Deleting_a_claimed_task_returns_409()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("delete-claimed"), "Molly");
+        await CreateHouseholdAsync(token, "Delete Claimed House");
+        var task = await CreateTaskAsync(token, "Claimed, cannot delete");
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Delete, $"/api/tasks/{task.Id}", token));
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deleting_a_foreign_household_task_returns_404()
+    {
+        var aToken = await RegisterAndLoginAsync(NewEmail("del-a"), "Alice");
+        await CreateHouseholdAsync(aToken, "House A");
+        var task = await CreateTaskAsync(aToken, "Belongs to A");
+
+        var bToken = await RegisterAndLoginAsync(NewEmail("del-b"), "Bob");
+        await CreateHouseholdAsync(bToken, "House B");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Delete, $"/api/tasks/{task.Id}", bToken));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Claiming_a_task_appends_it_to_the_bottom_of_in_progress()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("transition"), "Molly");
+        await CreateHouseholdAsync(token, "Transition House");
+
+        var first = await CreateTaskAsync(token, "First in progress");
+        var second = await CreateTaskAsync(token, "Second in progress");
+        (await ActionAsync(token, first.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(token, second.Id, "claim")).EnsureSuccessStatusCode();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var firstRow = await db.HouseholdTasks.SingleAsync(t => t.Id == first.Id);
+        var secondRow = await db.HouseholdTasks.SingleAsync(t => t.Id == second.Id);
+        Assert.True(secondRow.SortOrder > firstRow.SortOrder);
+    }
+
+    [Fact]
+    public async Task To_do_task_reports_can_edit_and_can_delete_then_false_once_claimed()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("aff-ed"), "Molly");
+        await CreateHouseholdAsync(token, "Affordance Edit House");
+        var task = await CreateTaskAsync(token, "Manageable");
+
+        var todoView = (await GetBoardAsync(token)).Single(t => t.Id == task.Id);
+        Assert.True(todoView.CanEdit);
+        Assert.True(todoView.CanDelete);
+
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+        var claimedView = (await GetBoardAsync(token)).Single(t => t.Id == task.Id);
+        Assert.False(claimedView.CanEdit);
+        Assert.False(claimedView.CanDelete);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_edit_delete_and_reorder_return_401()
+    {
+        var id = Guid.NewGuid();
+
+        var edit = await _client.PutAsJsonAsync($"/api/tasks/{id}", new { title = "x" });
+        Assert.Equal(HttpStatusCode.Unauthorized, edit.StatusCode);
+
+        var delete = await _client.DeleteAsync($"/api/tasks/{id}");
+        Assert.Equal(HttpStatusCode.Unauthorized, delete.StatusCode);
+
+        var reorder = await _client.PutAsJsonAsync("/api/tasks/order", new { status = "ToDo", orderedIds = new[] { id } });
+        Assert.Equal(HttpStatusCode.Unauthorized, reorder.StatusCode);
+    }
+
     private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);
 
     private sealed record HouseholdBody(Guid Id, string Name, string Role);
@@ -331,5 +565,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         bool CanClaim,
         bool CanMarkDone,
         bool CanConfirm,
-        bool WillSelfAttest);
+        bool WillSelfAttest,
+        bool CanEdit,
+        bool CanDelete);
 }

@@ -25,6 +25,14 @@ public class HouseholdTask
 
     public HouseholdTaskStatus Status { get; set; }
 
+    /// <summary>
+    /// The manual, household-shared position of this task *within its current status column* (FR-021 — the
+    /// only priority surface in v1). The board query partitions by <see cref="Status"/> first, so values may
+    /// repeat across columns harmlessly. Maintained as a contiguous <c>0..n-1</c> per column: set to the
+    /// bottom of a column on create and on each claim/done transition, and reassigned wholesale on reorder.
+    /// </summary>
+    public int SortOrder { get; set; }
+
     /// <summary>The user who created the task (FK → <c>AspNetUsers.Id</c>).</summary>
     public string CreatedById { get; set; } = string.Empty;
 
