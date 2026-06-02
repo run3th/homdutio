@@ -267,11 +267,11 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-02       | household-and-board           | Create household + empty mobile-first kanban board          | done                  | Delivered 2026-06-01 (`b2173c2`/`9523d78`/`d027b35`); not yet archived |
 | S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | done                  | North star; delivered 2026-06-01 (`d0b3b71`/`8e4a601`/`9a3e3a2`/`07843f8`); not yet archived |
 | S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | done                  | Delivered 2026-06-02 (`9349a6f`/`34ac8b6`/`7ce9c22`); not yet archived |
-| S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | no                    | Needs S-03 |
+| S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | yes                   | S-03 done; transitions must extend the audit trail (NFR-3) |
 | S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | done                  | Delivered 2026-06-02 (`aa1fbba`/`26f2e31`/`35a44e1`/`ff85332`); folds in F-03; not yet archived |
-| S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | no                    | Needs S-03; worst-bug guardrail |
-| S-08       | password-reset                | Password reset via emailed link                             | no                    | Needs S-01; email via SendGrid (Open Q #2 resolved) |
-| S-09       | member-administration         | Admin promote / remove member                               | no                    | Nice-to-have; needs S-06 |
+| S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | yes                   | S-03 done; worst-bug guardrail |
+| S-08       | password-reset                | Password reset via emailed link                             | yes                   | S-01 done; email via SendGrid (Open Q #2 resolved) |
+| S-09       | member-administration         | Admin promote / remove member                               | yes                   | S-06 done; nice-to-have |
 | S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | yes                   | Needs S-01 (done); un-defers F-02 refresh/revocation; lean httpOnly cookie |
 
 This table is the clean handoff to Jira/Linear or any MCP-backed backlog. One row per `F-NN` and `S-NN`.
