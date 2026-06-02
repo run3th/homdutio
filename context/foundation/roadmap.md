@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-06-01
+updated: 2026-06-02
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -31,14 +31,14 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | ----- | ----------------------------- | --------------------------------------------------------------------- | ------------- | ------------------------------------------------- | -------- |
 | F-01  | persistence-baseline          | (foundation) EF Core + provisioned Azure SQL wired; data persists     | —             | NFR-3                                             | done     |
 | F-02  | auth-identity-plumbing        | (foundation) ASP.NET Identity + JWT bearer pipeline issuing tokens     | F-01          | Access Control                                    | done     |
-| F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | ready    |
+| F-03  | live-update-transport         | (foundation) board mutations propagate to other members within 5s     | —             | NFR-1                                             | done     |
 | F-04  | ci-auto-deploy                | (foundation) merge → build + smoke-gate → deploy, no manual zip        | —             | tech-stack ci_default_flow                        | done     |
 | S-01  | account-access                | register, log in, and log out                                          | F-01, F-02    | FR-001, FR-002, FR-003                            | done     |
 | S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | proposed |
 | S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | proposed |
 | S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | proposed |
 | S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | proposed |
-| S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | proposed |
+| S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | done     |
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
@@ -110,7 +110,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:** —
 - **Decision (2026-05-30):** Polling, not SignalR. The contract is "≤5s freshness," which a short poll interval meets on the single-instance B1 / single-household MVP with near-zero added complexity — no stateful connection and no scale-out backplane/key-ring concern (both deferred per infra risk register). This supersedes the re-run-interview SignalR lean and aligns with `tech-stack.md` `has_realtime: false`. SignalR remains the reversible upgrade path post-validation if freshness/UX demands push.
 - **Risk:** Polling is chattier than push but trivially correct and cheap to run at single-household scale; cap the interval so server load stays bounded. Off the north-star critical path — the loop (S-03) is verifiable on one device.
-- **Status:** ready
+- **Delivered (2026-06-02):** Built as **S-06 Phase 3** (folded in, not a standalone change). `TaskService` client-side polling on a 4s interval refetches `GET /api/tasks`, paused while the tab is hidden (`document.hidden`, bounding idle load) and suppressed during an active drag / open task dialog so a tick never disrupts an in-progress action; the board owns the lifecycle (start on init, stop on destroy/logout — no leaked interval). Meets NFR-1's ≤5s freshness. Commit `35a44e1` (within the `invite-and-multiplayer-board` stream).
+- **Status:** done
 
 ### F-04: CI auto-deploy
 
@@ -199,7 +200,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Turns the loop genuinely multiplayer — a real second member makes FR-015's cross-member confirm verifiable and delivers NFR-1 freshness via F-03's polling transport. Single-use link invalidation (FR-005) and one-household-per-user (FR-007) are the correctness-sensitive parts. Still gated on its prerequisites (S-02, F-03), but no longer blocked on an open decision.
-- **Status:** proposed
+- **Delivered (2026-06-02):** Single-use, 7-day-expiring DB-backed invite — `HouseholdInvite` entity with a `rowversion` concurrency token making consume atomic (single-use, FR-005); additive `AddHouseholdInvites` migration; generate / public-preview / accept endpoints with one-household-per-user (FR-007 → 409) and consumed/expired (410) and cross-household-scoping (US-02) guards, all locked by xUnit integration tests. SPA: `InviteService` + `buildJoinUrl`, board **Invite a member** affordance (generate + clipboard copy + selectable-link fallback), public `/join/:token` page branching on auth/household state (preview / login-prompt / already-in-household block / join), with `returnUrl` threaded through login (open-redirect-guarded) and register so the token survives the auth hop; a successful joiner lands on the live board. Live board folds in **F-03** polling (see F-03 Delivered). 3 phases + epilogue, commits `aa1fbba` (p1) / `26f2e31` (p2) / `35a44e1` (p3) / `ff85332` (epilogue). Not yet archived.
+- **Status:** done
 
 ### S-07: Household data isolation
 
@@ -256,14 +258,14 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | ---------- | ----------------------------- | ---------------------------------------------------------- | --------------------- | ----- |
 | F-01       | persistence-baseline          | Wire EF Core + provisioned Azure SQL persistence baseline   | done                  | Delivered 2026-05-30 (`74225da`); prod `/health` verify deferred to F-04 |
 | F-02       | auth-identity-plumbing        | Mount ASP.NET Identity + JWT bearer pipeline                | done                  | Delivered 2026-05-31 (`c4e7059`); JWT, not cookie sessions; consumed by S-01 |
-| F-03       | live-update-transport         | Establish 5s live-update transport via polling              | yes                   | Transport decided: polling (Open Q #1 resolved) |
+| F-03       | live-update-transport         | Establish 5s live-update transport via polling              | done                  | Delivered 2026-06-02 as S-06 Phase 3 (`35a44e1`); not a standalone change |
 | F-04       | ci-auto-deploy                | GitHub Actions build+smoke gate + auto-deploy on merge      | done                  | Delivered 2026-06-01; prod `/health` green against Azure SQL |
 | S-01       | account-access                | Register, log in, log out                                   | done                  | Delivered 2026-06-01 (`3b318e2`); not yet archived |
 | S-02       | household-and-board           | Create household + empty mobile-first kanban board          | no                    | Needs S-01 |
 | S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | no                    | North star; needs S-02 |
 | S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | no                    | Needs S-03 |
 | S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | no                    | Needs S-03 |
-| S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | no                    | Needs S-02, F-03 (polling) |
+| S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | done                  | Delivered 2026-06-02 (`aa1fbba`/`26f2e31`/`35a44e1`/`ff85332`); folds in F-03; not yet archived |
 | S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | no                    | Needs S-03; worst-bug guardrail |
 | S-08       | password-reset                | Password reset via emailed link                             | no                    | Needs S-01; email via SendGrid (Open Q #2 resolved) |
 | S-09       | member-administration         | Admin promote / remove member                               | no                    | Nice-to-have; needs S-06 |
