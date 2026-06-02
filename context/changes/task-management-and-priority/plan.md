@@ -479,31 +479,31 @@ dropped or retyped.
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 Migration is additive only (one `SortOrder` column + backfill) — confirmed by reviewing the generated `Up`
-- [x] 1.3 API integration tests pass: `dotnet test`
-- [x] 1.4 Migration applies cleanly to a fresh DB (via test run)
+- [x] 1.1 Solution builds: `dotnet build` — 9349a6f
+- [x] 1.2 Migration is additive only (one `SortOrder` column + backfill) — confirmed by reviewing the generated `Up` — 9349a6f
+- [x] 1.3 API integration tests pass: `dotnet test` — 9349a6f
+- [x] 1.4 Migration applies cleanly to a fresh DB (via test run) — 9349a6f
 
 #### Manual
 
-- [x] 1.5 `PUT /api/tasks/order` changes the order returned by `GET /api/tasks`
-- [x] 1.6 Edit a "To do" task succeeds; editing a claimed task → 409
-- [x] 1.7 Delete a "To do" task → 204 and it's gone; deleting a claimed task → 409
-- [x] 1.8 A reorder request with another household's task id → 404 (no partial reindex)
+- [x] 1.5 `PUT /api/tasks/order` changes the order returned by `GET /api/tasks` — 9349a6f
+- [x] 1.6 Edit a "To do" task succeeds; editing a claimed task → 409 — 9349a6f
+- [x] 1.7 Delete a "To do" task → 204 and it's gone; deleting a claimed task → 409 — 9349a6f
+- [x] 1.8 A reorder request with another household's task id → 404 (no partial reindex) — 9349a6f
 
 ### Phase 2: Frontend — edit & delete via task-detail dialog
 
 #### Automated
 
-- [ ] 2.1 Frontend builds: `npm run build` (in `web/`)
-- [ ] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`)
+- [x] 2.1 Frontend builds: `npm run build` (in `web/`)
+- [x] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`)
 
 #### Manual
 
-- [ ] 2.3 A "To do" card's dialog edits and Save updates the card
-- [ ] 2.4 Blank title shows the mapped validation error and does not close
-- [ ] 2.5 Dialog Delete (after confirm) removes the card; a claimed/done card's dialog is read-only
-- [ ] 2.6 The dialog is usable at a 400px viewport
+- [x] 2.3 A "To do" card's dialog edits and Save updates the card
+- [x] 2.4 Blank title shows the mapped validation error and does not close
+- [x] 2.5 Dialog Delete (after confirm) removes the card; a claimed/done card's dialog is read-only
+- [x] 2.6 The dialog is usable at a 400px viewport
 
 ### Phase 3: Frontend — drag-and-drop reorder
 

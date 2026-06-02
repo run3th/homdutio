@@ -1,0 +1,102 @@
+<section class="task-detail" role="dialog" aria-modal="true" aria-labelledby="task-detail-heading">
+  <header class="task-detail-header">
+    <h2 id="task-detail-heading">{{ task.canEdit ? 'Edit task' : 'Task details' }}</h2>
+    <button type="button" class="icon-button" aria-label="Close" (click)="close()">×</button>
+  </header>
+
+  @if (errors().length) {
+    <div class="form-error" role="alert">
+      @for (message of errors(); track message) {
+        <p>{{ message }}</p>
+      }
+    </div>
+  }
+
+  @if (task.canEdit) {
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="field">
+        <label for="detail-title">Title</label>
+        <input id="detail-title" type="text" formControlName="title" autocomplete="off" />
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <span class="field-error">A task title is required.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="detail-description">Description <span class="optional">(optional)</span></label>
+        <input id="detail-description" type="text" formControlName="description" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label for="detail-category">Category <span class="optional">(optional)</span></label>
+        <input id="detail-category" type="text" formControlName="category" autocomplete="off" />
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn" [disabled]="pending()">
+          {{ pending() ? 'Saving…' : 'Save' }}
+        </button>
+
+        @if (task.canDelete) {
+          @if (!confirmingDelete()) {
+            <button type="button" class="btn btn--danger" [disabled]="pending()" (click)="requestDelete()">
+              Delete
+            </button>
+          } @else {
+            <span class="confirm-delete">
+              <span class="confirm-delete-prompt">Delete this task?</span>
+              <button
+                type="button"
+                class="btn btn--danger"
+                [disabled]="pending()"
+                (click)="confirmDelete()"
+              >
+                {{ pending() ? 'Deleting…' : 'Yes, delete' }}
+              </button>
+              <button type="button" class="btn btn--ghost" [disabled]="pending()" (click)="cancelDelete()">
+                Cancel
+              </button>
+            </span>
+          }
+        }
+      </div>
+    </form>
+  } @else {
+    <dl class="task-detail-readonly">
+      <div class="task-meta-row">
+        <dt>Title</dt>
+        <dd>{{ task.title }}</dd>
+      </div>
+      @if (task.category) {
+        <div class="task-meta-row">
+          <dt>Category</dt>
+          <dd>{{ task.category }}</dd>
+        </div>
+      }
+      @if (task.description) {
+        <div class="task-meta-row">
+          <dt>Description</dt>
+          <dd>{{ task.description }}</dd>
+        </div>
+      }
+      <div class="task-meta-row">
+        <dt>Created by</dt>
+        <dd>{{ task.createdByName }}</dd>
+      </div>
+      @if (task.claimerName) {
+        <div class="task-meta-row">
+          <dt>Claimed by</dt>
+          <dd>{{ task.claimerName }}</dd>
+        </div>
+      }
+      <div class="task-meta-row">
+        <dt>Created</dt>
+        <dd>{{ task.createdAtUtc | date: 'short' }}</dd>
+      </div>
+    </dl>
+
+    <div class="actions">
+      <button type="button" class="btn" (click)="close()">Close</button>
+    </div>
+  }
+</section>

@@ -1,10 +1,12 @@
 import { Component, computed, inject, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Dialog } from '@angular/cdk/dialog';
 import { Observable } from 'rxjs';
 
 import { HouseholdService } from '../household/household.service';
 import { CreateTaskComponent } from './create-task/create-task.component';
+import { TaskDetailComponent } from './task-detail/task-detail.component';
 import { Task, TaskService, TaskStatus } from './task.service';
 
 /**
@@ -24,6 +26,7 @@ import { Task, TaskService, TaskStatus } from './task.service';
 export class BoardComponent implements OnInit {
   private readonly households = inject(HouseholdService);
   private readonly tasks = inject(TaskService);
+  private readonly dialog = inject(Dialog);
 
   readonly household = this.households.current;
 
@@ -61,6 +64,14 @@ export class BoardComponent implements OnInit {
   /** Confirm a Done task (admin), closing it off the board. */
   confirm(task: Task): void {
     this.run(this.tasks.confirm(task.id));
+  }
+
+  /**
+   * Open the per-task detail panel (S-04). An explicit control distinct from the drag handle (Phase 3), so a
+   * drag never opens the dialog. The dialog's own mutations refetch the board, so no extra wiring on close.
+   */
+  openDetail(task: Task): void {
+    this.dialog.open(TaskDetailComponent, { data: task });
   }
 
   ngOnInit(): void {

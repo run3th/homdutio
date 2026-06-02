@@ -81,6 +81,31 @@
   font-size: 0.9375rem;
 }
 
+/* The title is an explicit open-detail affordance (S-04), kept distinct from the Phase 3 drag handle. */
+.task-title-button {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.task-title-button:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.task-title-button:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
 .task-category {
   display: inline-block;
   margin-top: 0.375rem;

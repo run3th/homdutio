@@ -1,0 +1,122 @@
+import { Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { DatePipe } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+
+import { Task, TaskService } from '../task.service';
+import { mapValidationProblem } from '../../auth/validation-problem';
+
+/**
+ * The per-task detail panel (S-04), opened via `@angular/cdk/dialog`. One reusable component covers two
+ * modes driven entirely by the server's affordance flags (the SPA stays authorization-dumb):
+ *
+ * - **Editable** (`task.canEdit` — only while the task is in "To do", FR-011): a reactive form over
+ *   title/description/category. Save calls {@link TaskService.update} (which refetches the board) and closes
+ *   on success; a 400 maps via {@link mapValidationProblem} and the dialog stays open. When `task.canDelete`
+ *   (also "To do" only, FR-012) a Delete control with an inline two-step confirm calls
+ *   {@link TaskService.delete} and closes.
+ * - **Read-only** (a claimed/done task): the fields render as static text, no edit, no delete.
+ *
+ * Deliberately structured so a future slice can add an assignee field (and S-05's send-back comment) without
+ * reworking the card. Closes on backdrop click / escape via CDK defaults.
+ */
+@Component({
+  selector: 'app-task-detail',
+  imports: [ReactiveFormsModule, DatePipe],
+  templateUrl: './task-detail.component.html',
+  styleUrl: './task-detail.component.scss',
+})
+export class TaskDetailComponent {
+  private readonly fb = inject(FormBuilder);
+  private readonly tasks = inject(TaskService);
+  private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
+
+  /** The task this panel describes, handed in by the opener via CDK `DIALOG_DATA`. */
+  readonly task = inject<Task>(DIALOG_DATA);
+
+  readonly form = this.fb.nonNullable.group({
+    title: [this.task.title, [Validators.required]],
+    description: [this.task.description ?? ''],
+    category: [this.task.category ?? ''],
+  });
+
+  /** Mapped validation messages from a 400 (or a generic fallback). */
+  readonly errors = signal<string[]>([]);
+  readonly pending = signal(false);
+
+  /** Two-step delete: the first click arms the confirm, the second performs it. */
+  readonly confirmingDelete = signal(false);
+
+  constructor() {
+    // Read-only tasks (claimed/done) present their fields as static text — the form is inert.
+    if (!this.task.canEdit) {
+      this.form.disable();
+    }
+  }
+
+  save(): void {
+    if (!this.task.canEdit || this.form.invalid || this.pending()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.errors.set([]);
+    this.pending.set(true);
+
+    const { title, description, category } = this.form.getRawValue();
+    this.tasks
+      .update(this.task.id, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        category: category.trim() || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.pending.set(false);
+          this.dialogRef.close();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.pending.set(false);
+          this.errors.set(
+            error.status === 400
+              ? mapValidationProblem(error)
+              : ['Something went wrong. Please try again.'],
+          );
+        },
+      });
+  }
+
+  /** First click arms the inline confirm; a Cancel disarms it. */
+  requestDelete(): void {
+    this.confirmingDelete.set(true);
+  }
+
+  cancelDelete(): void {
+    this.confirmingDelete.set(false);
+  }
+
+  confirmDelete(): void {
+    if (!this.task.canDelete || this.pending()) {
+      return;
+    }
+
+    this.errors.set([]);
+    this.pending.set(true);
+
+    this.tasks.delete(this.task.id).subscribe({
+      next: () => {
+        this.pending.set(false);
+        this.dialogRef.close();
+      },
+      error: () => {
+        this.pending.set(false);
+        this.errors.set(['Something went wrong. Please try again.']);
+      },
+    });
+  }
+
+  close(): void {
+    this.dialogRef.close();
+  }
+}

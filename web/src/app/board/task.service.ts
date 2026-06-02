@@ -20,10 +20,20 @@ export interface Task {
   canMarkDone: boolean;
   canConfirm: boolean;
   willSelfAttest: boolean;
+  /** Edit/delete are server-gated to "To do" (FR-011/012); the dialog renders read-only when both are false. */
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 /** Body for `POST /api/tasks` (matches the C# CreateTaskRequest). */
 export interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  category?: string;
+}
+
+/** Body for `PUT /api/tasks/{id}` (matches the C# UpdateTaskRequest). */
+export interface UpdateTaskRequest {
   title: string;
   description?: string;
   category?: string;
@@ -69,6 +79,16 @@ export class TaskService {
   /** `POST /api/tasks/{id}/confirm` then refetch (the confirmed task drops off the board). */
   confirm(id: string): Observable<Task[]> {
     return this.http.post<Task>(`/api/tasks/${id}/confirm`, {}).pipe(switchMap(() => this.load()));
+  }
+
+  /** `PUT /api/tasks/{id}` (edit, To-do-only) then refetch so the card re-renders. */
+  update(id: string, request: UpdateTaskRequest): Observable<Task[]> {
+    return this.http.put<Task>(`/api/tasks/${id}`, request).pipe(switchMap(() => this.load()));
+  }
+
+  /** `DELETE /api/tasks/{id}` (To-do-only) then refetch so the card disappears. */
+  delete(id: string): Observable<Task[]> {
+    return this.http.delete<void>(`/api/tasks/${id}`).pipe(switchMap(() => this.load()));
   }
 
   /** Resets the board state. Wired into {@link AuthService.logout} alongside the household reset. */

@@ -24,6 +24,8 @@ describe('TaskService', () => {
     canMarkDone: false,
     canConfirm: false,
     willSelfAttest: false,
+    canEdit: true,
+    canDelete: true,
   };
 
   beforeEach(() => {
@@ -99,6 +101,30 @@ describe('TaskService', () => {
     expect(post.request.method).toBe('POST');
     post.flush({ ...task, status: 'Done' });
 
+    httpMock.expectOne('/api/tasks').flush([]);
+    expect(service.current()).toEqual([]);
+  });
+
+  it('update PUTs /api/tasks/{id} then refetches', () => {
+    service.update('t1', { title: 'Renamed' }).subscribe();
+
+    const put = httpMock.expectOne('/api/tasks/t1');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ title: 'Renamed' });
+    put.flush({ ...task, title: 'Renamed' });
+
+    httpMock.expectOne('/api/tasks').flush([{ ...task, title: 'Renamed' }]);
+    expect(service.current()[0].title).toBe('Renamed');
+  });
+
+  it('delete DELETEs /api/tasks/{id} then refetches', () => {
+    service.delete('t1').subscribe();
+
+    const del = httpMock.expectOne('/api/tasks/t1');
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null);
+
+    // The refetch returns an empty board (the task is gone).
     httpMock.expectOne('/api/tasks').flush([]);
     expect(service.current()).toEqual([]);
   });

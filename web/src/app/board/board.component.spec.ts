@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 
 import { BoardComponent } from './board.component';
@@ -13,6 +14,7 @@ describe('BoardComponent', () => {
   let claim: ReturnType<typeof vi.fn>;
   let markDone: ReturnType<typeof vi.fn>;
   let confirm: ReturnType<typeof vi.fn>;
+  let open: ReturnType<typeof vi.fn>;
 
   function baseTask(overrides: Partial<Task>): Task {
     return {
@@ -28,6 +30,8 @@ describe('BoardComponent', () => {
       canMarkDone: false,
       canConfirm: false,
       willSelfAttest: false,
+      canEdit: false,
+      canDelete: false,
       ...overrides,
     };
   }
@@ -38,6 +42,7 @@ describe('BoardComponent', () => {
     claim = vi.fn(() => of(tasks()));
     markDone = vi.fn(() => of(tasks()));
     confirm = vi.fn(() => of(tasks()));
+    open = vi.fn();
     TestBed.configureTestingModule({
       imports: [BoardComponent],
       providers: [
@@ -46,6 +51,7 @@ describe('BoardComponent', () => {
           provide: TaskService,
           useValue: { current: tasks.asReadonly(), load, claim, markDone, confirm },
         },
+        { provide: Dialog, useValue: { open } },
       ],
     });
   });
@@ -111,6 +117,20 @@ describe('BoardComponent', () => {
     button.click();
 
     expect(claim).toHaveBeenCalledWith('a');
+  });
+
+  it('clicking the task title opens the detail dialog with the task', () => {
+    const task = baseTask({ id: 'a', status: 'ToDo', canEdit: true, canDelete: true });
+    tasks.set([task]);
+    const fixture = render();
+    const titleButton = (fixture.nativeElement as HTMLElement).querySelector(
+      '.task-title-button',
+    ) as HTMLButtonElement;
+
+    titleButton.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][1]).toEqual({ data: task });
   });
 
   it('a confirmed task drops off the board after the refetch', () => {

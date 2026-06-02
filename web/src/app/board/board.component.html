@@ -18,7 +18,11 @@
         } @else {
           @for (task of columnTasks; track task.id) {
             <article class="task-card">
-              <h3 class="task-title">{{ task.title }}</h3>
+              <h3 class="task-title">
+                <button type="button" class="task-title-button" (click)="openDetail(task)">
+                  {{ task.title }}
+                </button>
+              </h3>
               @if (task.category) {
                 <span class="task-category">{{ task.category }}</span>
               }
