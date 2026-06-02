@@ -501,14 +501,14 @@ optimistic-concurrency retry touches at most the one invite row plus one members
 
 #### Automated
 
-- [x] 3.1 Frontend builds: `npm run build` (in `web/`)
-- [x] 3.2 All vitest specs pass: `npm test` (in `web/`)
-- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [x] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` (in `web/`) — 35a44e1
+- [x] 3.2 All vitest specs pass: `npm test` (in `web/`) — 35a44e1
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release` — 35a44e1
+- [x] 3.4 Full backend suite still green: `dotnet test` — 35a44e1
 
 #### Manual
 
-- [x] 3.5 A change by one member appears on the other's board within 5 seconds (two profiles)
-- [x] 3.6 Backgrounding the tab pauses polling; refocus resumes and catches up
-- [x] 3.7 A poll mid-drag / mid-dialog does not reset the in-progress interaction
-- [x] 3.8 No console errors / leaked intervals after navigating away or logging out
+- [x] 3.5 A change by one member appears on the other's board within 5 seconds (two profiles) — 35a44e1
+- [x] 3.6 Backgrounding the tab pauses polling; refocus resumes and catches up — 35a44e1
+- [x] 3.7 A poll mid-drag / mid-dialog does not reset the in-progress interaction — 35a44e1
+- [x] 3.8 No console errors / leaked intervals after navigating away or logging out — 35a44e1
