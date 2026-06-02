@@ -487,28 +487,28 @@ optimistic-concurrency retry touches at most the one invite row plus one members
 
 #### Automated
 
-- [x] 2.1 Frontend builds: `npm run build` (in `web/`)
-- [x] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`)
+- [x] 2.1 Frontend builds: `npm run build` (in `web/`) — 26f2e31
+- [x] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`) — 26f2e31
 
 #### Manual
 
-- [x] 2.3 Invite a member generates + copies a link; opening it shows the household name
-- [x] 2.4 Logged-out open → Register/Log in → return to join → join → board
-- [x] 2.5 Re-opening a consumed link shows "no longer valid"; already-in-household shows the block
-- [x] 2.6 The join page is usable at a 400px viewport
+- [x] 2.3 Invite a member generates + copies a link; opening it shows the household name — 26f2e31
+- [x] 2.4 Logged-out open → Register/Log in → return to join → join → board — 26f2e31
+- [x] 2.5 Re-opening a consumed link shows "no longer valid"; already-in-household shows the block — 26f2e31
+- [x] 2.6 The join page is usable at a 400px viewport — 26f2e31
 
 ### Phase 3: Live board — polling transport (F-03)
 
 #### Automated
 
-- [ ] 3.1 Frontend builds: `npm run build` (in `web/`)
-- [ ] 3.2 All vitest specs pass: `npm test` (in `web/`)
-- [ ] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [ ] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` (in `web/`)
+- [x] 3.2 All vitest specs pass: `npm test` (in `web/`)
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
+- [x] 3.4 Full backend suite still green: `dotnet test`
 
 #### Manual
 
-- [ ] 3.5 A change by one member appears on the other's board within 5 seconds (two profiles)
-- [ ] 3.6 Backgrounding the tab pauses polling; refocus resumes and catches up
-- [ ] 3.7 A poll mid-drag / mid-dialog does not reset the in-progress interaction
-- [ ] 3.8 No console errors / leaked intervals after navigating away or logging out
+- [x] 3.5 A change by one member appears on the other's board within 5 seconds (two profiles)
+- [x] 3.6 Backgrounding the tab pauses polling; refocus resumes and catches up
+- [x] 3.7 A poll mid-drag / mid-dialog does not reset the in-progress interaction
+- [x] 3.8 No console errors / leaked intervals after navigating away or logging out

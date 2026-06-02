@@ -19,6 +19,9 @@ describe('BoardComponent', () => {
   let open: ReturnType<typeof vi.fn>;
   let generate: ReturnType<typeof vi.fn>;
   let writeText: ReturnType<typeof vi.fn>;
+  let startPolling: ReturnType<typeof vi.fn>;
+  let stopPolling: ReturnType<typeof vi.fn>;
+  let setPaused: ReturnType<typeof vi.fn>;
 
   function baseTask(overrides: Partial<Task>): Task {
     return {
@@ -47,9 +50,13 @@ describe('BoardComponent', () => {
     markDone = vi.fn(() => of(tasks()));
     confirm = vi.fn(() => of(tasks()));
     reorder = vi.fn(() => of(tasks()));
-    open = vi.fn();
+    // Dialog.open returns a DialogRef whose `closed` observable the board subscribes to (resume polling).
+    open = vi.fn(() => ({ closed: of(undefined) }));
     generate = vi.fn(() => of({ token: 'tok123', expiresAtUtc: '2026-06-09T00:00:00Z' }));
     writeText = vi.fn(() => Promise.resolve());
+    startPolling = vi.fn();
+    stopPolling = vi.fn();
+    setPaused = vi.fn();
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
       configurable: true,
@@ -60,7 +67,17 @@ describe('BoardComponent', () => {
         { provide: HouseholdService, useValue: { current } },
         {
           provide: TaskService,
-          useValue: { current: tasks.asReadonly(), load, claim, markDone, confirm, reorder },
+          useValue: {
+            current: tasks.asReadonly(),
+            load,
+            claim,
+            markDone,
+            confirm,
+            reorder,
+            startPolling,
+            stopPolling,
+            setPaused,
+          },
         },
         { provide: Dialog, useValue: { open } },
         { provide: InviteService, useValue: { generate } },
@@ -189,6 +206,35 @@ describe('BoardComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.invite-link')?.textContent).toBe(
       expected,
     );
+  });
+
+  it('starts polling on init and stops it on destroy (F-03)', () => {
+    const fixture = render();
+    expect(startPolling).toHaveBeenCalled();
+
+    fixture.destroy();
+    expect(stopPolling).toHaveBeenCalled();
+  });
+
+  it('pauses polling on drag start and resumes on drag end', () => {
+    const fixture = render();
+
+    fixture.componentInstance.onDragStart();
+    expect(setPaused).toHaveBeenLastCalledWith(true);
+
+    fixture.componentInstance.onDragEnd();
+    expect(setPaused).toHaveBeenLastCalledWith(false);
+  });
+
+  it('pauses polling while the detail dialog is open and resumes on close', () => {
+    tasks.set([baseTask({ id: 'a' })]);
+    const fixture = render();
+
+    fixture.componentInstance.openDetail(baseTask({ id: 'a' }));
+
+    // Paused when opened; the stubbed closed$ emits synchronously, so it resumes too.
+    expect(setPaused).toHaveBeenCalledWith(true);
+    expect(setPaused).toHaveBeenLastCalledWith(false);
   });
 
   it('a confirmed task drops off the board after the refetch', () => {

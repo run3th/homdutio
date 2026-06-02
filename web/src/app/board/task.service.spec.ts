@@ -147,4 +147,67 @@ describe('TaskService', () => {
 
     expect(service.current()).toEqual([]);
   });
+
+  describe('polling (F-03)', () => {
+    afterEach(() => {
+      service.stopPolling();
+      vi.useRealTimers();
+    });
+
+    it('an interval tick refetches the board (GET /api/tasks)', () => {
+      vi.useFakeTimers();
+      service.startPolling(4000);
+
+      vi.advanceTimersByTime(4000);
+
+      httpMock.expectOne('/api/tasks').flush([task]);
+      expect(service.current()).toEqual([task]);
+    });
+
+    it('a tick while paused does not refetch', () => {
+      vi.useFakeTimers();
+      service.setPaused(true);
+      service.startPolling(4000);
+
+      vi.advanceTimersByTime(4000);
+
+      httpMock.expectNone('/api/tasks');
+    });
+
+    it('a tick while the tab is hidden does not refetch', () => {
+      vi.useFakeTimers();
+      const spy = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+      service.startPolling(4000);
+
+      vi.advanceTimersByTime(4000);
+
+      httpMock.expectNone('/api/tasks');
+      spy.mockRestore();
+    });
+
+    it('stopPolling halts further ticks', () => {
+      vi.useFakeTimers();
+      service.startPolling(4000);
+      vi.advanceTimersByTime(4000);
+      httpMock.expectOne('/api/tasks').flush([task]);
+
+      service.stopPolling();
+      vi.advanceTimersByTime(12000);
+
+      httpMock.expectNone('/api/tasks');
+    });
+
+    it('a failed poll is swallowed and the next tick retries', () => {
+      vi.useFakeTimers();
+      service.startPolling(4000);
+
+      vi.advanceTimersByTime(4000);
+      httpMock.expectOne('/api/tasks').flush(null, { status: 500, statusText: 'Server Error' });
+
+      // The stream survived the error; the next tick still fires.
+      vi.advanceTimersByTime(4000);
+      httpMock.expectOne('/api/tasks').flush([task]);
+      expect(service.current()).toEqual([task]);
+    });
+  });
 });

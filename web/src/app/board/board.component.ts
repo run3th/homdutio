@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
@@ -25,7 +25,10 @@ import { Task, TaskService, TaskStatus } from './task.service';
   templateUrl: './board.component.html',
   styleUrl: './board.component.scss',
 })
-export class BoardComponent implements OnInit {
+export class BoardComponent implements OnInit, OnDestroy {
+  /** Poll cadence (F-03): comfortably under NFR-1's 5s once request latency is added. */
+  private static readonly POLL_INTERVAL_MS = 4000;
+
   private readonly households = inject(HouseholdService);
   private readonly tasks = inject(TaskService);
   private readonly dialog = inject(Dialog);
@@ -80,9 +83,23 @@ export class BoardComponent implements OnInit {
   /**
    * Open the per-task detail panel (S-04). An explicit control distinct from the drag handle, so a drag
    * never opens the dialog. The dialog's own mutations refetch the board, so no extra wiring on close.
+   * Polling is paused while the dialog is open and resumed on close, so a tick never refetches the board
+   * out from under an in-progress edit (F-03).
    */
   openDetail(task: Task): void {
-    this.dialog.open(TaskDetailComponent, { data: task });
+    this.tasks.setPaused(true);
+    const ref = this.dialog.open(TaskDetailComponent, { data: task });
+    ref.closed.subscribe(() => this.tasks.setPaused(false));
+  }
+
+  /** A drag started — pause polling so a tick can't refetch mid-reorder (F-03). */
+  onDragStart(): void {
+    this.tasks.setPaused(true);
+  }
+
+  /** A drag ended (dropped or cancelled) — resume polling. */
+  onDragEnd(): void {
+    this.tasks.setPaused(false);
   }
 
   /**
@@ -139,6 +156,13 @@ export class BoardComponent implements OnInit {
 
   ngOnInit(): void {
     this.tasks.load().subscribe();
+    // F-03: keep the board live for the other member's changes within NFR-1's 5s.
+    this.tasks.startPolling(BoardComponent.POLL_INTERVAL_MS);
+  }
+
+  ngOnDestroy(): void {
+    // Tear down the poll so no interval leaks after navigating away from the board.
+    this.tasks.stopPolling();
   }
 
   /**

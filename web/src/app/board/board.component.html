@@ -35,7 +35,12 @@
             <p class="column-empty">No tasks yet</p>
           } @else {
             @for (task of columnTasks; track task.id) {
-              <article class="task-card" cdkDrag>
+              <article
+                class="task-card"
+                cdkDrag
+                (cdkDragStarted)="onDragStart()"
+                (cdkDragEnded)="onDragEnd()"
+              >
                 <button
                   type="button"
                   class="drag-handle"

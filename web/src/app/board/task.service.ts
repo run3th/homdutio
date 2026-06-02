@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, switchMap, tap } from 'rxjs';
+import { EMPTY, Observable, Subscription, catchError, interval, switchMap, tap } from 'rxjs';
 
 /** The three lifecycle columns; mirrors the C# HouseholdTaskStatus enum (string-serialised). */
 export type TaskStatus = 'ToDo' | 'InProgress' | 'Done';
@@ -56,9 +56,46 @@ export class TaskService {
   /** Public read-only board state (open tasks for the caller's household). */
   readonly current = this._tasks.asReadonly();
 
+  /** The live-poll subscription (S-06, F-03); `undefined` when polling is stopped. */
+  private pollSub?: Subscription;
+  /**
+   * When set, an interval tick is suppressed even on a visible tab — the board raises it during a drag or
+   * while the task dialog is open so a refetch never yanks the board out from under an in-progress action.
+   */
+  private readonly _paused = signal(false);
+
   /** `GET /api/tasks` — the caller's open board; replaces the signal. */
   load(): Observable<Task[]> {
     return this.http.get<Task[]>('/api/tasks').pipe(tap((tasks) => this._tasks.set(tasks)));
+  }
+
+  /**
+   * Start refetching the board every `intervalMs` so a change another member makes appears here within
+   * NFR-1's 5s (F-03 polling — the MVP transport ahead of a possible SignalR upgrade). A tick is skipped
+   * while the tab is hidden (`document.hidden`, bounding idle server load) or while `paused` is set. A failed
+   * poll is swallowed (`catchError`) so the stream survives to the next tick and never throws into the UI.
+   * Idempotent: a second call tears down the prior subscription first.
+   */
+  startPolling(intervalMs: number): void {
+    this.stopPolling();
+    this.pollSub = interval(intervalMs)
+      .pipe(
+        switchMap(() =>
+          document.hidden || this._paused() ? EMPTY : this.load().pipe(catchError(() => EMPTY)),
+        ),
+      )
+      .subscribe();
+  }
+
+  /** Tear the poll subscription down (board destroy / logout) so no interval leaks after navigation. */
+  stopPolling(): void {
+    this.pollSub?.unsubscribe();
+    this.pollSub = undefined;
+  }
+
+  /** Raise/clear the poll-suppression flag (board sets it during a drag and while the dialog is open). */
+  setPaused(paused: boolean): void {
+    this._paused.set(paused);
   }
 
   /** `POST /api/tasks` then refetch so the new card appears in "To do". */
@@ -101,8 +138,10 @@ export class TaskService {
       .pipe(switchMap(() => this.load()));
   }
 
-  /** Resets the board state. Wired into {@link AuthService.logout} alongside the household reset. */
+  /** Resets the board state and halts polling. Wired into {@link AuthService.logout} alongside the household reset. */
   clearOnLogout(): void {
+    this.stopPolling();
+    this._paused.set(false);
     this._tasks.set([]);
   }
 }
