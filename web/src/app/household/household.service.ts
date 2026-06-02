@@ -59,6 +59,16 @@ export class HouseholdService {
   }
 
   /**
+   * Caches a household the caller just joined (the accept-invite path, S-06), mirroring how {@link create}
+   * caches a newly-created one. Lets the board render membership immediately without a follow-up
+   * `GET /api/households/me`. Also marks loaded so the membership guard trusts the cache.
+   */
+  setMembership(household: Household): void {
+    this._household.set(household);
+    this._loaded.set(true);
+  }
+
+  /**
    * Resets both the household and the loaded flag. MUST reset `_loaded` too — otherwise a different
    * user logging in on the same page load is treated as "loaded, no household" and mis-routed to
    * `/create-household`, since the guard never refetches. Wired into {@link AuthService.logout}.

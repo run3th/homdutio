@@ -1,0 +1,46 @@
+<div class="page">
+  <div class="card">
+    @switch (previewState()) {
+      @case ('loading') {
+        <p class="muted" role="status">Loading invite…</p>
+      }
+      @case ('invalid') {
+        <h1>Invite unavailable</h1>
+        <p class="form-error" role="alert">This invite is no longer valid.</p>
+        <a class="alt-link" routerLink="/board">Go to the board</a>
+      }
+      @case ('valid') {
+        <h1>Join {{ householdName() }}</h1>
+
+        @if (!isAuthenticated()) {
+          <p>You've been invited to join this household. Log in or create an account to continue.</p>
+          <a
+            class="btn"
+            [routerLink]="['/login']"
+            [queryParams]="{ returnUrl: returnUrl }"
+            role="button"
+            >Log in</a
+          >
+          <a
+            class="alt-link"
+            [routerLink]="['/register']"
+            [queryParams]="{ returnUrl: returnUrl }"
+            >No account? Register</a
+          >
+        } @else if (!membershipLoaded()) {
+          <p class="muted" role="status">Checking your membership…</p>
+        } @else if (household()) {
+          <p class="form-error" role="alert">You already belong to a household.</p>
+          <a class="alt-link" routerLink="/board">Go to your board</a>
+        } @else {
+          @if (joinError()) {
+            <p class="form-error" role="alert">{{ joinError() }}</p>
+          }
+          <button type="button" class="btn" (click)="join()" [disabled]="joining()">
+            {{ joining() ? 'Joining…' : 'Join household' }}
+          </button>
+        }
+      }
+    }
+  </div>
+</div>

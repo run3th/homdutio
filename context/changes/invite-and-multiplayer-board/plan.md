@@ -471,31 +471,31 @@ optimistic-concurrency retry touches at most the one invite row plus one members
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 Migration is additive only (new `HouseholdInvites` table + indexes) — confirmed by reviewing the generated `Up`
-- [x] 1.3 API integration tests pass: `dotnet test`
-- [x] 1.4 Migration applies cleanly to a fresh DB (via test run)
+- [x] 1.1 Solution builds: `dotnet build` — aa1fbba
+- [x] 1.2 Migration is additive only (new `HouseholdInvites` table + indexes) — confirmed by reviewing the generated `Up` — aa1fbba
+- [x] 1.3 API integration tests pass: `dotnet test` — aa1fbba
+- [x] 1.4 Migration applies cleanly to a fresh DB (via test run) — aa1fbba
 
 #### Manual
 
-- [x] 1.5 Generate returns a token; preview returns the household name
-- [x] 1.6 A second account accepts and `GET /api/households/me` returns that household as `Member`
-- [x] 1.7 Re-accepting the same token → 410; accepting while already in a household → 409
-- [x] 1.8 Preview/accept of an expired or unknown token → 410 / 404
+- [x] 1.5 Generate returns a token; preview returns the household name — aa1fbba
+- [x] 1.6 A second account accepts and `GET /api/households/me` returns that household as `Member` — aa1fbba
+- [x] 1.7 Re-accepting the same token → 410; accepting while already in a household → 409 — aa1fbba
+- [x] 1.8 Preview/accept of an expired or unknown token → 410 / 404 — aa1fbba
 
 ### Phase 2: Frontend — invite generation + join flow
 
 #### Automated
 
-- [ ] 2.1 Frontend builds: `npm run build` (in `web/`)
-- [ ] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`)
+- [x] 2.1 Frontend builds: `npm run build` (in `web/`)
+- [x] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`)
 
 #### Manual
 
-- [ ] 2.3 Invite a member generates + copies a link; opening it shows the household name
-- [ ] 2.4 Logged-out open → Register/Log in → return to join → join → board
-- [ ] 2.5 Re-opening a consumed link shows "no longer valid"; already-in-household shows the block
-- [ ] 2.6 The join page is usable at a 400px viewport
+- [x] 2.3 Invite a member generates + copies a link; opening it shows the household name
+- [x] 2.4 Logged-out open → Register/Log in → return to join → join → board
+- [x] 2.5 Re-opening a consumed link shows "no longer valid"; already-in-household shows the block
+- [x] 2.6 The join page is usable at a 400px viewport
 
 ### Phase 3: Live board — polling transport (F-03)
 

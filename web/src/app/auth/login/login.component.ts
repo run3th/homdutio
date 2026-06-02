@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../auth.service';
 
@@ -20,11 +20,24 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
   });
+
+  /**
+   * Where to go after a successful login. Defaults to `/board`, but an invite flow passes
+   * `?returnUrl=/join/<token>` so the recipient returns to finish joining (S-06). Internal paths only —
+   * an absolute/protocol-relative value is ignored to avoid an open redirect.
+   */
+  private readonly returnUrl = (() => {
+    const candidate = this.route.snapshot.queryParamMap.get('returnUrl');
+    return candidate && candidate.startsWith('/') && !candidate.startsWith('//')
+      ? candidate
+      : '/board';
+  })();
 
   /** Success notice carried over from a just-completed registration. */
   readonly notice = signal<string | null>(null);
@@ -58,7 +71,7 @@ export class LoginComponent {
     this.auth.login(email, password).subscribe({
       next: () => {
         this.pending.set(false);
-        void this.router.navigate(['/board']);
+        void this.router.navigateByUrl(this.returnUrl);
       },
       error: () => {
         this.pending.set(false);

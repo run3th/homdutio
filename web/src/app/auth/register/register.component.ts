@@ -7,7 +7,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../auth.service';
 import { mapValidationProblem } from '../validation-problem';
@@ -43,6 +43,16 @@ export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * An optional invite `returnUrl` (S-06) forwarded through to `/login` on success, so the recipient
+   * returns to `/join/<token>` after authenticating. Internal paths only (no open redirect).
+   */
+  readonly returnUrl = (() => {
+    const candidate = this.route.snapshot.queryParamMap.get('returnUrl');
+    return candidate && candidate.startsWith('/') && !candidate.startsWith('//') ? candidate : null;
+  })();
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -69,8 +79,10 @@ export class RegisterComponent {
       next: () => {
         this.pending.set(false);
         // No auto-login: send the user to /login to authenticate explicitly, carrying a
-        // success notice and the email to prefill (via navigation state, not the URL).
+        // success notice and the email to prefill (via navigation state, not the URL). An invite
+        // returnUrl, when present, rides along as a query param so the token survives to login.
         void this.router.navigate(['/login'], {
+          queryParams: this.returnUrl ? { returnUrl: this.returnUrl } : {},
           state: { notice: 'Account created — please log in.', email },
         });
       },

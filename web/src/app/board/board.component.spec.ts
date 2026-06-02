@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 
 import { BoardComponent } from './board.component';
 import { Household, HouseholdService } from '../household/household.service';
+import { InviteService } from '../household/invite.service';
 import { Task, TaskService } from './task.service';
 
 describe('BoardComponent', () => {
@@ -16,6 +17,8 @@ describe('BoardComponent', () => {
   let confirm: ReturnType<typeof vi.fn>;
   let reorder: ReturnType<typeof vi.fn>;
   let open: ReturnType<typeof vi.fn>;
+  let generate: ReturnType<typeof vi.fn>;
+  let writeText: ReturnType<typeof vi.fn>;
 
   function baseTask(overrides: Partial<Task>): Task {
     return {
@@ -45,6 +48,12 @@ describe('BoardComponent', () => {
     confirm = vi.fn(() => of(tasks()));
     reorder = vi.fn(() => of(tasks()));
     open = vi.fn();
+    generate = vi.fn(() => of({ token: 'tok123', expiresAtUtc: '2026-06-09T00:00:00Z' }));
+    writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
     TestBed.configureTestingModule({
       imports: [BoardComponent],
       providers: [
@@ -54,6 +63,7 @@ describe('BoardComponent', () => {
           useValue: { current: tasks.asReadonly(), load, claim, markDone, confirm, reorder },
         },
         { provide: Dialog, useValue: { open } },
+        { provide: InviteService, useValue: { generate } },
       ],
     });
   });
@@ -160,6 +170,25 @@ describe('BoardComponent', () => {
     fixture.componentInstance.drop('ToDo', { previousIndex: 1, currentIndex: 1 } as never);
 
     expect(reorder).not.toHaveBeenCalled();
+  });
+
+  it('clicking Invite a member generates a link and copies it to the clipboard', async () => {
+    const fixture = render();
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '.invite-button',
+    ) as HTMLButtonElement;
+
+    button.click();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(generate).toHaveBeenCalled();
+    const expected = `${window.location.origin}/join/tok123`;
+    expect(writeText).toHaveBeenCalledWith(expected);
+    expect(fixture.componentInstance.inviteLink()).toBe(expected);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.invite-link')?.textContent).toBe(
+      expected,
+    );
   });
 
   it('a confirmed task drops off the board after the refetch', () => {

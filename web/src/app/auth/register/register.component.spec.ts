@@ -4,6 +4,8 @@ import { FormControl } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { ActivatedRoute } from '@angular/router';
+
 import { RegisterComponent, passwordPolicyValidator } from './register.component';
 import { AuthService } from '../auth.service';
 
@@ -56,6 +58,7 @@ describe('RegisterComponent', () => {
     expect(register).toHaveBeenCalledWith('new@b.com', 'Passw0rd!', 'Molly');
     expect(loginSpy).not.toHaveBeenCalled();
     expect(navSpy).toHaveBeenCalledWith(['/login'], {
+      queryParams: {},
       state: { notice: 'Account created — please log in.', email: 'new@b.com' },
     });
   });
@@ -95,5 +98,38 @@ describe('RegisterComponent', () => {
 
     expect(fixture.componentInstance.serverErrors()).toEqual(['Email is already taken.']);
     expect(navSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('RegisterComponent with an invite returnUrl', () => {
+  it('forwards the returnUrl as a query param onto /login on success', () => {
+    const register = vi.fn().mockReturnValue(of(undefined));
+    TestBed.configureTestingModule({
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { register, login: vi.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: { get: () => '/join/abc123' } } },
+        },
+      ],
+    });
+    const navSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.form.setValue({
+      email: 'new@b.com',
+      displayName: '',
+      password: 'Passw0rd!',
+    });
+
+    fixture.componentInstance.submit();
+
+    expect(navSpy).toHaveBeenCalledWith(['/login'], {
+      queryParams: { returnUrl: '/join/abc123' },
+      state: { notice: 'Account created — please log in.', email: 'new@b.com' },
+    });
   });
 });

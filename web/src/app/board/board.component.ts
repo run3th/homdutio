@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
@@ -6,6 +6,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { Observable } from 'rxjs';
 
 import { HouseholdService } from '../household/household.service';
+import { buildJoinUrl, InviteService } from '../household/invite.service';
 import { CreateTaskComponent } from './create-task/create-task.component';
 import { TaskDetailComponent } from './task-detail/task-detail.component';
 import { Task, TaskService, TaskStatus } from './task.service';
@@ -28,8 +29,17 @@ export class BoardComponent implements OnInit {
   private readonly households = inject(HouseholdService);
   private readonly tasks = inject(TaskService);
   private readonly dialog = inject(Dialog);
+  private readonly invites = inject(InviteService);
 
   readonly household = this.households.current;
+
+  /** The generated `/join/<token>` URL to share, shown as selectable text (clipboard-copy fallback). */
+  readonly inviteLink = signal<string | null>(null);
+  /** Whether the link was copied to the clipboard (drives the "copied" confirmation). */
+  readonly inviteCopied = signal(false);
+  /** A generate-time error to surface inline. */
+  readonly inviteError = signal<string | null>(null);
+  readonly invitePending = signal(false);
 
   /** The three fixed board columns: display label + the status they hold (English labels; no i18n in v1). */
   readonly columns: readonly { label: string; status: TaskStatus }[] = [
@@ -92,6 +102,38 @@ export class BoardComponent implements OnInit {
 
     this.tasks.reorder(status, orderedIds).subscribe({
       error: () => this.tasks.load().subscribe(),
+    });
+  }
+
+  /**
+   * Generate a single-use invite link and copy it to the clipboard to share out-of-band (FR-005).
+   * The API returns only the token; the shareable URL is composed against this origin. The link is also
+   * shown as selectable text so a recipient gets it even where `navigator.clipboard` is unavailable.
+   */
+  invite(): void {
+    if (this.invitePending()) {
+      return;
+    }
+
+    this.invitePending.set(true);
+    this.inviteError.set(null);
+    this.inviteCopied.set(false);
+
+    this.invites.generate().subscribe({
+      next: ({ token }) => {
+        this.invitePending.set(false);
+        const url = buildJoinUrl(window.location.origin, token);
+        this.inviteLink.set(url);
+        // Best-effort copy; the visible link is the fallback when the clipboard API is missing/denied.
+        navigator.clipboard
+          ?.writeText(url)
+          .then(() => this.inviteCopied.set(true))
+          .catch(() => this.inviteCopied.set(false));
+      },
+      error: () => {
+        this.invitePending.set(false);
+        this.inviteError.set('Could not create an invite. Please try again.');
+      },
     });
   }
 
