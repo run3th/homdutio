@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable } from 'rxjs';
 
 import { HouseholdService } from '../household/household.service';
@@ -19,7 +20,7 @@ import { Task, TaskService, TaskStatus } from './task.service';
  */
 @Component({
   selector: 'app-board',
-  imports: [DatePipe, CreateTaskComponent],
+  imports: [DatePipe, CreateTaskComponent, DragDropModule],
   templateUrl: './board.component.html',
   styleUrl: './board.component.scss',
 })
@@ -67,11 +68,31 @@ export class BoardComponent implements OnInit {
   }
 
   /**
-   * Open the per-task detail panel (S-04). An explicit control distinct from the drag handle (Phase 3), so a
-   * drag never opens the dialog. The dialog's own mutations refetch the board, so no extra wiring on close.
+   * Open the per-task detail panel (S-04). An explicit control distinct from the drag handle, so a drag
+   * never opens the dialog. The dialog's own mutations refetch the board, so no extra wiring on close.
    */
   openDetail(task: Task): void {
     this.dialog.open(TaskDetailComponent, { data: task });
+  }
+
+  /**
+   * A card was dropped within its column (S-04, FR-021). Compute the new within-column order from the drag
+   * indices and persist it; {@link TaskService.reorder} refetches so the board re-renders the shared order.
+   * If the persist fails (e.g. a concurrent transition moved a card out of the column), a `load()` self-heals
+   * back to the server's truth — mirroring the S-03 stale-affordance pattern. Lists are independent per
+   * column, so a drop is always within one status — cross-column moves are the lifecycle, not a drag.
+   */
+  drop(status: TaskStatus, event: CdkDragDrop<Task[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    const orderedIds = this.tasksFor(status).map((task) => task.id);
+    moveItemInArray(orderedIds, event.previousIndex, event.currentIndex);
+
+    this.tasks.reorder(status, orderedIds).subscribe({
+      error: () => this.tasks.load().subscribe(),
+    });
   }
 
   ngOnInit(): void {

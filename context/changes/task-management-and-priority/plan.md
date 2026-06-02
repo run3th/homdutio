@@ -495,28 +495,28 @@ dropped or retyped.
 
 #### Automated
 
-- [x] 2.1 Frontend builds: `npm run build` (in `web/`)
-- [x] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`)
+- [x] 2.1 Frontend builds: `npm run build` (in `web/`) — 34ac8b6
+- [x] 2.2 Existing + new vitest specs pass: `npm test` (in `web/`) — 34ac8b6
 
 #### Manual
 
-- [x] 2.3 A "To do" card's dialog edits and Save updates the card
-- [x] 2.4 Blank title shows the mapped validation error and does not close
-- [x] 2.5 Dialog Delete (after confirm) removes the card; a claimed/done card's dialog is read-only
-- [x] 2.6 The dialog is usable at a 400px viewport
+- [x] 2.3 A "To do" card's dialog edits and Save updates the card — 34ac8b6
+- [x] 2.4 Blank title shows the mapped validation error and does not close — 34ac8b6
+- [x] 2.5 Dialog Delete (after confirm) removes the card; a claimed/done card's dialog is read-only — 34ac8b6
+- [x] 2.6 The dialog is usable at a 400px viewport — 34ac8b6
 
 ### Phase 3: Frontend — drag-and-drop reorder
 
 #### Automated
 
-- [ ] 3.1 Frontend builds: `npm run build` (in `web/`)
-- [ ] 3.2 All vitest specs pass: `npm test` (in `web/`)
-- [ ] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [ ] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` (in `web/`)
+- [x] 3.2 All vitest specs pass: `npm test` (in `web/`)
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
+- [x] 3.4 Full backend suite still green: `dotnet test`
 
 #### Manual
 
-- [ ] 3.5 Dragging a card within "To do" reorders it; reload preserves the order
-- [ ] 3.6 Drag works in all three columns; a card cannot be dragged between columns
-- [ ] 3.7 At a 400px viewport the drag works by touch with no horizontal scroll
-- [ ] 3.8 A reorder by one member is visible to another after they reload
+- [x] 3.5 Dragging a card within "To do" reorders it; reload preserves the order
+- [x] 3.6 Drag works in all three columns; a card cannot be dragged between columns
+- [x] 3.7 At a 400px viewport the drag works by touch with no horizontal scroll
+- [x] 3.8 A reorder by one member is visible to another after they reload

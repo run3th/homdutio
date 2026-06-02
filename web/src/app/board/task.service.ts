@@ -91,6 +91,16 @@ export class TaskService {
     return this.http.delete<void>(`/api/tasks/${id}`).pipe(switchMap(() => this.load()));
   }
 
+  /**
+   * `PUT /api/tasks/order` then refetch — persist a column's new within-column order (FR-021) and
+   * re-render from the server (last-write-wins; cross-member propagation is S-06 polling).
+   */
+  reorder(status: TaskStatus, orderedIds: string[]): Observable<Task[]> {
+    return this.http
+      .put<void>('/api/tasks/order', { status, orderedIds })
+      .pipe(switchMap(() => this.load()));
+  }
+
   /** Resets the board state. Wired into {@link AuthService.logout} alongside the household reset. */
   clearOnLogout(): void {
     this._tasks.set([]);

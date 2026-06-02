@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { Task, TaskService } from './task.service';
 
@@ -127,6 +124,18 @@ describe('TaskService', () => {
     // The refetch returns an empty board (the task is gone).
     httpMock.expectOne('/api/tasks').flush([]);
     expect(service.current()).toEqual([]);
+  });
+
+  it('reorder PUTs /api/tasks/order with status + orderedIds then refetches', () => {
+    service.reorder('ToDo', ['c', 'a', 'b']).subscribe();
+
+    const put = httpMock.expectOne('/api/tasks/order');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ status: 'ToDo', orderedIds: ['c', 'a', 'b'] });
+    put.flush(null);
+
+    httpMock.expectOne('/api/tasks').flush([task]);
+    expect(service.current()).toEqual([task]);
   });
 
   it('clearOnLogout resets the board', () => {

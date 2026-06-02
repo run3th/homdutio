@@ -63,17 +63,79 @@
   font-size: 0.875rem;
 }
 
+/* The drop list owns the cards; it needs height even when empty so its layout is stable. */
+.column-list {
+  min-height: 1.5rem;
+}
+
 /* Task cards: full-width within their column so they never force horizontal scroll at ≤ 400px (NFR-2). */
 .task-card {
+  position: relative;
   background: #f9fafb;
   border: 1px solid #eceef1;
   border-radius: 0.5rem;
   padding: 0.75rem;
+  /* Leave room for the drag handle pinned top-right so it never overlaps the title. */
+  padding-right: 2.25rem;
   margin-bottom: 0.75rem;
 }
 
 .task-card:last-child {
   margin-bottom: 0;
+}
+
+/* Drag handle: the only drag initiator, so tapping the title/buttons never starts a drag. A comfortable
+   touch target (NFR-2); `touch-action: none` lets CDK own the gesture without the page scrolling. */
+.drag-handle {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: #9ca3af;
+  background: transparent;
+  border: 0;
+  border-radius: 0.375rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-handle:hover {
+  color: #4f46e5;
+  background: #eef2ff;
+}
+
+.drag-handle:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 1px;
+}
+
+/* CDK drag states. The preview is the card lifted under the pointer; the placeholder is the gap it leaves. */
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 5px 5px -3px rgba(0, 0, 0, 0.2),
+    0 8px 10px 1px rgba(0, 0, 0, 0.14),
+    0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0;
+}
+
+.cdk-drag-animating {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Settle the remaining cards smoothly as one is dropped. */
+.column-list.cdk-drop-list-dragging .task-card:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .task-title {

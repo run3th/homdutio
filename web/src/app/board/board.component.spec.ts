@@ -14,6 +14,7 @@ describe('BoardComponent', () => {
   let claim: ReturnType<typeof vi.fn>;
   let markDone: ReturnType<typeof vi.fn>;
   let confirm: ReturnType<typeof vi.fn>;
+  let reorder: ReturnType<typeof vi.fn>;
   let open: ReturnType<typeof vi.fn>;
 
   function baseTask(overrides: Partial<Task>): Task {
@@ -42,6 +43,7 @@ describe('BoardComponent', () => {
     claim = vi.fn(() => of(tasks()));
     markDone = vi.fn(() => of(tasks()));
     confirm = vi.fn(() => of(tasks()));
+    reorder = vi.fn(() => of(tasks()));
     open = vi.fn();
     TestBed.configureTestingModule({
       imports: [BoardComponent],
@@ -49,7 +51,7 @@ describe('BoardComponent', () => {
         { provide: HouseholdService, useValue: { current } },
         {
           provide: TaskService,
-          useValue: { current: tasks.asReadonly(), load, claim, markDone, confirm },
+          useValue: { current: tasks.asReadonly(), load, claim, markDone, confirm, reorder },
         },
         { provide: Dialog, useValue: { open } },
       ],
@@ -70,7 +72,9 @@ describe('BoardComponent', () => {
 
   it('renders the three column labels and loads on init', () => {
     const el = render().nativeElement as HTMLElement;
-    const titles = Array.from(el.querySelectorAll('.column-title')).map((n) => n.textContent?.trim());
+    const titles = Array.from(el.querySelectorAll('.column-title')).map((n) =>
+      n.textContent?.trim(),
+    );
     expect(titles).toEqual(['To do', 'In progress', 'Done']);
     expect(load).toHaveBeenCalled();
   });
@@ -91,7 +95,9 @@ describe('BoardComponent', () => {
   it('renders only the affordance-permitted buttons', () => {
     tasks.set([baseTask({ id: 'a', status: 'ToDo', canClaim: true })]);
     const el = render().nativeElement as HTMLElement;
-    const labels = Array.from(el.querySelectorAll('.task-action')).map((b) => b.textContent?.trim());
+    const labels = Array.from(el.querySelectorAll('.task-action')).map((b) =>
+      b.textContent?.trim(),
+    );
     expect(labels).toEqual(['Claim']);
   });
 
@@ -131,6 +137,29 @@ describe('BoardComponent', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     expect(open.mock.calls[0][1]).toEqual({ data: task });
+  });
+
+  it('a drop reorders the column and calls reorder with the new ordered ids', () => {
+    tasks.set([
+      baseTask({ id: 'a', status: 'ToDo' }),
+      baseTask({ id: 'b', status: 'ToDo' }),
+      baseTask({ id: 'c', status: 'ToDo' }),
+    ]);
+    const fixture = render();
+
+    // Drag the third card (index 2) to the top (index 0).
+    fixture.componentInstance.drop('ToDo', { previousIndex: 2, currentIndex: 0 } as never);
+
+    expect(reorder).toHaveBeenCalledWith('ToDo', ['c', 'a', 'b']);
+  });
+
+  it('a no-op drop (same index) does not call reorder', () => {
+    tasks.set([baseTask({ id: 'a', status: 'ToDo' }), baseTask({ id: 'b', status: 'ToDo' })]);
+    const fixture = render();
+
+    fixture.componentInstance.drop('ToDo', { previousIndex: 1, currentIndex: 1 } as never);
+
+    expect(reorder).not.toHaveBeenCalled();
   });
 
   it('a confirmed task drops off the board after the refetch', () => {
