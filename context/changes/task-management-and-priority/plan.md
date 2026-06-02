@@ -509,14 +509,14 @@ dropped or retyped.
 
 #### Automated
 
-- [x] 3.1 Frontend builds: `npm run build` (in `web/`)
-- [x] 3.2 All vitest specs pass: `npm test` (in `web/`)
-- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release`
-- [x] 3.4 Full backend suite still green: `dotnet test`
+- [x] 3.1 Frontend builds: `npm run build` (in `web/`) — 7ce9c22
+- [x] 3.2 All vitest specs pass: `npm test` (in `web/`) — 7ce9c22
+- [x] 3.3 Release build bundles the SPA: `dotnet build -c Release` — 7ce9c22
+- [x] 3.4 Full backend suite still green: `dotnet test` — 7ce9c22
 
 #### Manual
 
-- [x] 3.5 Dragging a card within "To do" reorders it; reload preserves the order
-- [x] 3.6 Drag works in all three columns; a card cannot be dragged between columns
-- [x] 3.7 At a 400px viewport the drag works by touch with no horizontal scroll
-- [x] 3.8 A reorder by one member is visible to another after they reload
+- [x] 3.5 Dragging a card within "To do" reorders it; reload preserves the order — 7ce9c22
+- [x] 3.6 Drag works in all three columns; a card cannot be dragged between columns — 7ce9c22
+- [x] 3.7 At a 400px viewport the drag works by touch with no horizontal scroll — 7ce9c22
+- [x] 3.8 A reorder by one member is visible to another after they reload — 7ce9c22
