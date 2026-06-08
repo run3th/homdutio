@@ -415,30 +415,30 @@ shared across queued 401s).
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 `AddRefreshTokens` migration applies cleanly against LocalDB
-- [x] 1.3 New + existing API tests pass: `dotnet test`
-- [x] 1.4 Login integration test asserts non-empty `refreshToken` + a hashed `RefreshTokens` row
+- [x] 1.1 Solution builds: `dotnet build` — 2089ae7
+- [x] 1.2 `AddRefreshTokens` migration applies cleanly against LocalDB — 2089ae7
+- [x] 1.3 New + existing API tests pass: `dotnet test` — 2089ae7
+- [x] 1.4 Login integration test asserts non-empty `refreshToken` + a hashed `RefreshTokens` row — 2089ae7
 
 #### Manual
 
-- [x] 1.5 `RefreshTokens` row after login: hashed token, FamilyId set, ~30-day expiry, null consumed/revoked
-- [x] 1.6 Access token `exp` is ~15 min out
+- [x] 1.5 `RefreshTokens` row after login: hashed token, FamilyId set, ~30-day expiry, null consumed/revoked — 2089ae7
+- [x] 1.6 Access token `exp` is ~15 min out — 2089ae7
 
 ### Phase 2: Backend — Refresh, Logout & Replay Handling
 
 #### Automated
 
-- [ ] 2.1 `dotnet test` passes including refresh-rotates test (old token rejected, new works)
-- [ ] 2.2 Expired-token refresh → 401 test
-- [ ] 2.3 Replay test: re-presenting consumed token → 401 and family revoked
-- [ ] 2.4 Logout → subsequent refresh → 401 test
-- [ ] 2.5 Unknown-token refresh → 401; unknown-token logout → 200 (idempotent)
+- [x] 2.1 `dotnet test` passes including refresh-rotates test (old token rejected, new works)
+- [x] 2.2 Expired-token refresh → 401 test
+- [x] 2.3 Replay test: re-presenting consumed token → 401 and family revoked
+- [x] 2.4 Logout → subsequent refresh → 401 test
+- [x] 2.5 Unknown-token refresh → 401; unknown-token logout → 200 (idempotent)
 
 #### Manual
 
-- [ ] 2.6 REST-client rotation walk: each refresh token works exactly once
-- [ ] 2.7 Replayed token kills the chain (RevokedAtUtc across family)
+- [x] 2.6 REST-client rotation walk: each refresh token works exactly once
+- [x] 2.7 Replayed token kills the chain (RevokedAtUtc across family)
 
 ### Phase 3: SPA — Persist, Restore & Interceptor Wiring
 

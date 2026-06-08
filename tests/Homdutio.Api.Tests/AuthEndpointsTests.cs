@@ -37,6 +37,29 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
         return body!.AccessToken;
     }
 
+    private async Task<string> RegisterAndGetRefreshTokenAsync(string email)
+    {
+        (await _client.PostAsJsonAsync("/api/auth/register", Credentials(email))).EnsureSuccessStatusCode();
+
+        var login = await _client.PostAsJsonAsync("/api/auth/login", Credentials(email));
+        login.EnsureSuccessStatusCode();
+        var body = await login.Content.ReadFromJsonAsync<LoginBody>();
+        return body!.RefreshToken;
+    }
+
+    private Task<HttpResponseMessage> RefreshAsync(string refreshToken) =>
+        _client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken });
+
+    private Task<HttpResponseMessage> LogoutAsync(string refreshToken) =>
+        _client.PostAsJsonAsync("/api/auth/logout", new { refreshToken });
+
+    private async Task<string> UserIdOfAsync(string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await db.Users.AsNoTracking().Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
+    }
+
     [Fact]
     public async Task Register_returns_ok()
     {
@@ -87,6 +110,96 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.True(row.ExpiresAtUtc > DateTime.UtcNow.AddDays(29));
         Assert.Null(row.ConsumedAtUtc);
         Assert.Null(row.RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task Refresh_rotates_token_old_rejected_new_works()
+    {
+        var email = $"rotate-{Guid.NewGuid():N}@example.test";
+        var token1 = await RegisterAndGetRefreshTokenAsync(email);
+
+        var r1 = await RefreshAsync(token1);
+        Assert.Equal(HttpStatusCode.OK, r1.StatusCode);
+        var token2 = (await r1.Content.ReadFromJsonAsync<LoginBody>())!.RefreshToken;
+        Assert.NotEqual(token1, token2);
+
+        // The rotated token works...
+        var r2 = await RefreshAsync(token2);
+        Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
+
+        // ...and the original (now consumed) token is rejected.
+        var r3 = await RefreshAsync(token1);
+        Assert.Equal(HttpStatusCode.Unauthorized, r3.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_with_expired_token_returns_401()
+    {
+        var email = $"expired-{Guid.NewGuid():N}@example.test";
+        var token = await RegisterAndGetRefreshTokenAsync(email);
+
+        // Backdate the persisted row's expiry — the fresh user has exactly one token.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userId = await db.Users.AsNoTracking().Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
+            var row = await db.RefreshTokens.SingleAsync(r => r.UserId == userId);
+            row.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await RefreshAsync(token);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_replay_of_consumed_token_kills_the_family()
+    {
+        var email = $"replay-{Guid.NewGuid():N}@example.test";
+        var token1 = await RegisterAndGetRefreshTokenAsync(email);
+
+        var r1 = await RefreshAsync(token1);
+        Assert.Equal(HttpStatusCode.OK, r1.StatusCode);
+        var token2 = (await r1.Content.ReadFromJsonAsync<LoginBody>())!.RefreshToken;
+
+        // Replaying the already-consumed original token → 401...
+        var replay = await RefreshAsync(token1);
+        Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
+
+        // ...and the whole family is now dead: the rotated successor is rejected too.
+        var afterReplay = await RefreshAsync(token2);
+        Assert.Equal(HttpStatusCode.Unauthorized, afterReplay.StatusCode);
+
+        // Every row in the family carries RevokedAtUtc.
+        var userId = await UserIdOfAsync(email);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var rows = await db.RefreshTokens.AsNoTracking().Where(r => r.UserId == userId).ToListAsync();
+        Assert.NotEmpty(rows);
+        Assert.All(rows, r => Assert.NotNull(r.RevokedAtUtc));
+    }
+
+    [Fact]
+    public async Task Logout_revokes_family_then_refresh_returns_401()
+    {
+        var email = $"logout-{Guid.NewGuid():N}@example.test";
+        var token = await RegisterAndGetRefreshTokenAsync(email);
+
+        var logout = await LogoutAsync(token);
+        Assert.Equal(HttpStatusCode.OK, logout.StatusCode);
+
+        var refresh = await RefreshAsync(token);
+        Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unknown_token_refresh_401_and_logout_200_idempotent()
+    {
+        var refresh = await RefreshAsync("this-token-was-never-issued");
+        Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
+
+        var logout = await LogoutAsync("this-token-was-never-issued");
+        Assert.Equal(HttpStatusCode.OK, logout.StatusCode);
     }
 
     [Fact]

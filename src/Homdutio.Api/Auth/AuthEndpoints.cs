@@ -56,6 +56,39 @@ public static class AuthEndpoints
             return Results.Ok(new LoginResponse(accessToken, expiresAtUtc, refreshToken.RawToken));
         });
 
+        group.MapPost("/refresh", async (
+            RefreshRequest request,
+            JwtTokenService tokens,
+            RefreshTokenService refreshTokens,
+            UserManager<ApplicationUser> users) =>
+        {
+            // Anonymous: the access token may already be expired, so this path cannot require a bearer.
+            var rotation = await refreshTokens.ValidateAndRotateAsync(request.RefreshToken);
+            if (rotation.Outcome != RefreshOutcome.Success)
+            {
+                // Expired/Revoked/NotFound, and Replay (the service already revoked the family) all → 401.
+                return Results.Unauthorized();
+            }
+
+            var user = await users.FindByIdAsync(rotation.UserId!);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var (accessToken, expiresAtUtc) = tokens.CreateAccessToken(user);
+            return Results.Ok(new LoginResponse(accessToken, expiresAtUtc, rotation.RawToken!));
+        });
+
+        group.MapPost("/logout", async (RefreshRequest request, RefreshTokenService refreshTokens) =>
+        {
+            // Idempotent + existence-safe: revoke the family if the token is known, always return 200 so a
+            // copied/expired/unknown token reveals nothing. No bearer required (expired access token must
+            // still be able to log out).
+            await refreshTokens.RevokeFamilyAsync(request.RefreshToken);
+            return Results.Ok();
+        });
+
         group.MapGet("/me", (ClaimsPrincipal principal) =>
             Results.Ok(new MeResponse(
                 principal.FindFirstValue("sub"),
@@ -81,6 +114,8 @@ public static class AuthEndpoints
 public sealed record RegisterRequest(string Email, string Password, string? DisplayName = null);
 
 public sealed record LoginRequest(string Email, string Password);
+
+public sealed record RefreshRequest(string RefreshToken);
 
 public sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc, string RefreshToken);
 
