@@ -444,17 +444,17 @@ shared across queued 401s).
 
 #### Automated
 
-- [x] 3.1 Lint passes: `npm run lint` (adapted → `npx prettier --check`; no lint script in repo)
-- [x] 3.2 Release `BuildAngularSpa` target succeeds
-- [x] 3.3 vitest: startup initializer restores on success / clears on failure-timeout / no-op when no token
-- [x] 3.4 vitest: 401 interceptor refreshes once + retries, second 401 → logout+redirect
-- [x] 3.5 vitest: `logout()` posts to `/api/auth/logout` and clears `localStorage`
+- [x] 3.1 Lint passes: `npm run lint` (adapted → `npx prettier --check`; no lint script in repo) — bed8c29
+- [x] 3.2 Release `BuildAngularSpa` target succeeds — bed8c29
+- [x] 3.3 vitest: startup initializer restores on success / clears on failure-timeout / no-op when no token — bed8c29
+- [x] 3.4 vitest: 401 interceptor refreshes once + retries, second 401 → logout+redirect — bed8c29
+- [x] 3.5 vitest: `logout()` posts to `/api/auth/logout` and clears `localStorage` — bed8c29
 
 #### Manual
 
-- [x] 3.6 Hard reload → still on `/board`, no `/login` flash
-- [x] 3.7 Close + reopen tab → resumes authenticated
-- [x] 3.8 Mid-session access-token expiry → board action succeeds silently
-- [x] 3.9 Logout → reload → lands on `/login`, no redirect loop
-- [x] 3.10 Multi-device: logout one, other stays authenticated
-- [x] 3.11 ≤400px no layout regression on the restore path (NFR-2)
+- [x] 3.6 Hard reload → still on `/board`, no `/login` flash — bed8c29
+- [x] 3.7 Close + reopen tab → resumes authenticated — bed8c29
+- [x] 3.8 Mid-session access-token expiry → board action succeeds silently — bed8c29
+- [x] 3.9 Logout → reload → lands on `/login`, no redirect loop — bed8c29
+- [x] 3.10 Multi-device: logout one, other stays authenticated — bed8c29
+- [x] 3.11 ≤400px no layout regression on the restore path (NFR-2) — bed8c29
