@@ -35,7 +35,8 @@ public static class AuthEndpoints
             LoginRequest request,
             UserManager<ApplicationUser> users,
             SignInManager<ApplicationUser> signIn,
-            JwtTokenService tokens) =>
+            JwtTokenService tokens,
+            RefreshTokenService refreshTokens) =>
         {
             var user = await users.FindByEmailAsync(request.Email);
             if (user is null)
@@ -50,7 +51,9 @@ public static class AuthEndpoints
             }
 
             var (accessToken, expiresAtUtc) = tokens.CreateAccessToken(user);
-            return Results.Ok(new LoginResponse(accessToken, expiresAtUtc));
+            // New family per login: independent sessions across devices (logout of one leaves the rest).
+            var refreshToken = await refreshTokens.IssueAsync(user.Id);
+            return Results.Ok(new LoginResponse(accessToken, expiresAtUtc, refreshToken.RawToken));
         });
 
         group.MapGet("/me", (ClaimsPrincipal principal) =>
@@ -79,6 +82,6 @@ public sealed record RegisterRequest(string Email, string Password, string? Disp
 
 public sealed record LoginRequest(string Email, string Password);
 
-public sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc);
+public sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc, string RefreshToken);
 
 public sealed record MeResponse(string? Sub, string? Email);

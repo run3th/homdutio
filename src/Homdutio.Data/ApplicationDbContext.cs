@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<HouseholdInvite> HouseholdInvites => Set<HouseholdInvite>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         // Identity needs its configuration applied first.
@@ -113,6 +115,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
 
             // CreatedById/ConsumedById are raw AspNetUsers.Id columns with no navigation (see HouseholdTask).
+        });
+
+        builder.Entity<RefreshToken>(refreshToken =>
+        {
+            refreshToken.Property(r => r.TokenHash).IsRequired().HasMaxLength(64);
+
+            // The hot path is the by-hash lookup on every refresh; unique so a hash maps to exactly one row.
+            refreshToken.HasIndex(r => r.TokenHash).IsUnique();
+
+            // Replay/logout revoke an entire rotation chain at once — this index backs the family sweep.
+            refreshToken.HasIndex(r => r.FamilyId);
+
+            // Per-user queries and the eventual expired-row cleanup job (see plan Performance Considerations).
+            refreshToken.HasIndex(r => r.UserId);
+
+            // Optimistic-concurrency guard that makes consume single-winner under a rotation race (S-10).
+            refreshToken.Property(r => r.RowVersion).IsRowVersion();
+
+            // UserId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
         });
     }
 }

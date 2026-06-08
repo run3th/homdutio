@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Homdutio.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Homdutio.Api.Tests;
 
@@ -13,10 +16,12 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
 {
     private const string Password = "P@ssw0rd!23";
     private readonly HttpClient _client;
+    private readonly AuthApiFactory _factory;
 
     public AuthEndpointsTests(AuthApiFactory factory)
     {
         factory.EnsureDatabaseMigrated();
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -55,6 +60,36 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
     }
 
     [Fact]
+    public async Task Login_issues_refresh_token_and_persists_a_hashed_row()
+    {
+        var email = $"refresh-{Guid.NewGuid():N}@example.test";
+        (await _client.PostAsJsonAsync("/api/auth/register", Credentials(email))).EnsureSuccessStatusCode();
+
+        var response = await _client.PostAsJsonAsync("/api/auth/login", Credentials(email));
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<LoginBody>();
+
+        Assert.False(string.IsNullOrEmpty(body!.RefreshToken));
+
+        // The persisted row stores a hash, not the raw token, and is live (not yet consumed/revoked).
+        // Scoped to this login's user — the class fixture shares one database across tests.
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var userId = await db.Users.AsNoTracking()
+            .Where(u => u.Email == email)
+            .Select(u => u.Id)
+            .SingleAsync();
+        var row = await db.RefreshTokens.AsNoTracking().SingleAsync(r => r.UserId == userId);
+
+        Assert.NotEqual(body.RefreshToken, row.TokenHash);
+        Assert.Equal(64, row.TokenHash.Length);
+        Assert.NotEqual(Guid.Empty, row.FamilyId);
+        Assert.True(row.ExpiresAtUtc > DateTime.UtcNow.AddDays(29));
+        Assert.Null(row.ConsumedAtUtc);
+        Assert.Null(row.RevokedAtUtc);
+    }
+
+    [Fact]
     public async Task Me_with_bearer_token_returns_claims()
     {
         var email = $"me-{Guid.NewGuid():N}@example.test";
@@ -88,7 +123,7 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);
+    private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc, string RefreshToken);
 
     private sealed record MeBody(string? Sub, string? Email);
 }

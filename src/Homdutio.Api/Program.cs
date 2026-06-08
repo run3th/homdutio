@@ -73,6 +73,10 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<JwtTokenService>();
 
+// Scoped (not singleton like JwtTokenService) because it depends on the scoped ApplicationDbContext —
+// token minting is stateless, but refresh persistence is per-request DB work.
+builder.Services.AddScoped<RefreshTokenService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
