@@ -1,17 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { AuthService, LoginResponse } from './auth.service';
+import { AuthService, LoginResponse, REFRESH_TOKEN_KEY } from './auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
 
+  const loginResponse: LoginResponse = {
+    accessToken: 'jwt-123',
+    expiresAtUtc: '2099-01-01T00:00:00Z',
+    refreshToken: 'refresh-abc',
+  };
+
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [AuthService, provideHttpClient(), provideHttpClientTesting()],
     });
@@ -19,44 +23,114 @@ describe('AuthService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    httpMock.verify();
+    localStorage.clear();
+  });
 
   it('starts unauthenticated with a null token', () => {
     expect(service.isAuthenticated()).toBe(false);
     expect(service.token).toBeNull();
     expect(service.email()).toBeNull();
+    expect(service.hasRefreshToken).toBe(false);
   });
 
-  it('login stores the token, captures the email, and flips auth state', () => {
-    const response: LoginResponse = {
-      accessToken: 'jwt-123',
-      expiresAtUtc: '2099-01-01T00:00:00Z',
-    };
-
+  it('login stores the token, captures the email, persists the refresh token, and flips auth state', () => {
     service.login('user@example.com', 'Passw0rd!').subscribe();
 
     const req = httpMock.expectOne('/api/auth/login');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ email: 'user@example.com', password: 'Passw0rd!' });
-    req.flush(response);
+    req.flush(loginResponse);
 
     expect(service.token).toBe('jwt-123');
     expect(service.isAuthenticated()).toBe(true);
     expect(service.email()).toBe('user@example.com');
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-abc');
   });
 
-  it('logout clears the token, email, and auth state', () => {
-    service.login('user@example.com', 'Passw0rd!').subscribe();
-    httpMock.expectOne('/api/auth/login').flush({
-      accessToken: 'jwt-123',
+  it('refresh posts the stored token, updates the access token, and rotates the stored token', () => {
+    localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-abc');
+
+    let result: boolean | undefined;
+    service.refresh().subscribe((ok) => (result = ok));
+
+    const req = httpMock.expectOne('/api/auth/refresh');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ refreshToken: 'refresh-abc' });
+    req.flush({
+      accessToken: 'jwt-456',
       expiresAtUtc: '2099-01-01T00:00:00Z',
-    });
+      refreshToken: 'refresh-def',
+    } satisfies LoginResponse);
+
+    expect(result).toBe(true);
+    expect(service.token).toBe('jwt-456');
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-def');
+  });
+
+  it('refresh with no stored token resolves false without a request', () => {
+    let result: boolean | undefined;
+    service.refresh().subscribe((ok) => (result = ok));
+
+    httpMock.expectNone('/api/auth/refresh');
+    expect(result).toBe(false);
+  });
+
+  it('refresh on a 401 clears the token and stored credentials and resolves false', () => {
+    localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-abc');
+
+    let result: boolean | undefined;
+    service.refresh().subscribe((ok) => (result = ok));
+
+    httpMock
+      .expectOne('/api/auth/refresh')
+      .flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(result).toBe(false);
+    expect(service.token).toBeNull();
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+  });
+
+  it('refresh shares a single in-flight request across concurrent callers', () => {
+    localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-abc');
+
+    const results: boolean[] = [];
+    service.refresh().subscribe((ok) => results.push(ok));
+    service.refresh().subscribe((ok) => results.push(ok));
+
+    // Only one HTTP refresh despite two callers.
+    httpMock.expectOne('/api/auth/refresh').flush({
+      accessToken: 'jwt-456',
+      expiresAtUtc: '2099-01-01T00:00:00Z',
+      refreshToken: 'refresh-def',
+    } satisfies LoginResponse);
+
+    expect(results).toEqual([true, true]);
+  });
+
+  it('logout posts to the logout endpoint, clears auth state, and clears localStorage', () => {
+    service.login('user@example.com', 'Passw0rd!').subscribe();
+    httpMock.expectOne('/api/auth/login').flush(loginResponse);
 
     service.logout();
+
+    const logoutReq = httpMock.expectOne('/api/auth/logout');
+    expect(logoutReq.request.method).toBe('POST');
+    expect(logoutReq.request.body).toEqual({ refreshToken: 'refresh-abc' });
+    logoutReq.flush(null);
 
     expect(service.token).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
     expect(service.email()).toBeNull();
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+  });
+
+  it('logout without a stored refresh token clears state without a request', () => {
+    service.logout();
+
+    httpMock.expectNone('/api/auth/logout');
+    expect(service.isAuthenticated()).toBe(false);
   });
 
   it('register posts to the register endpoint without storing a token', () => {

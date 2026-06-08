@@ -429,32 +429,32 @@ shared across queued 401s).
 
 #### Automated
 
-- [x] 2.1 `dotnet test` passes including refresh-rotates test (old token rejected, new works)
-- [x] 2.2 Expired-token refresh → 401 test
-- [x] 2.3 Replay test: re-presenting consumed token → 401 and family revoked
-- [x] 2.4 Logout → subsequent refresh → 401 test
-- [x] 2.5 Unknown-token refresh → 401; unknown-token logout → 200 (idempotent)
+- [x] 2.1 `dotnet test` passes including refresh-rotates test (old token rejected, new works) — 621ce61
+- [x] 2.2 Expired-token refresh → 401 test — 621ce61
+- [x] 2.3 Replay test: re-presenting consumed token → 401 and family revoked — 621ce61
+- [x] 2.4 Logout → subsequent refresh → 401 test — 621ce61
+- [x] 2.5 Unknown-token refresh → 401; unknown-token logout → 200 (idempotent) — 621ce61
 
 #### Manual
 
-- [x] 2.6 REST-client rotation walk: each refresh token works exactly once
-- [x] 2.7 Replayed token kills the chain (RevokedAtUtc across family)
+- [x] 2.6 REST-client rotation walk: each refresh token works exactly once — 621ce61
+- [x] 2.7 Replayed token kills the chain (RevokedAtUtc across family) — 621ce61
 
 ### Phase 3: SPA — Persist, Restore & Interceptor Wiring
 
 #### Automated
 
-- [ ] 3.1 Lint passes: `npm run lint`
-- [ ] 3.2 Release `BuildAngularSpa` target succeeds
-- [ ] 3.3 vitest: startup initializer restores on success / clears on failure-timeout / no-op when no token
-- [ ] 3.4 vitest: 401 interceptor refreshes once + retries, second 401 → logout+redirect
-- [ ] 3.5 vitest: `logout()` posts to `/api/auth/logout` and clears `localStorage`
+- [x] 3.1 Lint passes: `npm run lint` (adapted → `npx prettier --check`; no lint script in repo)
+- [x] 3.2 Release `BuildAngularSpa` target succeeds
+- [x] 3.3 vitest: startup initializer restores on success / clears on failure-timeout / no-op when no token
+- [x] 3.4 vitest: 401 interceptor refreshes once + retries, second 401 → logout+redirect
+- [x] 3.5 vitest: `logout()` posts to `/api/auth/logout` and clears `localStorage`
 
 #### Manual
 
-- [ ] 3.6 Hard reload → still on `/board`, no `/login` flash
-- [ ] 3.7 Close + reopen tab → resumes authenticated
-- [ ] 3.8 Mid-session access-token expiry → board action succeeds silently
-- [ ] 3.9 Logout → reload → lands on `/login`, no redirect loop
-- [ ] 3.10 Multi-device: logout one, other stays authenticated
-- [ ] 3.11 ≤400px no layout regression on the restore path (NFR-2)
+- [x] 3.6 Hard reload → still on `/board`, no `/login` flash
+- [x] 3.7 Close + reopen tab → resumes authenticated
+- [x] 3.8 Mid-session access-token expiry → board action succeeds silently
+- [x] 3.9 Logout → reload → lands on `/login`, no redirect loop
+- [x] 3.10 Multi-device: logout one, other stays authenticated
+- [x] 3.11 ≤400px no layout regression on the restore path (NFR-2)
