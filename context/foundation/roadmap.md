@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-06-02
+updated: 2026-06-08
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -43,6 +43,7 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
 | S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | proposed |
+| S-11  | ui-redesign                   | see a polished, minimalist board UI (sidebar + topbar shell, Claude-style cards) | S-02, S-03, S-04, S-06 | NFR-2                                  | proposed |
 
 ## Streams
 
@@ -54,6 +55,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | B      | Multiplayer & freshness| `F-03` → `S-06` → `S-09`                                     | Branches off `S-02`'s board; transport decided (polling), so F-03 is buildable.|
 | C      | Hardening & recovery   | `S-07` / `S-08` / `S-10`                                    | `S-07` hardens `S-03`; `S-08` and `S-10` extend `S-01`. All run parallel to the spine. |
 | D      | Delivery automation    | `F-04`                                                      | Standalone infra; parallel with everything, gates no slice.                    |
+| E      | Experience / UI        | `S-02` → `S-11`                                             | Cross-cutting reskin of the board surfaces; the new design must host the affordances of S-04 (edit), S-05 (loop recovery), S-06 (invite) and S-09 (member admin). |
 
 ## Baseline
 
@@ -245,14 +247,32 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-10: Session persistence (refresh-token flow)
 
-- **Outcome:** A logged-in user stays authenticated across a full page reload instead of being bounced to `/login`. The SPA keeps the access token in memory (no XSS-exposed storage) but, on startup, silently re-mints a short-lived access token from a persisted refresh credential — so a refresh, a reopened tab, or a returning session resumes without re-entering the password.
+- **Outcome:** A logged-in user stays authenticated across a full page reload instead of being bounced to `/login`. The SPA keeps the access token in memory but, on startup, silently re-mints a short-lived access token from a persisted refresh token — so a refresh, a reopened tab, or a returning session resumes without re-entering the password.
 - **Change ID:** session-persistence
 - **PRD refs:** Access Control (un-defers the refresh/revocation F-02 explicitly postponed)
 - **Prerequisites:** S-01 (builds on the SPA in-memory-token auth layer — `AuthService`, bearer/401 interceptors, guard — and the F-02 token pipeline)
 - **Parallel with:** S-02, S-03, S-04, S-05, S-06, S-07, S-08 (off the north-star path)
 - **Blockers:** —
-- **Unknowns:** Refresh-token transport + storage — **httpOnly cookie** (XSS-safe, but needs CSRF defense and a same-site/path decision) vs a refresh token in web storage (reintroduces the exact XSS exposure F-02 flagged). Lean httpOnly cookie; confirm during `/10x-plan`.
-- **Risk:** F-02 deliberately deferred refresh/revocation and S-01 kept the access token in memory only, accepting logout-on-reload as the v1 trade. This slice removes that UX cost **without** reintroducing XSS exposure: the access token stays in memory; a server-side `refresh` endpoint plus an httpOnly refresh cookie and a startup silent-refresh restore the session. It also adds the server-side token store F-02 noted as optional, which turns logout into real server-side revocation rather than a client-only token discard. Pure UX + security hardening; gates nothing on the north star. Watch token-rotation/replay handling and a clean expiry path (refresh expired → land on `/login`, no redirect loop).
+- **Decision (2026-06-08, during `/10x-plan`):** Refresh-token transport + storage — **`localStorage`, body-transported (no httpOnly cookie)**, overriding the earlier cookie lean. The refresh token is held in web storage and sent in the request body, so there is no cookie and no CSRF surface. This is a deliberate departure from F-02's "no XSS-exposed storage" guardrail: web storage **does** reintroduce the XSS exposure F-02 flagged. The exposure is **mitigated, not eliminated**, by a short refresh-token rotation (rotate-on-use + replay detection: a reused token revokes its whole token family) and a shortened ~15-min access-token lifetime. The server-side token store is stored hashed (SHA-256), enabling real logout revocation.
+- **Risk:** F-02 deliberately deferred refresh/revocation and S-01 kept the access token in memory only, accepting logout-on-reload as the v1 trade. This slice removes that UX cost: the access token stays in memory; a server-side `refresh` endpoint plus a `localStorage` refresh token and a blocking startup silent-refresh restore the session. It adds the server-side token store F-02 noted as optional, turning logout into real server-side revocation rather than a client-only token discard. **Security trade made explicit (see Decision):** the `localStorage` refresh token is XSS-reachable; the rotation/replay scheme and short access TTL bound the blast radius rather than closing it. Off the north-star path; gates nothing. Watch token-rotation/replay handling, the single-winner consume race on rapid double-refresh, and a clean expiry path (refresh expired → land on `/login`, no redirect loop). Planned 2026-06-08 (`context/changes/session-persistence/plan.md`).
+- **Status:** proposed
+
+### S-11: UI redesign (board experience overhaul)
+
+- **Outcome:** A household member sees the board, task cards, add-task form, and member/invite controls rendered in a polished, minimalist UI — a persistent sidebar + topbar shell, a pastel palette, soft shadows and rounded cards — replacing the bare v1 shell. The layout is designed up front to host **every existing and planned member/task affordance** (task edit/detail from S-04, unclaim / admin send-back from S-05, invite from S-06, member promote/remove + settings from S-09), so those slices slot into a ready surface rather than forcing a re-layout.
+- **Change ID:** ui-redesign
+- **PRD refs:** NFR-2 (mobile-first, no horizontal scroll at ≤ 400px — re-skins the board/task surfaces of FR-004 / FR-010–FR-018 / FR-021 without changing their behaviour)
+- **Prerequisites:** S-02, S-03, S-04, S-06 (the shipped board, task lifecycle, edit/reorder, and invite surfaces this reskins)
+- **Parallel with:** S-05, S-07, S-08, S-09, S-10 (pure presentation; gates none of them, but its component shell is where S-05/S-09 affordances later land)
+- **Blockers:** —
+- **Unknowns:** Whether a fixed left sidebar + topbar shell stays usable at ≤ 400px (NFR-2) or must collapse to a bottom bar / drawer on phones — settle during design.
+- **Design brief (style):** Minimalist, elegant, pastel, generous whitespace, soft shadows, rounded corners — inspired by Claude.ai and Scanye.
+  - **Layout:** narrow left **sidebar** with icons (Home, Tasks, Members, Settings — dark or translucent); **topbar** with section name left, user avatar right; an **"Add a task"** card (Title / Description / Category + primary **Add task**) in the Claude card style; a **Kanban board** of three white, shadowed columns (To do / In progress / Done); **task cards** in the Claude style — pastel, clean, with metadata (Created by, Claimed by, Created); an **"Invite a member"** primary CTA.
+  - **Colour:** pastel violets + blues over neutral greys.
+  - **Typography:** Inter / SF Pro.
+  - **Spacing & grid:** consistent spacing scale + a grid layout for the board columns and cards (define tokens during design).
+  - **Angular components:** `sidebar`, `topbar`, `task-form`, `kanban-board`, `task-column`, `task-card` — a clean split the lifecycle/edit/invite/admin features hang off.
+- **Risk:** Pure presentation slice — no API or data-model change — so the correctness risk is low, but it touches every board surface at once, so it must preserve all existing behaviour (lifecycle buttons, drag-reorder, the task-detail dialog, the invite affordance) and the ≤ 400px guarantee (NFR-2). The real value-at-risk is scope creep: keep it a reskin of shipped surfaces plus ready slots for S-05/S-09, not a place to invent new features. Sequence after the functional board is stable (S-04/S-06 done) so the redesign isn't chasing a moving target.
 - **Status:** proposed
 
 ## Backlog Handoff
@@ -272,7 +292,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | yes                   | S-03 done; worst-bug guardrail |
 | S-08       | password-reset                | Password reset via emailed link                             | yes                   | S-01 done; email via SendGrid (Open Q #2 resolved) |
 | S-09       | member-administration         | Admin promote / remove member                               | yes                   | S-06 done; nice-to-have |
-| S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | yes                   | Needs S-01 (done); un-defers F-02 refresh/revocation; lean httpOnly cookie |
+| S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | planned               | Planned 2026-06-08; un-defers F-02 refresh/revocation; refresh token in `localStorage` (not httpOnly cookie) — XSS trade accepted, mitigated by rotation/replay + short access TTL |
+| S-11       | ui-redesign                   | Rebuild board UI: Claude/Scanye-inspired minimalist redesign | yes                  | Reskin of shipped board/task/invite surfaces (no API change); design must host S-04/S-05/S-06/S-09 affordances + keep NFR-2 ≤400px; components: sidebar/topbar/task-form/kanban-board/task-column/task-card |
 
 This table is the clean handoff to Jira/Linear or any MCP-backed backlog. One row per `F-NN` and `S-NN`.
 
