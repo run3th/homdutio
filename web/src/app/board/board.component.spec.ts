@@ -4,12 +4,9 @@ import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 
 import { BoardComponent } from './board.component';
-import { Household, HouseholdService } from '../household/household.service';
-import { InviteService } from '../household/invite.service';
 import { Task, TaskService } from './task.service';
 
 describe('BoardComponent', () => {
-  const current = signal<Household | null>({ id: 'h1', name: 'The Burrow', role: 'Admin' });
   const tasks = signal<Task[]>([]);
   let load: ReturnType<typeof vi.fn>;
   let claim: ReturnType<typeof vi.fn>;
@@ -17,8 +14,6 @@ describe('BoardComponent', () => {
   let confirm: ReturnType<typeof vi.fn>;
   let reorder: ReturnType<typeof vi.fn>;
   let open: ReturnType<typeof vi.fn>;
-  let generate: ReturnType<typeof vi.fn>;
-  let writeText: ReturnType<typeof vi.fn>;
   let startPolling: ReturnType<typeof vi.fn>;
   let stopPolling: ReturnType<typeof vi.fn>;
   let setPaused: ReturnType<typeof vi.fn>;
@@ -52,19 +47,12 @@ describe('BoardComponent', () => {
     reorder = vi.fn(() => of(tasks()));
     // Dialog.open returns a DialogRef whose `closed` observable the board subscribes to (resume polling).
     open = vi.fn(() => ({ closed: of(undefined) }));
-    generate = vi.fn(() => of({ token: 'tok123', expiresAtUtc: '2026-06-09T00:00:00Z' }));
-    writeText = vi.fn(() => Promise.resolve());
     startPolling = vi.fn();
     stopPolling = vi.fn();
     setPaused = vi.fn();
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText },
-      configurable: true,
-    });
     TestBed.configureTestingModule({
       imports: [BoardComponent],
       providers: [
-        { provide: HouseholdService, useValue: { current } },
         {
           provide: TaskService,
           useValue: {
@@ -80,7 +68,6 @@ describe('BoardComponent', () => {
           },
         },
         { provide: Dialog, useValue: { open } },
-        { provide: InviteService, useValue: { generate } },
       ],
     });
   });
@@ -90,12 +77,6 @@ describe('BoardComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
-
-  it('renders the household name and role badge', () => {
-    const el = render().nativeElement as HTMLElement;
-    expect(el.querySelector('.board-header h1')?.textContent).toContain('The Burrow');
-    expect(el.querySelector('.role-badge')?.textContent).toContain('Admin');
-  });
 
   it('renders the three column labels and loads on init', () => {
     const el = render().nativeElement as HTMLElement;
@@ -187,25 +168,6 @@ describe('BoardComponent', () => {
     fixture.componentInstance.drop('ToDo', { previousIndex: 1, currentIndex: 1 } as never);
 
     expect(reorder).not.toHaveBeenCalled();
-  });
-
-  it('clicking Invite a member generates a link and copies it to the clipboard', async () => {
-    const fixture = render();
-    const button = (fixture.nativeElement as HTMLElement).querySelector(
-      '.invite-button',
-    ) as HTMLButtonElement;
-
-    button.click();
-    await Promise.resolve();
-    fixture.detectChanges();
-
-    expect(generate).toHaveBeenCalled();
-    const expected = `${window.location.origin}/join/tok123`;
-    expect(writeText).toHaveBeenCalledWith(expected);
-    expect(fixture.componentInstance.inviteLink()).toBe(expected);
-    expect((fixture.nativeElement as HTMLElement).querySelector('.invite-link')?.textContent).toBe(
-      expected,
-    );
   });
 
   it('starts polling on init and stops it on destroy (F-03)', () => {

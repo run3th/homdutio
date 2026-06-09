@@ -1,26 +1,4 @@
 <div class="board">
-  <header class="board-header">
-    <h1>{{ household()?.name }}</h1>
-    @if (household(); as h) {
-      <span class="role-badge" [class.role-badge--admin]="h.role === 'Admin'">{{ h.role }}</span>
-    }
-    <button type="button" class="invite-button" (click)="invite()" [disabled]="invitePending()">
-      {{ invitePending() ? 'Generating…' : 'Invite a member' }}
-    </button>
-  </header>
-
-  @if (inviteError()) {
-    <p class="invite-error" role="alert">{{ inviteError() }}</p>
-  }
-  @if (inviteLink(); as link) {
-    <div class="invite-panel" role="status">
-      <p class="invite-panel-note">
-        {{ inviteCopied() ? 'Link copied — share it with the person you want to invite.' : 'Copy this link and share it with the person you want to invite.' }}
-      </p>
-      <code class="invite-link">{{ link }}</code>
-    </div>
-  }
-
   <app-create-task />
 
   <div class="columns">

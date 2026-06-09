@@ -1,0 +1,19 @@
+<button
+  type="button"
+  class="avatar-button"
+  (click)="toggle()"
+  [attr.aria-expanded]="open()"
+  aria-haspopup="menu"
+  aria-label="Account menu"
+>
+  {{ initial() }}
+</button>
+
+@if (open()) {
+  <div class="avatar-menu" role="menu">
+    <p class="avatar-menu-email">{{ email() }}</p>
+    <button type="button" class="avatar-menu-item" role="menuitem" (click)="logout()">
+      Log out
+    </button>
+  </div>
+}

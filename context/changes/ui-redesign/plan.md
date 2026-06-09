@@ -527,32 +527,32 @@ This is the user's chosen pattern, replacing the earlier header-trash idea.
 
 #### Automated
 
-- [x] 1.1 `@fontsource-variable/inter` installs + app builds (`npm install` + `npm run build`)
-- [x] 1.2 Release `BuildAngularSpa` target succeeds (`dotnet build -c Release`)
-- [x] 1.3 vitest passes unchanged (`npm test`)
-- [x] 1.4 Prettier clean on changed files (`npx prettier --check`)
+- [x] 1.1 `@fontsource-variable/inter` installs + app builds (`npm install` + `npm run build`) — 1d75381
+- [x] 1.2 Release `BuildAngularSpa` target succeeds (`dotnet build -c Release`) — 1d75381
+- [x] 1.3 vitest passes unchanged (`npm test`) — 1d75381
+- [x] 1.4 Prettier clean on changed files (`npx prettier --check`) — 1d75381
 
 #### Manual
 
-- [x] 1.5 All screens render with tokens + Inter actually loads (DevTools shows the font file)
-- [x] 1.6 No layout regressions; ≤ 400px no horizontal scroll on any screen (NFR-2)
+- [x] 1.5 All screens render with tokens + Inter actually loads (DevTools shows the font file) — 1d75381
+- [x] 1.6 No layout regressions; ≤ 400px no horizontal scroll on any screen (NFR-2) — 1d75381
 
 ### Phase 2: App Shell (Sidebar + Topbar)
 
 #### Automated
 
-- [ ] 2.1 Build + Release `BuildAngularSpa` succeed with restructured routing
-- [ ] 2.2 vitest: sidebar nav, avatar-menu logout (→ `AuthService.logout` + `/login`), topbar invite
-- [ ] 2.3 Existing board/auth specs updated + green (board no longer owns invite/header)
-- [ ] 2.4 Prettier clean on changed files
+- [x] 2.1 Build + Release `BuildAngularSpa` succeed with restructured routing
+- [x] 2.2 vitest: sidebar nav, avatar-menu logout (→ `AuthService.logout` + `/login`), topbar invite
+- [x] 2.3 Existing board/auth specs updated + green (board no longer owns invite/header)
+- [x] 2.4 Prettier clean on changed files
 
 #### Manual
 
-- [ ] 2.5 `/board` inside shell: sidebar (Home, Tasks), topbar (name + role, Invite, avatar)
-- [ ] 2.6 Logout reachable from avatar menu → `/login`, no loop
-- [ ] 2.7 Invite works from the topbar (generate + copy + visible link)
-- [ ] 2.8 ≤ 400px: sidebar → bottom bar, no horizontal scroll; auth/join/create-household stay full-page
-- [ ] 2.9 No regressions to lifecycle/drag/polling on the board
+- [x] 2.5 `/board` inside shell: sidebar (Home, Tasks), topbar (name + role, Invite, avatar)
+- [x] 2.6 Logout reachable from avatar menu → `/login`, no loop
+- [x] 2.7 Invite works from the topbar (generate + copy + visible link)
+- [x] 2.8 ≤ 400px: sidebar → bottom bar, no horizontal scroll; auth/join/create-household stay full-page
+- [x] 2.9 No regressions to lifecycle/drag/polling on the board
 
 ### Phase 3: Board Recomposition & Task Dialogs
 

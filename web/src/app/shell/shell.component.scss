@@ -1,0 +1,31 @@
+:host {
+  display: block;
+}
+
+/* Desktop: side rail + main column filling the viewport height. */
+.shell {
+  display: flex;
+  min-height: 100dvh;
+}
+
+.shell-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  /* Without this the topbar's title ellipsis and the content can't shrink inside the flex row. */
+  min-width: 0;
+}
+
+/* The page scrolls inside the outlet; the topbar stays put above it. */
+.shell-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+/* Mobile (≤ 400px): the sidebar becomes a fixed bottom bar (leaves the flow), so the main column is
+   full-width. Reserve bottom padding equal to the bar height so the last card is never occluded (NFR-2). */
+@media (max-width: 400px) {
+  .shell-content {
+    padding-bottom: var(--shell-bottombar-h);
+  }
+}
