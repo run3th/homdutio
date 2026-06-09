@@ -558,13 +558,13 @@ This is the user's chosen pattern, replacing the earlier header-trash idea.
 
 #### Automated
 
-- [x] 3.1 Build + Release `BuildAngularSpa` succeed
-- [x] 3.2 vitest: board recomposition + new task-card/create-dialog/detail-delete specs green
-- [x] 3.3 Prettier clean on changed files
+- [x] 3.1 Build + Release `BuildAngularSpa` succeed — 0d7e13b
+- [x] 3.2 vitest: board recomposition + new task-card/create-dialog/detail-delete specs green — 0d7e13b
+- [x] 3.3 Prettier clean on changed files — 0d7e13b
 
 #### Manual
 
-- [x] 3.4 Topbar **+ Add task** opens create dialog; create adds a To-do card + closes; polling pauses
-- [x] 3.5 Card **⋯ menu** = Edit + Delete (+S-05 Unclaim/Send back slots); Delete via confirm dialog; edit dialog is delete-free
-- [x] 3.6 Kanban restyled (white shadowed columns, pastel cards w/ metadata); lifecycle/drag/polling intact
-- [x] 3.7 ≤ 400px: stacked columns, full-width cards, usable dialogs, icon **+ Add task**, no h-scroll
+- [x] 3.4 Topbar **+ Add task** opens create dialog; create adds a To-do card + closes; polling pauses — 0d7e13b
+- [x] 3.5 Card **⋯ menu** = Edit + Delete (+S-05 Unclaim/Send back slots); Delete via confirm dialog; edit dialog is delete-free — 0d7e13b
+- [x] 3.6 Kanban restyled (white shadowed columns, pastel cards w/ metadata); lifecycle/drag/polling intact — 0d7e13b
+- [x] 3.7 ≤ 400px: stacked columns, full-width cards, usable dialogs, icon **+ Add task**, no h-scroll — 0d7e13b
