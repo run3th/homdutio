@@ -1,83 +1,20 @@
 <div class="board">
-  <app-create-task />
-
   <div class="columns">
     @for (column of columns; track column.status) {
-      @let columnTasks = tasksFor(column.status);
-      <section class="column">
-        <h2 class="column-title">{{ column.label }}</h2>
-        <!-- One independent drop list per column — not connected, so a card cannot be dragged across columns
-             (moving columns is the lifecycle: claim/done/confirm). Drops persist the new within-column order. -->
-        <div class="column-list" cdkDropList (cdkDropListDropped)="drop(column.status, $event)">
-          @if (columnTasks.length === 0) {
-            <p class="column-empty">No tasks yet</p>
-          } @else {
-            @for (task of columnTasks; track task.id) {
-              <article
-                class="task-card"
-                cdkDrag
-                (cdkDragStarted)="onDragStart()"
-                (cdkDragEnded)="onDragEnd()"
-              >
-                <button
-                  type="button"
-                  class="drag-handle"
-                  cdkDragHandle
-                  aria-label="Drag to reorder"
-                  title="Drag to reorder"
-                >
-                  ⠿
-                </button>
-                <h3 class="task-title">
-                  <button type="button" class="task-title-button" (click)="openDetail(task)">
-                    {{ task.title }}
-                  </button>
-                </h3>
-                @if (task.category) {
-                  <span class="task-category">{{ task.category }}</span>
-                }
-                @if (task.description) {
-                  <p class="task-description">{{ task.description }}</p>
-                }
-                <dl class="task-meta">
-                  <div class="task-meta-row">
-                    <dt>Created by</dt>
-                    <dd>{{ task.createdByName }}</dd>
-                  </div>
-                  @if (task.claimerName) {
-                    <div class="task-meta-row">
-                      <dt>Claimed by</dt>
-                      <dd>{{ task.claimerName }}</dd>
-                    </div>
-                  }
-                  <div class="task-meta-row">
-                    <dt>Created</dt>
-                    <dd>{{ task.createdAtUtc | date: 'short' }}</dd>
-                  </div>
-                </dl>
-
-                @if (task.canClaim || task.canMarkDone || task.canConfirm) {
-                  <div class="task-actions">
-                    @if (task.canClaim) {
-                      <button type="button" class="task-action" (click)="claim(task)">Claim</button>
-                    }
-                    @if (task.canMarkDone) {
-                      <button type="button" class="task-action" (click)="markDone(task)">
-                        Mark done
-                      </button>
-                    }
-                    @if (task.canConfirm) {
-                      <button type="button" class="task-action" (click)="confirm(task)">
-                        {{ task.willSelfAttest ? 'Confirm (self-attested)' : 'Confirm' }}
-                      </button>
-                    }
-                  </div>
-                }
-              </article>
-            }
-          }
-        </div>
-      </section>
+      <app-task-column
+        [label]="column.label"
+        [status]="column.status"
+        [tasks]="tasksFor(column.status)"
+        (dropped)="drop(column.status, $event)"
+        (dragStart)="onDragStart()"
+        (dragEnd)="onDragEnd()"
+        (openDetail)="openDetail($event)"
+        (claim)="claim($event)"
+        (markDone)="markDone($event)"
+        (confirm)="confirm($event)"
+        (edit)="openDetail($event)"
+        (delete)="requestDelete($event)"
+      />
     }
   </div>
 </div>

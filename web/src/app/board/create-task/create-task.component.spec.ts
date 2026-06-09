@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
+import { DialogRef } from '@angular/cdk/dialog';
 import { of, throwError } from 'rxjs';
 
 import { CreateTaskComponent } from './create-task.component';
@@ -7,12 +8,17 @@ import { TaskService } from '../task.service';
 
 describe('CreateTaskComponent', () => {
   let create: ReturnType<typeof vi.fn>;
+  let close: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     create = vi.fn();
+    close = vi.fn();
     TestBed.configureTestingModule({
       imports: [CreateTaskComponent],
-      providers: [{ provide: TaskService, useValue: { create } }],
+      providers: [
+        { provide: TaskService, useValue: { create } },
+        { provide: DialogRef, useValue: { close } },
+      ],
     });
   });
 
@@ -28,7 +34,7 @@ describe('CreateTaskComponent', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('creates the task (trimmed, optionals omitted when blank) and resets the form on success', () => {
+  it('creates the task (trimmed, optionals omitted when blank) and closes the dialog on success', () => {
     create.mockReturnValue(of([]));
     const component = instance();
     component.form.setValue({ title: '  Take out bins  ', description: '', category: '' });
@@ -40,7 +46,7 @@ describe('CreateTaskComponent', () => {
       description: undefined,
       category: undefined,
     });
-    expect(component.form.controls.title.value).toBe('');
+    expect(close).toHaveBeenCalled();
   });
 
   it('passes through description and category when provided', () => {
@@ -57,7 +63,7 @@ describe('CreateTaskComponent', () => {
     });
   });
 
-  it('maps 400 validation messages without resetting the form', () => {
+  it('maps 400 validation messages and keeps the dialog open', () => {
     create.mockReturnValue(
       throwError(
         () =>
@@ -73,5 +79,13 @@ describe('CreateTaskComponent', () => {
     component.submit();
 
     expect(component.errors()).toEqual(['A task title is required.']);
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('Cancel closes the dialog without creating', () => {
+    const component = instance();
+    component.close();
+    expect(create).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
   });
 });

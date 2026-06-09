@@ -1,0 +1,24 @@
+<h2 class="column-title">{{ label }}</h2>
+
+<!-- One independent drop list per column — not connected, so a card cannot be dragged across columns
+     (moving columns is the lifecycle: claim/done/confirm). Drops persist the new within-column order. -->
+<div class="column-list" cdkDropList (cdkDropListDropped)="dropped.emit($event)">
+  @if (tasks.length === 0) {
+    <p class="column-empty">No tasks yet</p>
+  } @else {
+    @for (task of tasks; track task.id) {
+      <app-task-card
+        [task]="task"
+        cdkDrag
+        (cdkDragStarted)="dragStart.emit()"
+        (cdkDragEnded)="dragEnd.emit()"
+        (openDetail)="openDetail.emit($event)"
+        (claim)="claim.emit($event)"
+        (markDone)="markDone.emit($event)"
+        (confirm)="confirm.emit($event)"
+        (edit)="edit.emit($event)"
+        (delete)="delete.emit($event)"
+      />
+    }
+  }
+</div>

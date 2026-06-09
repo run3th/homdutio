@@ -541,30 +541,30 @@ This is the user's chosen pattern, replacing the earlier header-trash idea.
 
 #### Automated
 
-- [x] 2.1 Build + Release `BuildAngularSpa` succeed with restructured routing
-- [x] 2.2 vitest: sidebar nav, avatar-menu logout (→ `AuthService.logout` + `/login`), topbar invite
-- [x] 2.3 Existing board/auth specs updated + green (board no longer owns invite/header)
-- [x] 2.4 Prettier clean on changed files
+- [x] 2.1 Build + Release `BuildAngularSpa` succeed with restructured routing — a745e2c
+- [x] 2.2 vitest: sidebar nav, avatar-menu logout (→ `AuthService.logout` + `/login`), topbar invite — a745e2c
+- [x] 2.3 Existing board/auth specs updated + green (board no longer owns invite/header) — a745e2c
+- [x] 2.4 Prettier clean on changed files — a745e2c
 
 #### Manual
 
-- [x] 2.5 `/board` inside shell: sidebar (Home, Tasks), topbar (name + role, Invite, avatar)
-- [x] 2.6 Logout reachable from avatar menu → `/login`, no loop
-- [x] 2.7 Invite works from the topbar (generate + copy + visible link)
-- [x] 2.8 ≤ 400px: sidebar → bottom bar, no horizontal scroll; auth/join/create-household stay full-page
-- [x] 2.9 No regressions to lifecycle/drag/polling on the board
+- [x] 2.5 `/board` inside shell: sidebar (Home, Tasks), topbar (name + role, Invite, avatar) — a745e2c
+- [x] 2.6 Logout reachable from avatar menu → `/login`, no loop — a745e2c
+- [x] 2.7 Invite works from the topbar (generate + copy + visible link) — a745e2c
+- [x] 2.8 ≤ 400px: sidebar → bottom bar, no horizontal scroll; auth/join/create-household stay full-page — a745e2c
+- [x] 2.9 No regressions to lifecycle/drag/polling on the board — a745e2c
 
 ### Phase 3: Board Recomposition & Task Dialogs
 
 #### Automated
 
-- [ ] 3.1 Build + Release `BuildAngularSpa` succeed
-- [ ] 3.2 vitest: board recomposition + new task-card/create-dialog/detail-delete specs green
-- [ ] 3.3 Prettier clean on changed files
+- [x] 3.1 Build + Release `BuildAngularSpa` succeed
+- [x] 3.2 vitest: board recomposition + new task-card/create-dialog/detail-delete specs green
+- [x] 3.3 Prettier clean on changed files
 
 #### Manual
 
-- [ ] 3.4 Topbar **+ Add task** opens create dialog; create adds a To-do card + closes; polling pauses
-- [ ] 3.5 Card **⋯ menu** = Edit + Delete (+S-05 Unclaim/Send back slots); Delete via confirm dialog; edit dialog is delete-free
-- [ ] 3.6 Kanban restyled (white shadowed columns, pastel cards w/ metadata); lifecycle/drag/polling intact
-- [ ] 3.7 ≤ 400px: stacked columns, full-width cards, usable dialogs, icon **+ Add task**, no h-scroll
+- [x] 3.4 Topbar **+ Add task** opens create dialog; create adds a To-do card + closes; polling pauses
+- [x] 3.5 Card **⋯ menu** = Edit + Delete (+S-05 Unclaim/Send back slots); Delete via confirm dialog; edit dialog is delete-free
+- [x] 3.6 Kanban restyled (white shadowed columns, pastel cards w/ metadata); lifecycle/drag/polling intact
+- [x] 3.7 ≤ 400px: stacked columns, full-width cards, usable dialogs, icon **+ Add task**, no h-scroll

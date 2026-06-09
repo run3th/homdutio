@@ -1,19 +1,44 @@
 :host {
   display: block;
-  margin-bottom: var(--space-5);
 }
 
-/* A compact panel on the board (not a full-page card). Full-width so it never overflows at ≤ 400px. */
-.create-task {
+/* Dialog panel — same language as the task-detail dialog. Never wider than the viewport (NFR-2). */
+.task-dialog {
+  width: min(26rem, calc(100vw - 2rem));
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
 }
 
-.create-task-title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-base);
+.task-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.task-dialog-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.icon-button {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--color-surface-2);
 }
 
 .optional {
@@ -21,8 +46,26 @@
   color: var(--color-text-subtle);
 }
 
-/* The submit button is auto-width here rather than full-bleed, but still a comfortable tap target. */
-.create-task button[type='submit'] {
+/* Actions wrap rather than overflow at ≤ 400px; Save is the trailing primary action. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.btn {
   width: auto;
-  min-width: 8rem;
+  min-width: 6rem;
+}
+
+.btn--ghost {
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+}
+
+.btn--ghost:hover {
+  background: var(--color-surface-2);
+  filter: brightness(0.96);
 }

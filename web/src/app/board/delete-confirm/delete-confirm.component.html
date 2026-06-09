@@ -1,0 +1,16 @@
+<section
+  class="delete-confirm"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="delete-confirm-heading"
+>
+  <h2 id="delete-confirm-heading" class="delete-confirm-title">Delete task?</h2>
+  <p class="delete-confirm-body">
+    “{{ task.title }}” will be removed for everyone in the household. This can't be undone.
+  </p>
+
+  <div class="actions">
+    <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+    <button type="button" class="btn btn--danger" (click)="confirm()">Delete</button>
+  </div>
+</section>

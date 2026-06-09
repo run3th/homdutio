@@ -1,16 +1,19 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DialogRef } from '@angular/cdk/dialog';
 
 import { TaskService } from '../task.service';
 import { mapValidationProblem } from '../../auth/validation-problem';
 
 /**
- * The create-task form on the board (S-03, FR-010). A reactive form with a required `title` and optional
- * `description`/`category`; on submit it calls {@link TaskService.create}, which posts the task and then
- * refetches the board so the new card appears in "To do". Mirrors {@link CreateHouseholdComponent}'s
- * structure (signals for `pending`/`errors`, `mapValidationProblem` for 400 bodies). Available to any
- * member — admin or adult member both create per FR-010.
+ * The create-task dialog (S-03/S-11, FR-010), opened from the topbar's **+ Add task** CTA via
+ * `@angular/cdk/dialog` — the same dialog language as editing. A reactive form with a required `title` and
+ * optional `description`/`category`; on submit it calls {@link TaskService.create}, which posts the task and
+ * then refetches the board so the new card appears in "To do", and the dialog **closes** on success (rather
+ * than resetting inline). Mirrors {@link CreateHouseholdComponent}'s structure (signals for
+ * `pending`/`errors`, `mapValidationProblem` for 400 bodies). Available to any member — admin or adult
+ * member both create per FR-010. Closes on backdrop click / escape via CDK defaults.
  */
 @Component({
   selector: 'app-create-task',
@@ -21,6 +24,7 @@ import { mapValidationProblem } from '../../auth/validation-problem';
 export class CreateTaskComponent {
   private readonly fb = inject(FormBuilder);
   private readonly tasks = inject(TaskService);
+  private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
@@ -51,7 +55,7 @@ export class CreateTaskComponent {
       .subscribe({
         next: () => {
           this.pending.set(false);
-          this.form.reset();
+          this.dialogRef.close();
         },
         error: (error: HttpErrorResponse) => {
           this.pending.set(false);
@@ -62,5 +66,9 @@ export class CreateTaskComponent {
           );
         },
       });
+  }
+
+  close(): void {
+    this.dialogRef.close();
   }
 }

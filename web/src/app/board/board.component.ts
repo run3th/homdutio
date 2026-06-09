@@ -1,26 +1,27 @@
 import { Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable } from 'rxjs';
 
-import { CreateTaskComponent } from './create-task/create-task.component';
+import { TaskColumnComponent } from './task-column/task-column.component';
 import { TaskDetailComponent } from './task-detail/task-detail.component';
+import { DeleteConfirmComponent } from './delete-confirm/delete-confirm.component';
 import { Task, TaskService, TaskStatus } from './task.service';
 
 /**
- * The household board (S-03). Renders the create-task form and three live columns fed by
- * {@link TaskService} (the household identity + invite action now live in the shell topbar, S-11).
- * Tasks load on init and are grouped
- * by status into the columns; each card shows its title, creator, claimer (if any), and creation timestamp
- * (FR-018), plus exactly the lifecycle actions the server permits (the affordance flags). Each action
- * refetches the board on success (a confirmed task drops off); a stale affordance that the server rejects
- * (403/409) also triggers a refetch so the board self-heals to the true state.
+ * The household board (S-03/S-11). Composes three {@link TaskColumnComponent}s fed by {@link TaskService}
+ * (the household identity, invite action, and **+ Add task** CTA now live in the shell topbar). The board
+ * keeps owning the orchestration: drag/drop reorder, polling pause/resume, and the lifecycle actions. Tasks
+ * load on init and are grouped by status into the columns; each card shows its title, creator, claimer (if
+ * any), and creation timestamp (FR-018), plus exactly the lifecycle actions the server permits (the
+ * affordance flags). Editing opens the detail dialog (a pure form); deleting opens a small confirm dialog.
+ * Each action refetches the board on success (a confirmed task drops off); a stale affordance that the
+ * server rejects (403/409) also triggers a refetch so the board self-heals to the true state.
  */
 @Component({
   selector: 'app-board',
-  imports: [DatePipe, CreateTaskComponent, DragDropModule],
+  imports: [TaskColumnComponent],
   templateUrl: './board.component.html',
   styleUrl: './board.component.scss',
 })
@@ -77,6 +78,23 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.tasks.setPaused(true);
     const ref = this.dialog.open(TaskDetailComponent, { data: task });
     ref.closed.subscribe(() => this.tasks.setPaused(false));
+  }
+
+  /**
+   * Delete a task (FR-012) from the card's ⋯ menu. Opens a small confirm dialog; on confirm, calls
+   * {@link TaskService.delete} (which refetches so the card disappears). Polling is paused while the confirm
+   * is open so a tick can't refetch underneath it. The To-do-only + 409 guards are server-side: a stale
+   * affordance that the server rejects (403/409) refetches via {@link run} so the board self-heals.
+   */
+  requestDelete(task: Task): void {
+    this.tasks.setPaused(true);
+    const ref = this.dialog.open<boolean>(DeleteConfirmComponent, { data: task });
+    ref.closed.subscribe((confirmed) => {
+      this.tasks.setPaused(false);
+      if (confirmed) {
+        this.run(this.tasks.delete(task.id));
+      }
+    });
   }
 
   /** A drag started — pause polling so a tick can't refetch mid-reorder (F-03). */

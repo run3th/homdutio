@@ -7,6 +7,11 @@
   </div>
 
   <div class="topbar-actions">
+    <button type="button" class="add-task-button" (click)="addTask()">
+      <span class="add-task-icon" aria-hidden="true">+</span>
+      <span class="add-task-label">Add task</span>
+    </button>
+
     <div class="invite">
       <button type="button" class="invite-button" (click)="invite()" [disabled]="invitePending()">
         {{ invitePending() ? 'Generating…' : 'Invite a member' }}

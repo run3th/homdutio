@@ -8,15 +8,14 @@ import { Task, TaskService } from '../task.service';
 import { mapValidationProblem } from '../../auth/validation-problem';
 
 /**
- * The per-task detail panel (S-04), opened via `@angular/cdk/dialog`. One reusable component covers two
+ * The per-task detail panel (S-04/S-11), opened via `@angular/cdk/dialog`. One reusable component covers two
  * modes driven entirely by the server's affordance flags (the SPA stays authorization-dumb):
  *
- * - **Editable** (`task.canEdit` — only while the task is in "To do", FR-011): a reactive form over
- *   title/description/category. Save calls {@link TaskService.update} (which refetches the board) and closes
- *   on success; a 400 maps via {@link mapValidationProblem} and the dialog stays open. When `task.canDelete`
- *   (also "To do" only, FR-012) a Delete control with an inline two-step confirm calls
- *   {@link TaskService.delete} and closes.
- * - **Read-only** (a claimed/done task): the fields render as static text, no edit, no delete.
+ * - **Editable** (`task.canEdit` — only while the task is in "To do", FR-011): a **pure** reactive form over
+ *   title/description/category — Cancel / Save, nothing else. Save calls {@link TaskService.update} (which
+ *   refetches the board) and closes on success; a 400 maps via {@link mapValidationProblem} and the dialog
+ *   stays open. Deletion (FR-012) lives on the card's ⋯ menu, not here, so destruction never sits beside Save.
+ * - **Read-only** (a claimed/done task): the fields render as static text, no edit.
  *
  * Deliberately structured so a future slice can add an assignee field (and S-05's send-back comment) without
  * reworking the card. Closes on backdrop click / escape via CDK defaults.
@@ -44,9 +43,6 @@ export class TaskDetailComponent {
   /** Mapped validation messages from a 400 (or a generic fallback). */
   readonly errors = signal<string[]>([]);
   readonly pending = signal(false);
-
-  /** Two-step delete: the first click arms the confirm, the second performs it. */
-  readonly confirmingDelete = signal(false);
 
   constructor() {
     // Read-only tasks (claimed/done) present their fields as static text — the form is inert.
@@ -85,35 +81,6 @@ export class TaskDetailComponent {
           );
         },
       });
-  }
-
-  /** First click arms the inline confirm; a Cancel disarms it. */
-  requestDelete(): void {
-    this.confirmingDelete.set(true);
-  }
-
-  cancelDelete(): void {
-    this.confirmingDelete.set(false);
-  }
-
-  confirmDelete(): void {
-    if (!this.task.canDelete || this.pending()) {
-      return;
-    }
-
-    this.errors.set([]);
-    this.pending.set(true);
-
-    this.tasks.delete(this.task.id).subscribe({
-      next: () => {
-        this.pending.set(false);
-        this.dialogRef.close();
-      },
-      error: () => {
-        this.pending.set(false);
-        this.errors.set(['Something went wrong. Please try again.']);
-      },
-    });
   }
 
   close(): void {

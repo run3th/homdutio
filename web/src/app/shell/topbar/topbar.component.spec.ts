@@ -1,21 +1,28 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 
 import { TopbarComponent } from './topbar.component';
 import { AuthService } from '../../auth/auth.service';
 import { Household, HouseholdService } from '../../household/household.service';
 import { InviteService } from '../../household/invite.service';
+import { TaskService } from '../../board/task.service';
+import { CreateTaskComponent } from '../../board/create-task/create-task.component';
 
 describe('TopbarComponent', () => {
   const current = signal<Household | null>({ id: 'h1', name: 'The Burrow', role: 'Admin' });
   let generate: ReturnType<typeof vi.fn>;
   let writeText: ReturnType<typeof vi.fn>;
+  let open: ReturnType<typeof vi.fn>;
+  let setPaused: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     generate = vi.fn(() => of({ token: 'tok123', expiresAtUtc: '2026-06-09T00:00:00Z' }));
     writeText = vi.fn(() => Promise.resolve());
+    open = vi.fn(() => ({ closed: of(undefined) }));
+    setPaused = vi.fn();
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     TestBed.configureTestingModule({
       imports: [TopbarComponent],
@@ -23,6 +30,8 @@ describe('TopbarComponent', () => {
         provideRouter([]),
         { provide: HouseholdService, useValue: { current } },
         { provide: InviteService, useValue: { generate } },
+        { provide: Dialog, useValue: { open } },
+        { provide: TaskService, useValue: { setPaused } },
         // The embedded avatar menu injects AuthService.
         { provide: AuthService, useValue: { email: signal('molly@burrow.test'), logout: vi.fn() } },
       ],
@@ -58,5 +67,19 @@ describe('TopbarComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.invite-link')?.textContent).toBe(
       expected,
     );
+  });
+
+  it('+ Add task opens the create dialog and pauses/resumes board polling', () => {
+    const fixture = render();
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '.add-task-button',
+    ) as HTMLButtonElement;
+
+    button.click();
+
+    expect(open).toHaveBeenCalledWith(CreateTaskComponent);
+    // Paused on open; the stubbed closed$ emits synchronously, so it resumes too.
+    expect(setPaused).toHaveBeenCalledWith(true);
+    expect(setPaused).toHaveBeenLastCalledWith(false);
   });
 });

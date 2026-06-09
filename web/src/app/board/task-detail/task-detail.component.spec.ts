@@ -45,6 +45,9 @@ describe('TaskDetailComponent', () => {
     });
   }
 
+  // `deleteTask` is provided only to satisfy the injector; the edit dialog never calls it (delete moved to
+  // the card's ⋯ menu, S-11). The assertions below prove the dialog stays delete-free.
+
   function render(task: Task) {
     configure(task);
     const fixture = TestBed.createComponent(TaskDetailComponent);
@@ -60,9 +63,8 @@ describe('TaskDetailComponent', () => {
   });
 
   it('renders static text (no form) when read-only', () => {
-    const el = render(
-      baseTask({ status: 'InProgress', canEdit: false, canDelete: false }),
-    ).nativeElement as HTMLElement;
+    const el = render(baseTask({ status: 'InProgress', canEdit: false, canDelete: false }))
+      .nativeElement as HTMLElement;
     expect(el.querySelector('#detail-title')).toBeNull();
     expect(el.querySelector('.task-detail-readonly')).not.toBeNull();
     expect(el.textContent).toContain('Take out bins');
@@ -87,23 +89,31 @@ describe('TaskDetailComponent', () => {
     expect(close).toHaveBeenCalled();
   });
 
-  it('a two-step delete confirm calls delete and closes', () => {
-    const fixture = render(baseTask({ canEdit: true, canDelete: true }));
+  it('is a pure form with no delete affordance, even when canDelete', () => {
+    const el = render(baseTask({ canEdit: true, canDelete: true })).nativeElement as HTMLElement;
+
+    // No Delete control lives in the dialog any more — deletion is on the card's ⋯ menu (S-11).
+    expect(el.querySelector('.btn--danger')).toBeNull();
+    expect(el.querySelector('.confirm-delete')).toBeNull();
+    expect(el.textContent).not.toContain('Delete');
+    // Cancel + Save are the only actions.
+    const actions = Array.from(el.querySelectorAll('.actions .btn')).map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Cancel', 'Save']);
+    expect(deleteTask).not.toHaveBeenCalled();
+  });
+
+  it('Cancel closes the dialog without saving', () => {
+    const fixture = render(baseTask({ canEdit: true }));
     const el = fixture.nativeElement as HTMLElement;
 
-    // First click arms the inline confirm.
-    (el.querySelector('.btn--danger') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(el.querySelector('.confirm-delete')).not.toBeNull();
-    expect(deleteTask).not.toHaveBeenCalled();
-
-    // The confirm button performs the delete.
-    const confirmBtn = Array.from(el.querySelectorAll('.confirm-delete .btn--danger')).at(
-      0,
+    const cancel = Array.from(el.querySelectorAll('.actions .btn')).find(
+      (b) => b.textContent?.trim() === 'Cancel',
     ) as HTMLButtonElement;
-    confirmBtn.click();
+    cancel.click();
 
-    expect(deleteTask).toHaveBeenCalledWith('t1');
+    expect(update).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalled();
   });
 

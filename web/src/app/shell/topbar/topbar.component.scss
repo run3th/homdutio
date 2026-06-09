@@ -54,6 +54,31 @@
   margin-left: auto;
 }
 
+/* Primary CTA: opens the create-task dialog. Collapses to an icon-only button at ≤ 400px (NFR-2). */
+.add-task-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.4rem 0.8rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-task-button:hover {
+  background: var(--color-primary-hover);
+}
+
+.add-task-icon {
+  font-size: var(--text-base);
+  line-height: 1;
+}
+
 /* Anchor for the generated-link popover so it floats below the bar without stretching its height. */
 .invite {
   position: relative;
@@ -121,6 +146,28 @@
 @media (max-width: 400px) {
   .topbar {
     padding: 0 var(--space-3);
+  }
+
+  /* The + Add task CTA collapses to an icon-only button to keep the bar uncluttered (NFR-2). */
+  .add-task-button {
+    padding: 0.4rem;
+  }
+
+  .add-task-label {
+    /* Visually hidden but kept for assistive tech. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .add-task-icon {
+    font-size: var(--text-lg);
   }
 
   .invite-error,

@@ -1,5 +1,8 @@
-<form class="create-task" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-  <h2 class="create-task-title">Add a task</h2>
+<section class="task-dialog" role="dialog" aria-modal="true" aria-labelledby="create-task-heading">
+  <header class="task-dialog-header">
+    <h2 id="create-task-heading">Add a task</h2>
+    <button type="button" class="icon-button" aria-label="Close" (click)="close()">×</button>
+  </header>
 
   @if (errors().length) {
     <div class="form-error" role="alert">
@@ -9,25 +12,32 @@
     </div>
   }
 
-  <div class="field">
-    <label for="task-title">Title</label>
-    <input id="task-title" type="text" formControlName="title" autocomplete="off" />
-    @if (form.controls.title.touched && form.controls.title.invalid) {
-      <span class="field-error">A task title is required.</span>
-    }
-  </div>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="field">
+      <label for="task-title">Title</label>
+      <input id="task-title" type="text" formControlName="title" autocomplete="off" />
+      @if (form.controls.title.touched && form.controls.title.invalid) {
+        <span class="field-error">A task title is required.</span>
+      }
+    </div>
 
-  <div class="field">
-    <label for="task-description">Description <span class="optional">(optional)</span></label>
-    <input id="task-description" type="text" formControlName="description" autocomplete="off" />
-  </div>
+    <div class="field">
+      <label for="task-description">Description <span class="optional">(optional)</span></label>
+      <input id="task-description" type="text" formControlName="description" autocomplete="off" />
+    </div>
 
-  <div class="field">
-    <label for="task-category">Category <span class="optional">(optional)</span></label>
-    <input id="task-category" type="text" formControlName="category" autocomplete="off" />
-  </div>
+    <div class="field">
+      <label for="task-category">Category <span class="optional">(optional)</span></label>
+      <input id="task-category" type="text" formControlName="category" autocomplete="off" />
+    </div>
 
-  <button type="submit" [disabled]="pending()">
-    {{ pending() ? 'Adding…' : 'Add task' }}
-  </button>
-</form>
+    <div class="actions">
+      <button type="button" class="btn btn--ghost" [disabled]="pending()" (click)="close()">
+        Cancel
+      </button>
+      <button type="submit" class="btn" [disabled]="pending()">
+        {{ pending() ? 'Adding…' : 'Add task' }}
+      </button>
+    </div>
+  </form>
+</section>

@@ -73,11 +73,11 @@
   overflow-wrap: anywhere;
 }
 
-/* Actions wrap rather than overflow at ≤ 400px. */
+/* Actions wrap rather than overflow at ≤ 400px; Save is the trailing primary action (Cancel leads). */
 .actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
@@ -85,15 +85,6 @@
 .btn {
   width: auto;
   min-width: 6rem;
-}
-
-.btn--danger {
-  background: var(--color-danger);
-}
-
-.btn--danger:hover {
-  background: var(--color-danger);
-  filter: brightness(0.92);
 }
 
 .btn--ghost {
@@ -104,17 +95,4 @@
 .btn--ghost:hover {
   background: var(--color-surface-2);
   filter: brightness(0.96);
-}
-
-.confirm-delete {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.confirm-delete-prompt {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-danger);
 }

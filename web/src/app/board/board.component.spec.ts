@@ -13,6 +13,7 @@ describe('BoardComponent', () => {
   let markDone: ReturnType<typeof vi.fn>;
   let confirm: ReturnType<typeof vi.fn>;
   let reorder: ReturnType<typeof vi.fn>;
+  let deleteTask: ReturnType<typeof vi.fn>;
   let open: ReturnType<typeof vi.fn>;
   let startPolling: ReturnType<typeof vi.fn>;
   let stopPolling: ReturnType<typeof vi.fn>;
@@ -45,7 +46,10 @@ describe('BoardComponent', () => {
     markDone = vi.fn(() => of(tasks()));
     confirm = vi.fn(() => of(tasks()));
     reorder = vi.fn(() => of(tasks()));
+    deleteTask = vi.fn(() => of(tasks()));
     // Dialog.open returns a DialogRef whose `closed` observable the board subscribes to (resume polling).
+    // `closed` emits undefined by default (detail dialog / a cancelled delete-confirm); individual tests
+    // override it to emit `true` to exercise a confirmed delete.
     open = vi.fn(() => ({ closed: of(undefined) }));
     startPolling = vi.fn();
     stopPolling = vi.fn();
@@ -62,6 +66,7 @@ describe('BoardComponent', () => {
             markDone,
             confirm,
             reorder,
+            delete: deleteTask,
             startPolling,
             stopPolling,
             setPaused,
@@ -94,10 +99,10 @@ describe('BoardComponent', () => {
       baseTask({ id: 'c', status: 'Done' }),
     ]);
     const el = render().nativeElement as HTMLElement;
-    const columns = el.querySelectorAll('.column');
-    expect(columns[0].querySelectorAll('.task-card').length).toBe(1);
-    expect(columns[1].querySelectorAll('.task-card').length).toBe(1);
-    expect(columns[2].querySelectorAll('.task-card').length).toBe(1);
+    const columns = el.querySelectorAll('app-task-column');
+    expect(columns[0].querySelectorAll('app-task-card').length).toBe(1);
+    expect(columns[1].querySelectorAll('app-task-card').length).toBe(1);
+    expect(columns[2].querySelectorAll('app-task-card').length).toBe(1);
   });
 
   it('renders only the affordance-permitted buttons', () => {
@@ -214,5 +219,30 @@ describe('BoardComponent', () => {
     fixture.detectChanges();
 
     expect(el.querySelectorAll('.task-card').length).toBe(0);
+  });
+
+  it('requesting a delete opens the confirm dialog and deletes only when confirmed', () => {
+    open.mockReturnValue({ closed: of(true) });
+    const fixture = render();
+    const task = baseTask({ id: 'a', status: 'ToDo', canDelete: true });
+
+    fixture.componentInstance.requestDelete(task);
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][1]).toEqual({ data: task });
+    expect(deleteTask).toHaveBeenCalledWith('a');
+    // Polling pauses while the confirm is open and resumes after it closes.
+    expect(setPaused).toHaveBeenCalledWith(true);
+    expect(setPaused).toHaveBeenLastCalledWith(false);
+  });
+
+  it('a cancelled delete-confirm does not delete', () => {
+    open.mockReturnValue({ closed: of(false) });
+    const fixture = render();
+
+    fixture.componentInstance.requestDelete(baseTask({ id: 'a', canDelete: true }));
+
+    expect(deleteTask).not.toHaveBeenCalled();
+    expect(setPaused).toHaveBeenLastCalledWith(false);
   });
 });
