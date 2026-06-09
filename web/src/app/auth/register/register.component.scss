@@ -3,11 +3,11 @@
 }
 
 .optional {
-  font-weight: 400;
-  color: #888;
+  font-weight: var(--weight-normal);
+  color: var(--color-text-subtle);
 }
 
 .field-hint {
   font-size: 0.8125rem;
-  color: #888;
+  color: var(--color-text-subtle);
 }

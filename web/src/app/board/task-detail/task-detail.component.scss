@@ -5,18 +5,18 @@
 /* Mobile-first panel: never wider than the viewport, comfortable at ≤ 400px (NFR-2). */
 .task-detail {
   width: min(26rem, calc(100vw - 2rem));
-  background: #fff;
-  border-radius: 0.75rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
   padding: 1.25rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 .task-detail-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .task-detail-header h2 {
@@ -30,37 +30,37 @@
   height: 2rem;
   font-size: 1.25rem;
   line-height: 1;
-  color: #555;
+  color: var(--color-text-muted);
   background: transparent;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .icon-button:hover {
-  background: #f0f0f3;
+  background: var(--color-surface-2);
 }
 
 .optional {
-  font-weight: 400;
-  color: #888;
+  font-weight: var(--weight-normal);
+  color: var(--color-text-subtle);
 }
 
 /* Read-only field list (claimed/done tasks). */
 .task-detail-readonly {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-4);
   font-size: 0.9375rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .task-meta-row {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .task-meta-row dt {
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   flex: 0 0 5.5rem;
 }
 
@@ -78,8 +78,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .btn {
@@ -88,31 +88,33 @@
 }
 
 .btn--danger {
-  background: #b91c1c;
+  background: var(--color-danger);
 }
 
 .btn--danger:hover {
-  background: #991b1b;
+  background: var(--color-danger);
+  filter: brightness(0.92);
 }
 
 .btn--ghost {
-  color: #374151;
-  background: #e5e7eb;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
 }
 
 .btn--ghost:hover {
-  background: #d6dae0;
+  background: var(--color-surface-2);
+  filter: brightness(0.96);
 }
 
 .confirm-delete {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .confirm-delete-prompt {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #b91c1c;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-danger);
 }

@@ -1,5 +1,68 @@
 /* Global styles. Mobile-first; every primary flow must be usable at ≤ 400px (NFR-2). */
 
+/* Self-hosted Inter (variable). Same-origin, works offline; renders the named font instead of
+   the silent system fallback. Imported once here so the whole app gets it. */
+@import '@fontsource-variable/inter';
+
+:root {
+  /* Surfaces & neutrals */
+  --color-bg: #f7f7fb; /* app background (lavender-grey) */
+  --color-surface: #ffffff; /* cards, columns, dialogs */
+  --color-surface-2: #f4f4f9; /* inset surfaces (a card on a column) */
+  --color-border: #ececf3;
+  --color-text: #1d1c2b;
+  --color-text-muted: #6b6a7b;
+  --color-text-subtle: #9a99a8;
+  /* Primary (soft violet) */
+  --color-primary: #6c5ce7;
+  --color-primary-hover: #5a48d6;
+  --color-primary-soft: #eeebff; /* active nav, chips, role badge */
+  --color-on-primary: #ffffff;
+  /* Accent + semantic (soft pairs: fg / bg) */
+  --color-blue: #5b8def;
+  --color-blue-soft: #e8f0ff;
+  --color-success: #1f9d63;
+  --color-success-soft: #e6f7ef;
+  --color-danger: #e5484d;
+  --color-danger-soft: #fdecec;
+  --color-warning: #cc8a1a;
+  --color-warning-soft: #fbf0db; /* reserved: S-05 send-back */
+  /* Spacing (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
+  /* Shadows (soft) */
+  --shadow-sm: 0 1px 2px rgba(29, 28, 43, 0.06), 0 1px 3px rgba(29, 28, 43, 0.08);
+  --shadow-md: 0 4px 12px rgba(29, 28, 43, 0.08);
+  --shadow-lg: 0 12px 32px rgba(29, 28, 43, 0.12);
+  /* Typography */
+  --font-sans:
+    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  /* Focus + shell metrics */
+  --focus-ring: 0 0 0 2px var(--color-primary);
+  --shell-sidebar-w: 4.75rem;
+  --shell-topbar-h: 3.5rem;
+  --shell-bottombar-h: 3.5rem;
+}
+
 *,
 *::before,
 *::after {
@@ -13,10 +76,9 @@ body {
 }
 
 body {
-  font-family:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  color: #1a1a1a;
-  background: #f5f5f7;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -28,87 +90,92 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: var(--space-4);
 }
 
 .card {
   width: 100%;
   max-width: 22rem;
-  background: #fff;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
 }
 
 .card h1 {
-  margin: 0 0 1rem;
-  font-size: 1.5rem;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xl);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
 }
 
 .field label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .field input {
   width: 100%;
-  padding: 0.625rem 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 0.5rem;
+  padding: 0.625rem var(--space-3);
+  font-size: var(--text-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .field input:focus {
-  outline: 2px solid #4f46e5;
-  outline-offset: 0;
-  border-color: #4f46e5;
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--color-primary);
 }
 
 .field-error {
-  color: #b91c1c;
+  color: var(--color-danger);
   font-size: 0.8125rem;
 }
 
 .form-error {
-  color: #b91c1c;
-  font-size: 0.875rem;
-  margin: 0 0 1rem;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-4);
 }
 
 .notice {
-  background: #ecfdf5;
-  color: #065f46;
-  border-radius: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  font-size: 0.875rem;
-  margin: 0 0 1rem;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: 0.625rem var(--space-3);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-4);
 }
 
 .rules {
   font-size: 0.8125rem;
-  color: #555;
-  margin: 0 0 1rem;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-4);
   padding-left: 1.1rem;
 }
 
 button[type='submit'],
 .btn {
   width: 100%;
-  padding: 0.7rem 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  background: #4f46e5;
+  padding: 0.7rem var(--space-4);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+}
+
+button[type='submit']:hover:not(:disabled),
+.btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
 button[type='submit']:disabled {
@@ -117,7 +184,7 @@ button[type='submit']:disabled {
 }
 
 .alt-link {
-  margin: 1rem 0 0;
-  font-size: 0.875rem;
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
   text-align: center;
 }

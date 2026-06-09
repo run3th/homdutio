@@ -9,7 +9,7 @@
 }
 
 .muted {
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 /* A second stacked action under a primary .btn (e.g. Register under Log in) gets breathing room. */

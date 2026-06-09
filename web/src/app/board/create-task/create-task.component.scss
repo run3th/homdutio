@@ -1,24 +1,24 @@
 :host {
   display: block;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-5);
 }
 
 /* A compact panel on the board (not a full-page card). Full-width so it never overflows at ≤ 400px. */
 .create-task {
-  background: #fff;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
 }
 
 .create-task-title {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-base);
 }
 
 .optional {
-  font-weight: 400;
-  color: #888;
+  font-weight: var(--weight-normal);
+  color: var(--color-text-subtle);
 }
 
 /* The submit button is auto-width here rather than full-bleed, but still a comfortable tap target. */

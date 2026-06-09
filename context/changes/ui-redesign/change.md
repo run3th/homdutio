@@ -2,9 +2,9 @@
 change_id: ui-redesign
 roadmap_id: S-11
 title: UI redesign (board experience overhaul)
-status: planned
+status: implementing
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-09
 prerequisites: [household-and-board, accountability-loop, task-management-and-priority, invite-and-multiplayer-board]
 prd_refs: [NFR-2]
 ---

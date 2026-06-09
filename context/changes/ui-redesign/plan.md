@@ -527,15 +527,15 @@ This is the user's chosen pattern, replacing the earlier header-trash idea.
 
 #### Automated
 
-- [ ] 1.1 `@fontsource-variable/inter` installs + app builds (`npm install` + `npm run build`)
-- [ ] 1.2 Release `BuildAngularSpa` target succeeds (`dotnet build -c Release`)
-- [ ] 1.3 vitest passes unchanged (`npm test`)
-- [ ] 1.4 Prettier clean on changed files (`npx prettier --check`)
+- [x] 1.1 `@fontsource-variable/inter` installs + app builds (`npm install` + `npm run build`)
+- [x] 1.2 Release `BuildAngularSpa` target succeeds (`dotnet build -c Release`)
+- [x] 1.3 vitest passes unchanged (`npm test`)
+- [x] 1.4 Prettier clean on changed files (`npx prettier --check`)
 
 #### Manual
 
-- [ ] 1.5 All screens render with tokens + Inter actually loads (DevTools shows the font file)
-- [ ] 1.6 No layout regressions; ≤ 400px no horizontal scroll on any screen (NFR-2)
+- [x] 1.5 All screens render with tokens + Inter actually loads (DevTools shows the font file)
+- [x] 1.6 No layout regressions; ≤ 400px no horizontal scroll on any screen (NFR-2)
 
 ### Phase 2: App Shell (Sidebar + Topbar)
 
