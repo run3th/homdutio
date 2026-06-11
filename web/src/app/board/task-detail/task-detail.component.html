@@ -84,4 +84,49 @@
       <button type="button" class="btn" (click)="close()">Close</button>
     </div>
   }
+
+  <!-- Comments thread (S-05): every member can read + post, regardless of edit rights. -->
+  <section class="comments" aria-label="Comments">
+    <h3 class="comments-title">Comments</h3>
+
+    @if (commentsLoaded() && comments().length === 0) {
+      <p class="comments-empty">No comments yet.</p>
+    }
+
+    @if (comments().length) {
+      <ul class="comment-list">
+        @for (comment of comments(); track comment.id) {
+          <li class="comment" [class.comment--sendback]="comment.kind === 'SendBack'">
+            <div class="comment-head">
+              <span class="comment-author">{{ comment.authorName }}</span>
+              @if (comment.kind === 'SendBack') {
+                <span class="comment-tag">Sent back</span>
+              }
+              <span class="comment-time">{{ comment.createdAtUtc | date: 'short' }}</span>
+            </div>
+            <p class="comment-body">{{ comment.body }}</p>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (commentError()) {
+      <p class="field-error" role="alert">{{ commentError() }}</p>
+    }
+
+    <form class="comment-form" (ngSubmit)="postComment()" novalidate>
+      <textarea
+        [formControl]="newComment"
+        rows="2"
+        maxlength="280"
+        aria-label="Add a comment"
+        placeholder="Add a comment…"
+      ></textarea>
+      <div class="actions">
+        <button type="submit" class="btn" [disabled]="newComment.invalid || postingComment()">
+          {{ postingComment() ? 'Posting…' : 'Post' }}
+        </button>
+      </div>
+    </form>
+  </section>
 </section>

@@ -539,30 +539,30 @@ the F-01 "migrations stay backward-compatible" rule). New `TaskEventType` values
 
 #### Automated
 
-- [x] 3.1 SPA builds (`ng build`)
-- [x] 3.2 Lint passes
-- [x] 3.3 vitest specs pass (card conditional render/emit; send-back dialog validation/trim; board call + polling pause/resume)
+- [x] 3.1 SPA builds (`ng build`) — d682f31
+- [x] 3.2 Lint passes — d682f31
+- [x] 3.3 vitest specs pass (card conditional render/emit; send-back dialog validation/trim; board call + polling pause/resume) — d682f31
 
 #### Manual
 
-- [x] 3.4 Claimer unclaims own task; admin unclaims a stuck task (instant return to To do)
-- [x] 3.5 Admin sends back a Done task with a reason → In progress, claimer preserved
-- [x] 3.6 Board self-heals on a stale-affordance 403/409
+- [x] 3.4 Claimer unclaims own task; admin unclaims a stuck task (instant return to To do) — d682f31
+- [x] 3.5 Admin sends back a Done task with a reason → In progress, claimer preserved — d682f31
+- [x] 3.6 Board self-heals on a stale-affordance 403/409 — d682f31
 
 ### Phase 4: Frontend — comments thread, count badge, admin edit
 
 #### Automated
 
-- [ ] 4.1 SPA builds (`ng build`)
-- [ ] 4.2 Lint passes
-- [ ] 4.3 vitest specs pass (badge by commentCount; thread render w/ author/time + send-back kind; empty-comment blocked; valid post re-lists; admin editable vs member read-only)
+- [x] 4.1 SPA builds (`ng build`)
+- [x] 4.2 Lint passes
+- [x] 4.3 vitest specs pass (badge by commentCount; thread render w/ author/time + send-back kind; empty-comment blocked; valid post re-lists; admin editable vs member read-only)
 
 #### Manual
 
-- [ ] 4.4 Card 💬 count matches the dialog's comment count
-- [ ] 4.5 Member can comment but not edit fields; admin can do both
-- [ ] 4.6 Send-back reason appears in the thread, attributed + timestamped
-- [ ] 4.7 Thread + input usable at ≤400px (NFR-2)
+- [x] 4.4 Card 💬 count matches the dialog's comment count
+- [x] 4.5 Member can comment but not edit fields; admin can do both
+- [x] 4.6 Send-back reason appears in the thread, attributed + timestamped
+- [x] 4.7 Thread + input usable at ≤400px (NFR-2)
 
 ### Phase 5: Charter reconciliation (docs)
 

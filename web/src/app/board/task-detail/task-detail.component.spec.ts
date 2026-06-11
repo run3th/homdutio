@@ -4,11 +4,13 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { of, throwError } from 'rxjs';
 
 import { TaskDetailComponent } from './task-detail.component';
-import { Task, TaskService } from '../task.service';
+import { Comment, Task, TaskService } from '../task.service';
 
 describe('TaskDetailComponent', () => {
   let update: ReturnType<typeof vi.fn>;
   let deleteTask: ReturnType<typeof vi.fn>;
+  let getComments: ReturnType<typeof vi.fn>;
+  let addComment: ReturnType<typeof vi.fn>;
   let close: ReturnType<typeof vi.fn>;
 
   function baseTask(overrides: Partial<Task>): Task {
@@ -37,13 +39,18 @@ describe('TaskDetailComponent', () => {
   function configure(task: Task) {
     update = vi.fn(() => of([]));
     deleteTask = vi.fn(() => of([]));
+    getComments = vi.fn(() => of([]));
+    addComment = vi.fn(() => of({}));
     close = vi.fn();
     TestBed.configureTestingModule({
       imports: [TaskDetailComponent],
       providers: [
         { provide: DIALOG_DATA, useValue: task },
         { provide: DialogRef, useValue: { close } },
-        { provide: TaskService, useValue: { update, delete: deleteTask } },
+        {
+          provide: TaskService,
+          useValue: { update, delete: deleteTask, getComments, addComment },
+        },
       ],
     });
   }
@@ -99,9 +106,9 @@ describe('TaskDetailComponent', () => {
     expect(el.querySelector('.btn--danger')).toBeNull();
     expect(el.querySelector('.confirm-delete')).toBeNull();
     expect(el.textContent).not.toContain('Delete');
-    // Cancel + Save are the only actions.
-    const actions = Array.from(el.querySelectorAll('.actions .btn')).map((b) =>
-      b.textContent?.trim(),
+    // Cancel + Save are the only edit-form actions (the comments section has its own Post button below).
+    const actions = Array.from(el.querySelectorAll('form:not(.comment-form) .actions .btn')).map(
+      (b) => b.textContent?.trim(),
     );
     expect(actions).toEqual(['Cancel', 'Save']);
     expect(deleteTask).not.toHaveBeenCalled();
@@ -131,13 +138,18 @@ describe('TaskDetailComponent', () => {
       ),
     );
     deleteTask = vi.fn(() => of([]));
+    getComments = vi.fn(() => of([]));
+    addComment = vi.fn(() => of({}));
     close = vi.fn();
     TestBed.configureTestingModule({
       imports: [TaskDetailComponent],
       providers: [
         { provide: DIALOG_DATA, useValue: baseTask({ canEdit: true }) },
         { provide: DialogRef, useValue: { close } },
-        { provide: TaskService, useValue: { update, delete: deleteTask } },
+        {
+          provide: TaskService,
+          useValue: { update, delete: deleteTask, getComments, addComment },
+        },
       ],
     });
     const fixture = TestBed.createComponent(TaskDetailComponent);
@@ -149,5 +161,80 @@ describe('TaskDetailComponent', () => {
 
     expect(close).not.toHaveBeenCalled();
     expect(el.querySelector('.form-error')?.textContent).toContain('A task title is required.');
+  });
+
+  // --- S-05: comments thread -----------------------------------------------------------------------
+
+  function comment(overrides: Partial<Comment>): Comment {
+    return {
+      id: 'c1',
+      body: 'Looks good',
+      kind: 'Member',
+      authorName: 'Molly',
+      createdAtUtc: '2026-06-01T10:00:00Z',
+      ...overrides,
+    };
+  }
+
+  function renderWithComments(comments: Comment[], task = baseTask({ canEdit: true })) {
+    configure(task);
+    getComments.mockReturnValue(of(comments));
+    const fixture = TestBed.createComponent(TaskDetailComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('lists comments with author/time and flags the send-back kind', () => {
+    const el = renderWithComments([
+      comment({ id: 'c1', body: 'On it', authorName: 'Molly', kind: 'Member' }),
+      comment({ id: 'c2', body: 'Please redo', authorName: 'Arthur', kind: 'SendBack' }),
+    ]).nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('.comment').length).toBe(2);
+    expect(el.textContent).toContain('Molly');
+    expect(el.textContent).toContain('On it');
+    expect(el.querySelector('.comment--sendback')).not.toBeNull();
+    expect(el.querySelector('.comment-tag')?.textContent?.trim()).toBe('Sent back');
+  });
+
+  it('shows the empty state when there are no comments', () => {
+    const el = renderWithComments([]).nativeElement as HTMLElement;
+    expect(el.querySelector('.comments-empty')?.textContent).toContain('No comments yet');
+  });
+
+  it('disables Post and does not call addComment while the input is empty', () => {
+    const fixture = renderWithComments([]);
+    const el = fixture.nativeElement as HTMLElement;
+    const post = el.querySelector('.comment-form button[type="submit"]') as HTMLButtonElement;
+    expect(post.disabled).toBe(true);
+
+    fixture.componentInstance.postComment();
+    expect(addComment).not.toHaveBeenCalled();
+  });
+
+  it('a valid post calls addComment and re-lists the thread', () => {
+    const fixture = renderWithComments([]);
+    expect(getComments).toHaveBeenCalledTimes(1);
+
+    fixture.componentInstance.newComment.setValue('Nice work');
+    fixture.componentInstance.postComment();
+
+    expect(addComment).toHaveBeenCalledWith('t1', 'Nice work');
+    // The thread re-lists after a successful post.
+    expect(getComments).toHaveBeenCalledTimes(2);
+  });
+
+  it('an admin (canEdit) sees the edit form and the comment input', () => {
+    const el = renderWithComments([], baseTask({ canEdit: true })).nativeElement as HTMLElement;
+    expect(el.querySelector('#detail-title')).not.toBeNull();
+    expect(el.querySelector('.comment-form textarea')).not.toBeNull();
+  });
+
+  it('a read-only (non-admin) member sees static fields but can still comment', () => {
+    const el = renderWithComments([], baseTask({ status: 'InProgress', canEdit: false }))
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('#detail-title')).toBeNull();
+    expect(el.querySelector('.task-detail-readonly')).not.toBeNull();
+    expect(el.querySelector('.comment-form textarea')).not.toBeNull();
   });
 });

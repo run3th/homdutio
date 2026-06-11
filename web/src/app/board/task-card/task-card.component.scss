@@ -189,6 +189,13 @@
   overflow-wrap: anywhere;
 }
 
+/* 💬 comment-count indicator, bottom-left under the metadata (S-05). Purely presentational. */
+.task-comment-count {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 /* Actions wrap rather than overflow; each stays a comfortable tap target at ≤ 400px (NFR-2). */
 .task-actions {
   display: flex;

@@ -1,10 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 
-import { Task, TaskService } from '../task.service';
+import { Comment, Task, TaskService } from '../task.service';
 import { mapValidationProblem } from '../../auth/validation-problem';
 
 /**
@@ -15,10 +15,12 @@ import { mapValidationProblem } from '../../auth/validation-problem';
  *   title/description/category — Cancel / Save, nothing else. Save calls {@link TaskService.update} (which
  *   refetches the board) and closes on success; a 400 maps via {@link mapValidationProblem} and the dialog
  *   stays open. Deletion (FR-012) lives on the card's ⋯ menu, not here, so destruction never sits beside Save.
- * - **Read-only** (a claimed/done task): the fields render as static text, no edit.
+ * - **Read-only** (a non-admin caller): the fields render as static text, no edit.
  *
- * Deliberately structured so a future slice can add an assignee field (and S-05's send-back comment) without
- * reworking the card. Closes on backdrop click / escape via CDK defaults.
+ * Below the fields, **every** member sees the task's immutable comment thread (S-05) — author + timestamp,
+ * with send-back reasons distinguished — and an add-comment input, regardless of edit rights. The thread is
+ * lazy-loaded on open (`getComments`) so the board poll never carries comment bodies; a post re-lists the
+ * thread (the card badge catches up on the next board poll). Closes on backdrop click / escape via CDK defaults.
  */
 @Component({
   selector: 'app-task-detail',
@@ -44,11 +46,63 @@ export class TaskDetailComponent {
   readonly errors = signal<string[]>([]);
   readonly pending = signal(false);
 
+  /** The lazily-loaded comment thread (S-05) and whether the initial fetch has resolved (for the empty state). */
+  readonly comments = signal<Comment[]>([]);
+  readonly commentsLoaded = signal(false);
+
+  /** The add-comment control — required + bounded to the server's 280-char limit. */
+  readonly newComment = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.maxLength(280)],
+  });
+  readonly postingComment = signal(false);
+  readonly commentError = signal<string | null>(null);
+
   constructor() {
-    // Read-only tasks (claimed/done) present their fields as static text — the form is inert.
+    // Read-only (non-admin) tasks present their fields as static text — the form is inert.
     if (!this.task.canEdit) {
       this.form.disable();
     }
+
+    this.loadComments();
+  }
+
+  /** Lazy-load the thread on open; on failure leave it empty but mark loaded so the empty state shows. */
+  private loadComments(): void {
+    this.tasks.getComments(this.task.id).subscribe({
+      next: (comments) => {
+        this.comments.set(comments);
+        this.commentsLoaded.set(true);
+      },
+      error: () => this.commentsLoaded.set(true),
+    });
+  }
+
+  /** Post a member comment, then re-list the thread (the card badge updates on the next board poll). */
+  postComment(): void {
+    const body = this.newComment.value.trim();
+    if (!body || this.newComment.invalid || this.postingComment()) {
+      this.newComment.markAsTouched();
+      return;
+    }
+
+    this.commentError.set(null);
+    this.postingComment.set(true);
+    this.tasks.addComment(this.task.id, body).subscribe({
+      next: () => {
+        this.postingComment.set(false);
+        this.newComment.reset();
+        this.loadComments();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.postingComment.set(false);
+        this.commentError.set(
+          error.status === 400
+            ? 'A comment must be between 1 and 280 characters.'
+            : 'Something went wrong. Please try again.',
+        );
+      },
+    });
   }
 
   save(): void {

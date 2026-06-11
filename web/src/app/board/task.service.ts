@@ -30,6 +30,16 @@ export interface Task {
   commentCount: number;
 }
 
+/** A task comment, mirroring the camelCase JSON of the C# CommentResponse (S-05). */
+export interface Comment {
+  id: string;
+  body: string;
+  /** `Member` is a free-form note; `SendBack` is the reason an admin attached when returning a Done task. */
+  kind: 'Member' | 'SendBack';
+  authorName: string;
+  createdAtUtc: string;
+}
+
 /** Body for `POST /api/tasks` (matches the C# CreateTaskRequest). */
 export interface CreateTaskRequest {
   title: string;
@@ -153,6 +163,19 @@ export class TaskService {
     return this.http
       .put<void>('/api/tasks/order', { status, orderedIds })
       .pipe(switchMap(() => this.load()));
+  }
+
+  /** `GET /api/tasks/{id}/comments` — the task's full thread, lazy-loaded when the detail dialog opens. */
+  getComments(id: string): Observable<Comment[]> {
+    return this.http.get<Comment[]>(`/api/tasks/${id}/comments`);
+  }
+
+  /**
+   * `POST /api/tasks/{id}/comments` — post a member comment. Returns the created comment; the dialog re-lists
+   * the thread and the card's badge updates on the next board poll/refetch (no whole-board refetch needed).
+   */
+  addComment(id: string, body: string): Observable<Comment> {
+    return this.http.post<Comment>(`/api/tasks/${id}/comments`, { body });
   }
 
   /** Resets the board state and halts polling. Wired into {@link AuthService.logout} alongside the household reset. */

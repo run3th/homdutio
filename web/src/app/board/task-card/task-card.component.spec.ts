@@ -180,4 +180,16 @@ describe('TaskCardComponent', () => {
     expect(items).not.toContain('Unclaim');
     expect(items).not.toContain('Send back');
   });
+
+  it('renders the 💬 comment count only when commentCount > 0', () => {
+    const fixture = render(baseTask({ commentCount: 0 }));
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.task-comment-count')).toBeNull();
+
+    fixture.componentRef.setInput('task', baseTask({ commentCount: 3 }));
+    fixture.detectChanges();
+    const badge = el.querySelector('.task-comment-count');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('3');
+  });
 });

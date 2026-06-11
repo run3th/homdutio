@@ -85,6 +85,13 @@
   </div>
 </dl>
 
+<!-- 💬 comment count (S-05) — purely presentational; opening the thread is the existing title → openDetail. -->
+@if (task.commentCount > 0) {
+  <p class="task-comment-count" [attr.aria-label]="task.commentCount + ' comments'">
+    💬 {{ task.commentCount }}
+  </p>
+}
+
 <!-- Only the primary lifecycle action shows on the card; management actions live in the ⋯ menu. -->
 @if (task.canClaim || task.canMarkDone || task.canConfirm) {
   <div class="task-actions">
