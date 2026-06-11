@@ -78,8 +78,17 @@ export class TaskDetailComponent {
     });
   }
 
-  /** Post a member comment, then re-list the thread (the card badge updates on the next board poll). */
-  postComment(): void {
+  /**
+   * Post a member comment, then re-list the thread (the card badge updates on the next board poll).
+   *
+   * Called from the composer's native `submit` (button/Enter) and the textarea's `keydown.enter`. We
+   * `preventDefault` so the bare `<form>` — which has no `[formGroup]`, hence no Angular submit directive
+   * to intercept it — never triggers a full-page navigation that would tear the dialog down. Shift+Enter
+   * doesn't match `keydown.enter`, so it still inserts a newline for multi-line drafts.
+   */
+  postComment(event?: Event): void {
+    event?.preventDefault();
+
     const body = this.newComment.value.trim();
     if (!body || this.newComment.invalid || this.postingComment()) {
       this.newComment.markAsTouched();

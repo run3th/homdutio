@@ -5,6 +5,10 @@
 /* Mobile-first panel: never wider than the viewport, comfortable at ≤ 400px (NFR-2). */
 .task-detail {
   width: min(26rem, calc(100vw - 2rem));
+  /* The dialog never outgrows the viewport; if content is tall, the panel itself scrolls so the
+     comment input at the bottom always stays reachable on small screens (NFR-2). */
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   background: var(--color-surface);
   border-radius: var(--radius-md);
   padding: 1.25rem;
@@ -123,6 +127,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* A long thread scrolls within the panel instead of pushing the input out of view. */
+  max-height: 14rem;
+  overflow-y: auto;
 }
 
 .comment {
@@ -172,13 +179,48 @@
   overflow-wrap: anywhere;
 }
 
+/* Facebook-style composer: a pill-shaped field with a round send icon docked to its right. */
+.comment-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
 .comment-form textarea {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   box-sizing: border-box;
-  resize: vertical;
+  resize: none;
   font: inherit;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 1.25rem;
   background: var(--color-surface);
+  /* Grows a little for multi-line drafts, then scrolls — never shoves the send button off-screen. */
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
+.comment-send {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  cursor: pointer;
+}
+
+.comment-send:not(:disabled):hover {
+  filter: brightness(0.95);
+}
+
+.comment-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

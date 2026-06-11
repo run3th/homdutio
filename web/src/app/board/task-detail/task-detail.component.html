@@ -114,19 +114,25 @@
       <p class="field-error" role="alert">{{ commentError() }}</p>
     }
 
-    <form class="comment-form" (ngSubmit)="postComment()" novalidate>
+    <form class="comment-form" (submit)="postComment($event)" novalidate>
       <textarea
         [formControl]="newComment"
-        rows="2"
+        rows="1"
         maxlength="280"
         aria-label="Add a comment"
-        placeholder="Add a comment…"
+        placeholder="Add a comment… (Enter to send, Shift+Enter for a new line)"
+        (keydown.enter)="postComment($event)"
       ></textarea>
-      <div class="actions">
-        <button type="submit" class="btn" [disabled]="newComment.invalid || postingComment()">
-          {{ postingComment() ? 'Posting…' : 'Post' }}
-        </button>
-      </div>
+      <button
+        type="submit"
+        class="comment-send"
+        [disabled]="newComment.invalid || postingComment()"
+        [attr.aria-label]="postingComment() ? 'Posting comment' : 'Post comment'"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M3.4 20.4 22 12 3.4 3.6 3 10l13 2-13 2z" />
+        </svg>
+      </button>
     </form>
   </section>
 </section>

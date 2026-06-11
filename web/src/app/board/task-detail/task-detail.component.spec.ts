@@ -224,6 +224,29 @@ describe('TaskDetailComponent', () => {
     expect(getComments).toHaveBeenCalledTimes(2);
   });
 
+  it('submitting the composer posts via the service and prevents native navigation', () => {
+    const fixture = renderWithComments([]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    fixture.componentInstance.newComment.setValue('Via the form');
+    fixture.detectChanges();
+
+    const form = el.querySelector('.comment-form') as HTMLFormElement;
+    const submit = new Event('submit', { cancelable: true });
+    form.dispatchEvent(submit);
+
+    // The bare <form> has no formGroup, so the component must intercept submit itself: post + no reload.
+    expect(addComment).toHaveBeenCalledWith('t1', 'Via the form');
+    expect(submit.defaultPrevented).toBe(true);
+  });
+
+  it('preventDefault is a no-op when postComment is called without an event', () => {
+    const fixture = renderWithComments([]);
+    fixture.componentInstance.newComment.setValue('No event');
+    expect(() => fixture.componentInstance.postComment()).not.toThrow();
+    expect(addComment).toHaveBeenCalledWith('t1', 'No event');
+  });
+
   it('an admin (canEdit) sees the edit form and the comment input', () => {
     const el = renderWithComments([], baseTask({ canEdit: true })).nativeElement as HTMLElement;
     expect(el.querySelector('#detail-title')).not.toBeNull();
