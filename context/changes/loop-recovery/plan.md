@@ -524,30 +524,30 @@ the F-01 "migrations stay backward-compatible" rule). New `TaskEventType` values
 
 #### Automated
 
-- [x] 2.1 Solution builds (`dotnet build`)
-- [x] 2.2 Unclaim tests pass (claimer + admin succeed, `Unclaimed` appended, unassigned; non-claimer non-admin → 403; non-in-progress → 409)
-- [x] 2.3 Send-back tests pass (admin → In progress, claimer kept, `DoneAtUtc` cleared, `SentBack` event + `SendBack` comment; non-admin → 403; non-Done → 409; blank/oversized → 400)
-- [x] 2.4 Admin-edit tests pass (admin edits claimed/Done → 200; non-admin edit → 403)
-- [x] 2.5 Affordance-flag + foreign-id-404 + 401 tests pass for both new routes
+- [x] 2.1 Solution builds (`dotnet build`) — ab19d26
+- [x] 2.2 Unclaim tests pass (claimer + admin succeed, `Unclaimed` appended, unassigned; non-claimer non-admin → 403; non-in-progress → 409) — ab19d26
+- [x] 2.3 Send-back tests pass (admin → In progress, claimer kept, `DoneAtUtc` cleared, `SentBack` event + `SendBack` comment; non-admin → 403; non-Done → 409; blank/oversized → 400) — ab19d26
+- [x] 2.4 Admin-edit tests pass (admin edits claimed/Done → 200; non-admin edit → 403) — ab19d26
+- [x] 2.5 Affordance-flag + foreign-id-404 + 401 tests pass for both new routes — ab19d26
 
 #### Manual
 
-- [x] 2.6 Audit trail of a claim→done→send-back→done→confirm cycle reads coherently
-- [x] 2.7 No regression in existing S-03/S-04 lifecycle
+- [x] 2.6 Audit trail of a claim→done→send-back→done→confirm cycle reads coherently — ab19d26
+- [x] 2.7 No regression in existing S-03/S-04 lifecycle — ab19d26
 
 ### Phase 3: Frontend — loop-recovery actions
 
 #### Automated
 
-- [ ] 3.1 SPA builds (`ng build`)
-- [ ] 3.2 Lint passes
-- [ ] 3.3 vitest specs pass (card conditional render/emit; send-back dialog validation/trim; board call + polling pause/resume)
+- [x] 3.1 SPA builds (`ng build`)
+- [x] 3.2 Lint passes
+- [x] 3.3 vitest specs pass (card conditional render/emit; send-back dialog validation/trim; board call + polling pause/resume)
 
 #### Manual
 
-- [ ] 3.4 Claimer unclaims own task; admin unclaims a stuck task (instant return to To do)
-- [ ] 3.5 Admin sends back a Done task with a reason → In progress, claimer preserved
-- [ ] 3.6 Board self-heals on a stale-affordance 403/409
+- [x] 3.4 Claimer unclaims own task; admin unclaims a stuck task (instant return to To do)
+- [x] 3.5 Admin sends back a Done task with a reason → In progress, claimer preserved
+- [x] 3.6 Board self-heals on a stale-affordance 403/409
 
 ### Phase 4: Frontend — comments thread, count badge, admin edit
 

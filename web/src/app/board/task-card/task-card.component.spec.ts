@@ -20,6 +20,9 @@ describe('TaskCardComponent', () => {
       willSelfAttest: false,
       canEdit: false,
       canDelete: false,
+      canUnclaim: false,
+      canSendBack: false,
+      commentCount: 0,
       ...overrides,
     };
   }
@@ -90,13 +93,9 @@ describe('TaskCardComponent', () => {
     );
     expect(items).toContain('Edit');
     expect(items).toContain('Delete');
-    // Reserved S-05 slots are present but disabled (not wired yet).
-    expect(items).toContain('Unclaim');
-    expect(items).toContain('Send back');
-    const reserved = Array.from(el.querySelectorAll<HTMLButtonElement>('.task-menu-item')).filter(
-      (b) => b.disabled,
-    );
-    expect(reserved.map((b) => b.textContent?.trim())).toEqual(['Unclaim', 'Send back']);
+    // S-05 loop-recovery slots only render when the affordance is granted — not for this To-do task.
+    expect(items).not.toContain('Unclaim');
+    expect(items).not.toContain('Send back');
 
     (
       Array.from(el.querySelectorAll('.task-menu-item')).find(
@@ -128,5 +127,57 @@ describe('TaskCardComponent', () => {
     );
     expect(items).not.toContain('Edit');
     expect(items).not.toContain('Delete');
+  });
+
+  it('shows Unclaim only when canUnclaim and emits it on click', () => {
+    const fixture = render(baseTask({ status: 'InProgress', canUnclaim: true }));
+    const el = fixture.nativeElement as HTMLElement;
+    const spy = vi.fn();
+    fixture.componentInstance.unclaim.subscribe(spy);
+
+    el.querySelector<HTMLButtonElement>('[aria-label="Task actions"]')!.click();
+    fixture.detectChanges();
+
+    const unclaim = Array.from(el.querySelectorAll('.task-menu-item')).find(
+      (b) => b.textContent?.trim() === 'Unclaim',
+    ) as HTMLButtonElement;
+    expect(unclaim).toBeTruthy();
+
+    unclaim.click();
+    expect(spy).toHaveBeenCalledWith(fixture.componentInstance.task);
+  });
+
+  it('shows Send back only when canSendBack and emits it on click', () => {
+    const fixture = render(baseTask({ status: 'Done', canSendBack: true }));
+    const el = fixture.nativeElement as HTMLElement;
+    const spy = vi.fn();
+    fixture.componentInstance.sendBack.subscribe(spy);
+
+    el.querySelector<HTMLButtonElement>('[aria-label="Task actions"]')!.click();
+    fixture.detectChanges();
+
+    const sendBack = Array.from(el.querySelectorAll('.task-menu-item')).find(
+      (b) => b.textContent?.trim() === 'Send back',
+    ) as HTMLButtonElement;
+    expect(sendBack).toBeTruthy();
+
+    sendBack.click();
+    expect(spy).toHaveBeenCalledWith(fixture.componentInstance.task);
+  });
+
+  it('hides Unclaim and Send back when their affordances are false', () => {
+    const fixture = render(
+      baseTask({ status: 'InProgress', canUnclaim: false, canSendBack: false }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+
+    el.querySelector<HTMLButtonElement>('[aria-label="Task actions"]')!.click();
+    fixture.detectChanges();
+
+    const items = Array.from(el.querySelectorAll('.task-menu-item')).map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(items).not.toContain('Unclaim');
+    expect(items).not.toContain('Send back');
   });
 });

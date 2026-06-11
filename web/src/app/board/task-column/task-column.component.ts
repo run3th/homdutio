@@ -33,4 +33,6 @@ export class TaskColumnComponent {
   @Output() readonly confirm = new EventEmitter<Task>();
   @Output() readonly edit = new EventEmitter<Task>();
   @Output() readonly delete = new EventEmitter<Task>();
+  @Output() readonly unclaim = new EventEmitter<Task>();
+  @Output() readonly sendBack = new EventEmitter<Task>();
 }

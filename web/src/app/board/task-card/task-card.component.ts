@@ -42,6 +42,9 @@ export class TaskCardComponent {
   /** Edit opens the (now delete-free) detail form; Delete asks the board to confirm + delete. */
   @Output() readonly edit = new EventEmitter<Task>();
   @Output() readonly delete = new EventEmitter<Task>();
+  /** Loop-recovery (S-05): Unclaim frees an in-progress task; Send back opens the board's reason dialog. */
+  @Output() readonly unclaim = new EventEmitter<Task>();
+  @Output() readonly sendBack = new EventEmitter<Task>();
 
   private readonly host = inject(ElementRef<HTMLElement>);
 
@@ -60,6 +63,16 @@ export class TaskCardComponent {
   onDelete(): void {
     this.menuOpen.set(false);
     this.delete.emit(this.task);
+  }
+
+  onUnclaim(): void {
+    this.menuOpen.set(false);
+    this.unclaim.emit(this.task);
+  }
+
+  onSendBack(): void {
+    this.menuOpen.set(false);
+    this.sendBack.emit(this.task);
   }
 
   /** Close the menu on a click anywhere outside this card (the kebab's own click toggles first). */

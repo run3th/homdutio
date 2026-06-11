@@ -14,6 +14,8 @@ describe('BoardComponent', () => {
   let confirm: ReturnType<typeof vi.fn>;
   let reorder: ReturnType<typeof vi.fn>;
   let deleteTask: ReturnType<typeof vi.fn>;
+  let unclaim: ReturnType<typeof vi.fn>;
+  let sendBack: ReturnType<typeof vi.fn>;
   let open: ReturnType<typeof vi.fn>;
   let startPolling: ReturnType<typeof vi.fn>;
   let stopPolling: ReturnType<typeof vi.fn>;
@@ -35,6 +37,9 @@ describe('BoardComponent', () => {
       willSelfAttest: false,
       canEdit: false,
       canDelete: false,
+      canUnclaim: false,
+      canSendBack: false,
+      commentCount: 0,
       ...overrides,
     };
   }
@@ -47,6 +52,8 @@ describe('BoardComponent', () => {
     confirm = vi.fn(() => of(tasks()));
     reorder = vi.fn(() => of(tasks()));
     deleteTask = vi.fn(() => of(tasks()));
+    unclaim = vi.fn(() => of(tasks()));
+    sendBack = vi.fn(() => of(tasks()));
     // Dialog.open returns a DialogRef whose `closed` observable the board subscribes to (resume polling).
     // `closed` emits undefined by default (detail dialog / a cancelled delete-confirm); individual tests
     // override it to emit `true` to exercise a confirmed delete.
@@ -67,6 +74,8 @@ describe('BoardComponent', () => {
             confirm,
             reorder,
             delete: deleteTask,
+            unclaim,
+            sendBack,
             startPolling,
             stopPolling,
             setPaused,
@@ -243,6 +252,42 @@ describe('BoardComponent', () => {
     fixture.componentInstance.requestDelete(baseTask({ id: 'a', canDelete: true }));
 
     expect(deleteTask).not.toHaveBeenCalled();
+    expect(setPaused).toHaveBeenLastCalledWith(false);
+  });
+
+  it('unclaim calls the service directly (no dialog)', () => {
+    const fixture = render();
+
+    fixture.componentInstance.unclaim(
+      baseTask({ id: 'a', status: 'InProgress', canUnclaim: true }),
+    );
+
+    expect(unclaim).toHaveBeenCalledWith('a');
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('send back opens the reason dialog and calls the service with the returned comment', () => {
+    open.mockReturnValue({ closed: of('Please redo the corners') });
+    const fixture = render();
+    const task = baseTask({ id: 'a', status: 'Done', canSendBack: true });
+
+    fixture.componentInstance.sendBack(task);
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][1]).toEqual({ data: task });
+    expect(sendBack).toHaveBeenCalledWith('a', 'Please redo the corners');
+    // Polling pauses while the dialog is open and resumes after it closes.
+    expect(setPaused).toHaveBeenCalledWith(true);
+    expect(setPaused).toHaveBeenLastCalledWith(false);
+  });
+
+  it('a cancelled send-back does not call the service', () => {
+    open.mockReturnValue({ closed: of(undefined) });
+    const fixture = render();
+
+    fixture.componentInstance.sendBack(baseTask({ id: 'a', status: 'Done', canSendBack: true }));
+
+    expect(sendBack).not.toHaveBeenCalled();
     expect(setPaused).toHaveBeenLastCalledWith(false);
   });
 });

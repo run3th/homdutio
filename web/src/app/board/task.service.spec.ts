@@ -23,6 +23,9 @@ describe('TaskService', () => {
     willSelfAttest: false,
     canEdit: true,
     canDelete: true,
+    canUnclaim: false,
+    canSendBack: false,
+    commentCount: 0,
   };
 
   beforeEach(() => {

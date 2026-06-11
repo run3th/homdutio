@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 
-import { DeleteConfirmComponent } from './delete-confirm.component';
+import { SendBackComponent } from './send-back.component';
 import { Task } from '../task.service';
 
-describe('DeleteConfirmComponent', () => {
+describe('SendBackComponent', () => {
   let close: ReturnType<typeof vi.fn>;
 
   function baseTask(): Task {
@@ -13,18 +13,18 @@ describe('DeleteConfirmComponent', () => {
       title: 'Take out bins',
       description: null,
       category: null,
-      status: 'ToDo',
+      status: 'Done',
       createdByName: 'Molly',
-      claimerName: null,
+      claimerName: 'Arthur',
       createdAtUtc: '2026-06-01T10:00:00Z',
       canClaim: false,
       canMarkDone: false,
       canConfirm: false,
       willSelfAttest: false,
       canEdit: true,
-      canDelete: true,
+      canDelete: false,
       canUnclaim: false,
-      canSendBack: false,
+      canSendBack: true,
       commentCount: 0,
     };
   }
@@ -32,34 +32,47 @@ describe('DeleteConfirmComponent', () => {
   function render() {
     close = vi.fn();
     TestBed.configureTestingModule({
-      imports: [DeleteConfirmComponent],
+      imports: [SendBackComponent],
       providers: [
         { provide: DIALOG_DATA, useValue: baseTask() },
         { provide: DialogRef, useValue: { close } },
       ],
     });
-    const fixture = TestBed.createComponent(DeleteConfirmComponent);
+    const fixture = TestBed.createComponent(SendBackComponent);
     fixture.detectChanges();
     return fixture;
   }
 
-  it('shows the task title in the prompt', () => {
+  it('shows the task title and claimer in the prompt', () => {
     const el = render().nativeElement as HTMLElement;
     expect(el.textContent).toContain('Take out bins');
+    expect(el.textContent).toContain('Arthur');
   });
 
-  it('Delete closes the dialog with true', () => {
+  it('disables Send back and does not close while the reason is empty', () => {
     const fixture = render();
-    const del = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
-      (b) => b.textContent?.trim() === 'Delete',
+    const el = fixture.nativeElement as HTMLElement;
+    const sendBack = Array.from(el.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Send back',
     ) as HTMLButtonElement;
 
-    del.click();
+    expect(sendBack.disabled).toBe(true);
 
-    expect(close).toHaveBeenCalledWith(true);
+    // Even calling submit directly with a blank value must not close the dialog.
+    fixture.componentInstance.submit();
+    expect(close).not.toHaveBeenCalled();
   });
 
-  it('Cancel closes the dialog with false', () => {
+  it('closes with the trimmed reason on submit', () => {
+    const fixture = render();
+    fixture.componentInstance.comment.setValue('  Please redo the corners  ');
+
+    fixture.componentInstance.submit();
+
+    expect(close).toHaveBeenCalledWith('Please redo the corners');
+  });
+
+  it('Cancel closes the dialog with undefined', () => {
     const fixture = render();
     const cancel = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
@@ -67,6 +80,6 @@ describe('DeleteConfirmComponent', () => {
 
     cancel.click();
 
-    expect(close).toHaveBeenCalledWith(false);
+    expect(close).toHaveBeenCalledWith(undefined);
   });
 });

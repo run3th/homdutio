@@ -20,9 +20,14 @@ export interface Task {
   canMarkDone: boolean;
   canConfirm: boolean;
   willSelfAttest: boolean;
-  /** Edit/delete are server-gated to "To do" (FR-011/012); the dialog renders read-only when both are false. */
+  /** Edit is admin-only/any-column; delete stays To-do-only (FR-011/012, S-05). */
   canEdit: boolean;
   canDelete: boolean;
+  /** Loop-recovery affordances (S-05): the claimer/admin may unclaim in-progress; an admin may send a Done task back. */
+  canUnclaim: boolean;
+  canSendBack: boolean;
+  /** Per-task comment count for the card's 💬 badge (full thread loads lazily in the detail dialog). */
+  commentCount: number;
 }
 
 /** Body for `POST /api/tasks` (matches the C# CreateTaskRequest). */
@@ -118,7 +123,19 @@ export class TaskService {
     return this.http.post<Task>(`/api/tasks/${id}/confirm`, {}).pipe(switchMap(() => this.load()));
   }
 
-  /** `PUT /api/tasks/{id}` (edit, To-do-only) then refetch so the card re-renders. */
+  /** `POST /api/tasks/{id}/unclaim` then refetch — an in-progress task returns to To do, unassigned (S-05). */
+  unclaim(id: string): Observable<Task[]> {
+    return this.http.post<Task>(`/api/tasks/${id}/unclaim`, {}).pipe(switchMap(() => this.load()));
+  }
+
+  /** `POST /api/tasks/{id}/sendback` then refetch — an admin returns a Done task to In progress (S-05). */
+  sendBack(id: string, comment: string): Observable<Task[]> {
+    return this.http
+      .post<Task>(`/api/tasks/${id}/sendback`, { comment })
+      .pipe(switchMap(() => this.load()));
+  }
+
+  /** `PUT /api/tasks/{id}` (edit, admin-only/any-column) then refetch so the card re-renders. */
   update(id: string, request: UpdateTaskRequest): Observable<Task[]> {
     return this.http.put<Task>(`/api/tasks/${id}`, request).pipe(switchMap(() => this.load()));
   }

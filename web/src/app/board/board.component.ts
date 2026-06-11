@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { TaskColumnComponent } from './task-column/task-column.component';
 import { TaskDetailComponent } from './task-detail/task-detail.component';
 import { DeleteConfirmComponent } from './delete-confirm/delete-confirm.component';
+import { SendBackComponent } from './send-back/send-back.component';
 import { Task, TaskService, TaskStatus } from './task.service';
 
 /**
@@ -66,6 +67,31 @@ export class BoardComponent implements OnInit, OnDestroy {
   /** Confirm a Done task (admin), closing it off the board. */
   confirm(task: Task): void {
     this.run(this.tasks.confirm(task.id));
+  }
+
+  /**
+   * Unclaim an in-progress task (S-05, FR-022) from the card's ⋯ menu — the claimer frees their own, or an
+   * admin frees an absent member's. A direct action (no dialog); {@link run} self-heals on a stale 403/409.
+   */
+  unclaim(task: Task): void {
+    this.run(this.tasks.unclaim(task.id));
+  }
+
+  /**
+   * Send a Done task back (S-05, FR-023) from the card's ⋯ menu (admin). Opens {@link SendBackComponent} to
+   * collect the required reason; on a returned comment, calls {@link TaskService.sendBack} (which refetches).
+   * Polling is paused while the dialog is open and resumed on close so a tick can't refetch mid-entry (F-03);
+   * the not-admin / not-Done guards are server-side, so {@link run} self-heals if the affordance was stale.
+   */
+  sendBack(task: Task): void {
+    this.tasks.setPaused(true);
+    const ref = this.dialog.open<string>(SendBackComponent, { data: task });
+    ref.closed.subscribe((comment) => {
+      this.tasks.setPaused(false);
+      if (comment) {
+        this.run(this.tasks.sendBack(task.id, comment));
+      }
+    });
   }
 
   /**

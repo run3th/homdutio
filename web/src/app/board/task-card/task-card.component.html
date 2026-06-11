@@ -39,25 +39,17 @@
             Delete
           </button>
         }
-        <!-- Reserved S-05 loop-recovery slots — present so the layout is ready, not wired yet. -->
-        <button
-          type="button"
-          class="task-menu-item"
-          role="menuitem"
-          disabled
-          title="Coming soon (S-05)"
-        >
-          Unclaim
-        </button>
-        <button
-          type="button"
-          class="task-menu-item"
-          role="menuitem"
-          disabled
-          title="Coming soon (S-05)"
-        >
-          Send back
-        </button>
+        <!-- S-05 loop-recovery actions — shown only when the server grants the affordance. -->
+        @if (task.canUnclaim) {
+          <button type="button" class="task-menu-item" role="menuitem" (click)="onUnclaim()">
+            Unclaim
+          </button>
+        }
+        @if (task.canSendBack) {
+          <button type="button" class="task-menu-item" role="menuitem" (click)="onSendBack()">
+            Send back
+          </button>
+        }
       </div>
     }
   </div>
