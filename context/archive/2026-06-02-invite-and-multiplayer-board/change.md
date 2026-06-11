@@ -1,10 +1,10 @@
 ---
 change_id: invite-and-multiplayer-board
 title: Invite and multiplayer board
-status: implemented
+status: archived
 created: 2026-06-02
-updated: 2026-06-02
-archived_at: null
+updated: 2026-06-11
+archived_at: 2026-06-11T17:18:12Z
 ---
 
 ## Notes

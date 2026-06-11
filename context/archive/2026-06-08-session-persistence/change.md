@@ -2,11 +2,12 @@
 change_id: session-persistence
 roadmap_id: S-10
 title: Session persistence (refresh-token flow)
-status: implemented
+status: archived
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-11
 prerequisites: [account-access]
 prd_refs: [Access Control]
+archived_at: 2026-06-11T17:18:12Z
 ---
 
 # Change: session-persistence

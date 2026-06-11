@@ -1,10 +1,10 @@
 ---
 change_id: persistence-baseline
 title: Persistence baseline — EF Core + provisioned Azure SQL wiring (F-01)
-status: implementing
+status: archived
 created: 2026-05-30
-updated: 2026-05-30
-archived_at: null
+updated: 2026-06-11
+archived_at: 2026-06-11T17:18:12Z
 ---
 
 ## Notes

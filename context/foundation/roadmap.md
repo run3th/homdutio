@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-06-08
+updated: 2026-06-11
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -42,8 +42,8 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
-| S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | proposed |
-| S-11  | ui-redesign                   | see a polished, minimalist board UI (sidebar + topbar shell, Claude-style cards) | S-02, S-03, S-04, S-06 | NFR-2                                  | proposed |
+| S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | done     |
+| S-11  | ui-redesign                   | see a polished, minimalist board UI (sidebar + topbar shell, Claude-style cards) | S-02, S-03, S-04, S-06 | NFR-2                                  | done     |
 
 ## Streams
 
@@ -255,7 +255,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Decision (2026-06-08, during `/10x-plan`):** Refresh-token transport + storage — **`localStorage`, body-transported (no httpOnly cookie)**, overriding the earlier cookie lean. The refresh token is held in web storage and sent in the request body, so there is no cookie and no CSRF surface. This is a deliberate departure from F-02's "no XSS-exposed storage" guardrail: web storage **does** reintroduce the XSS exposure F-02 flagged. The exposure is **mitigated, not eliminated**, by a short refresh-token rotation (rotate-on-use + replay detection: a reused token revokes its whole token family) and a shortened ~15-min access-token lifetime. The server-side token store is stored hashed (SHA-256), enabling real logout revocation.
 - **Risk:** F-02 deliberately deferred refresh/revocation and S-01 kept the access token in memory only, accepting logout-on-reload as the v1 trade. This slice removes that UX cost: the access token stays in memory; a server-side `refresh` endpoint plus a `localStorage` refresh token and a blocking startup silent-refresh restore the session. It adds the server-side token store F-02 noted as optional, turning logout into real server-side revocation rather than a client-only token discard. **Security trade made explicit (see Decision):** the `localStorage` refresh token is XSS-reachable; the rotation/replay scheme and short access TTL bound the blast radius rather than closing it. Off the north-star path; gates nothing. Watch token-rotation/replay handling, the single-winner consume race on rapid double-refresh, and a clean expiry path (refresh expired → land on `/login`, no redirect loop). Planned 2026-06-08 (`context/changes/session-persistence/plan.md`).
-- **Status:** proposed
+- **Status:** done
 
 ### S-11: UI redesign (board experience overhaul)
 
@@ -273,7 +273,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - **Spacing & grid:** consistent spacing scale + a grid layout for the board columns and cards (define tokens during design).
   - **Angular components:** `sidebar`, `topbar`, `task-form`, `kanban-board`, `task-column`, `task-card` — a clean split the lifecycle/edit/invite/admin features hang off.
 - **Risk:** Pure presentation slice — no API or data-model change — so the correctness risk is low, but it touches every board surface at once, so it must preserve all existing behaviour (lifecycle buttons, drag-reorder, the task-detail dialog, the invite affordance) and the ≤ 400px guarantee (NFR-2). The real value-at-risk is scope creep: keep it a reskin of shipped surfaces plus ready slots for S-05/S-09, not a place to invent new features. Sequence after the functional board is stable (S-04/S-06 done) so the redesign isn't chasing a moving target.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -323,4 +323,13 @@ The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends an entry here — and flips that item's `Status` to `done` — when a change whose `Change ID` matches the item is archived. Do NOT pre-populate.)
+- **F-01: (foundation) EF Core and an `ApplicationDbContext` are wired to a provisioned Azure SQL database, with a runnable migration workflow and the connection string supplied via App Service settings — data persists.** — Archived 2026-06-11 → `context/archive/2026-05-30-persistence-baseline/`. Lesson: —.
+- **F-02: (foundation) ASP.NET Core Identity is mounted on the EF store as the user store, and a JWT bearer pipeline issues and validates signed tokens — no user-facing pages yet, just the token endpoints, JWT validation middleware, and Identity tables.** — Archived 2026-06-11 → `context/archive/2026-05-31-auth-identity-plumbing/`. Lesson: —.
+- **F-04: (foundation) a merge to main runs the Release build (which bundles the Angular SPA) behind a build + smoke-test gate, then deploys to App Service — replacing the manual Windows zip step.** — Archived 2026-06-11 → `context/archive/2026-05-31-ci-auto-deploy/`. Lesson: —.
+- **S-01: A person can register an account with email + password, log in, and log out.** — Archived 2026-06-11 → `context/archive/2026-06-01-account-access/`. Lesson: —.
+- **S-02: A logged-in user with no household can create one (becoming its first admin) and see the empty three-column kanban board, fully usable on a ≤ 400px phone screen.** — Archived 2026-06-11 → `context/archive/2026-06-01-household-and-board/`. Lesson: —.
+- **S-03: A household member can create a task, claim it, mark it done, and an admin can confirm it — closing the task off the board while a durable record (creator, claimer, confirmer, timestamps, `self-attested` flag) persists.** — Archived 2026-06-11 → `context/archive/2026-06-01-accountability-loop/`. Lesson: —.
+- **S-04: A member can edit a task's title/description/category and delete it while in "To do", and reorder tasks within a column so the top of "To do" reads as the priority.** — Archived 2026-06-11 → `context/archive/2026-06-02-task-management-and-priority/`. Lesson: —.
+- **S-06: A member can generate a single-use invite link; a second adult opening it joins the household (creating an account in the same flow if needed, bound to exactly one household), and both members see the shared board update within 5 seconds.** — Archived 2026-06-11 → `context/archive/2026-06-02-invite-and-multiplayer-board/`. Lesson: —.
+- **S-10: A logged-in user stays authenticated across a full page reload instead of being bounced to `/login`. The SPA keeps the access token in memory but, on startup, silently re-mints a short-lived access token from a persisted refresh token — so a refresh, a reopened tab, or a returning session resumes without re-entering the password.** — Archived 2026-06-11 → `context/archive/2026-06-08-session-persistence/`. Lesson: —.
+- **S-11: A household member sees the board, task cards, add-task form, and member/invite controls rendered in a polished, minimalist UI — a persistent sidebar + topbar shell, a pastel palette, soft shadows and rounded cards — replacing the bare v1 shell.** — Archived 2026-06-11 → `context/archive/2026-06-08-ui-redesign/`. Lesson: —.
