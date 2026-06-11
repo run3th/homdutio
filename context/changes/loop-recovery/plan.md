@@ -511,29 +511,29 @@ the F-01 "migrations stay backward-compatible" rule). New `TaskEventType` values
 
 #### Automated
 
-- [x] 1.1 Solution builds (`dotnet build`)
-- [x] 1.2 Migration applies cleanly on a fresh DB (`dotnet test` fixture migrate)
-- [x] 1.3 Comment endpoint xUnit tests pass (post 201 + persist; list ordered + author names; blank/oversized → 400; foreign id → 404; 401; commentCount correct)
+- [x] 1.1 Solution builds (`dotnet build`) — a018354
+- [x] 1.2 Migration applies cleanly on a fresh DB (`dotnet test` fixture migrate) — a018354
+- [x] 1.3 Comment endpoint xUnit tests pass (post 201 + persist; list ordered + author names; blank/oversized → 400; foreign id → 404; 401; commentCount correct) — a018354
 
 #### Manual
 
-- [x] 1.4 A posted comment survives an app restart (durable row)
-- [x] 1.5 `GET /api/tasks` payload carries only the count, no bodies
+- [x] 1.4 A posted comment survives an app restart (durable row) — a018354
+- [x] 1.5 `GET /api/tasks` payload carries only the count, no bodies — a018354
 
 ### Phase 2: Loop-recovery transitions backend
 
 #### Automated
 
-- [ ] 2.1 Solution builds (`dotnet build`)
-- [ ] 2.2 Unclaim tests pass (claimer + admin succeed, `Unclaimed` appended, unassigned; non-claimer non-admin → 403; non-in-progress → 409)
-- [ ] 2.3 Send-back tests pass (admin → In progress, claimer kept, `DoneAtUtc` cleared, `SentBack` event + `SendBack` comment; non-admin → 403; non-Done → 409; blank/oversized → 400)
-- [ ] 2.4 Admin-edit tests pass (admin edits claimed/Done → 200; non-admin edit → 403)
-- [ ] 2.5 Affordance-flag + foreign-id-404 + 401 tests pass for both new routes
+- [x] 2.1 Solution builds (`dotnet build`)
+- [x] 2.2 Unclaim tests pass (claimer + admin succeed, `Unclaimed` appended, unassigned; non-claimer non-admin → 403; non-in-progress → 409)
+- [x] 2.3 Send-back tests pass (admin → In progress, claimer kept, `DoneAtUtc` cleared, `SentBack` event + `SendBack` comment; non-admin → 403; non-Done → 409; blank/oversized → 400)
+- [x] 2.4 Admin-edit tests pass (admin edits claimed/Done → 200; non-admin edit → 403)
+- [x] 2.5 Affordance-flag + foreign-id-404 + 401 tests pass for both new routes
 
 #### Manual
 
-- [ ] 2.6 Audit trail of a claim→done→send-back→done→confirm cycle reads coherently
-- [ ] 2.7 No regression in existing S-03/S-04 lifecycle
+- [x] 2.6 Audit trail of a claim→done→send-back→done→confirm cycle reads coherently
+- [x] 2.7 No regression in existing S-03/S-04 lifecycle
 
 ### Phase 3: Frontend — loop-recovery actions
 

@@ -427,16 +427,20 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
     }
 
     [Fact]
-    public async Task Editing_a_claimed_task_returns_409()
+    public async Task Admin_edits_a_claimed_task_returns_200()
     {
+        // S-05 replaces the To-do-only edit guard (the old Editing_a_claimed_task_returns_409) with
+        // admin-anytime editing: an admin may edit a task in any column.
         var token = await RegisterAndLoginAsync(NewEmail("edit-claimed"), "Molly");
         await CreateHouseholdAsync(token, "Edit Claimed House");
         var task = await CreateTaskAsync(token, "About to be claimed");
         (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
-            new { title = "Too late", description = (string?)null, category = (string?)null }));
-        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+            new { title = "Edited while claimed", description = (string?)null, category = (string?)null }));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
+        Assert.Equal("Edited while claimed", body.Title);
     }
 
     [Fact]
@@ -518,8 +522,9 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
     }
 
     [Fact]
-    public async Task To_do_task_reports_can_edit_and_can_delete_then_false_once_claimed()
+    public async Task Admin_keeps_can_edit_after_claim_while_can_delete_goes_false()
     {
+        // S-05: edit is admin-anytime (so it survives the claim), delete stays To-do-only (so it doesn't).
         var token = await RegisterAndLoginAsync(NewEmail("aff-ed"), "Molly");
         await CreateHouseholdAsync(token, "Affordance Edit House");
         var task = await CreateTaskAsync(token, "Manageable");
@@ -530,8 +535,8 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
 
         (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
         var claimedView = (await GetBoardAsync(token)).Single(t => t.Id == task.Id);
-        Assert.False(claimedView.CanEdit);
-        Assert.False(claimedView.CanDelete);
+        Assert.True(claimedView.CanEdit);   // admin-anytime
+        Assert.False(claimedView.CanDelete); // To-do-only
     }
 
     [Fact]
@@ -547,6 +552,272 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
 
         var reorder = await _client.PutAsJsonAsync("/api/tasks/order", new { status = "ToDo", orderedIds = new[] { id } });
         Assert.Equal(HttpStatusCode.Unauthorized, reorder.StatusCode);
+    }
+
+    // --- S-05: loop-recovery transitions --------------------------------------------------------------
+
+    private Task<HttpResponseMessage> SendBackAsync(string token, Guid id, string comment) =>
+        _client.SendAsync(Authed(HttpMethod.Post, $"/api/tasks/{id}/sendback", token, new { comment }));
+
+    private async Task<HouseholdTask> LoadTaskRowAsync(Guid id)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await db.HouseholdTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+    }
+
+    [Fact]
+    public async Task Claimer_unclaims_their_in_progress_task_back_to_to_do_unassigned()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("uc-self"), "Molly");
+        await CreateHouseholdAsync(token, "Unclaim House");
+        var task = await CreateTaskAsync(token, "Stuck task");
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var resp = await ActionAsync(token, task.Id, "unclaim");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
+        Assert.Equal("ToDo", body.Status);
+        Assert.Null(body.ClaimerName);
+
+        var row = await LoadTaskRowAsync(task.Id);
+        Assert.Equal(HouseholdTaskStatus.ToDo, row.Status);
+        Assert.Null(row.ClaimedById);
+        Assert.Null(row.ClaimedAtUtc);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.True(await db.TaskEvents.AnyAsync(e => e.TaskId == task.Id && e.Type == TaskEventType.Unclaimed));
+    }
+
+    [Fact]
+    public async Task Admin_unclaims_another_members_in_progress_task()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("uc-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Admin Unclaim House");
+
+        var memberEmail = NewEmail("uc-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Member's task");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var resp = await ActionAsync(adminToken, task.Id, "unclaim");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var row = await LoadTaskRowAsync(task.Id);
+        Assert.Equal(HouseholdTaskStatus.ToDo, row.Status);
+        Assert.Null(row.ClaimedById);
+    }
+
+    [Fact]
+    public async Task Unclaim_by_a_non_claimer_non_admin_returns_403()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("uc-403-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Unclaim 403 House");
+
+        var claimerEmail = NewEmail("uc-403-claimer");
+        var claimerToken = await RegisterAndLoginAsync(claimerEmail, "Claimer");
+        await SeedMemberAsync(claimerEmail, householdId, HouseholdRole.Member);
+
+        var otherEmail = NewEmail("uc-403-other");
+        var otherToken = await RegisterAndLoginAsync(otherEmail, "Other");
+        await SeedMemberAsync(otherEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Claimed by claimer");
+        (await ActionAsync(claimerToken, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var resp = await ActionAsync(otherToken, task.Id, "unclaim");
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unclaim_of_a_non_in_progress_task_returns_409()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("uc-409"), "Molly");
+        await CreateHouseholdAsync(token, "Unclaim 409 House");
+        var task = await CreateTaskAsync(token, "Still to do");
+
+        var resp = await ActionAsync(token, task.Id, "unclaim");
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_sends_back_a_done_task_keeping_the_claimer_and_recording_the_reason()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("sb-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Send Back House");
+
+        var memberEmail = NewEmail("sb-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Sloppy work");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode();
+
+        var resp = await SendBackAsync(adminToken, task.Id, "Please redo the corners");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
+        Assert.Equal("InProgress", body.Status);
+        Assert.Equal("Member", body.ClaimerName); // original claimer remains attached
+
+        var row = await LoadTaskRowAsync(task.Id);
+        Assert.Equal(HouseholdTaskStatus.InProgress, row.Status);
+        Assert.Null(row.DoneAtUtc);
+        Assert.NotNull(row.ClaimedById);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.True(await db.TaskEvents.AnyAsync(e => e.TaskId == task.Id && e.Type == TaskEventType.SentBack));
+        var comment = await db.TaskComments.SingleAsync(c => c.TaskId == task.Id && c.Kind == TaskCommentKind.SendBack);
+        Assert.Equal("Please redo the corners", comment.Body);
+    }
+
+    [Fact]
+    public async Task Send_back_by_a_non_admin_returns_403()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("sb-403-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Send Back 403 House");
+
+        var memberEmail = NewEmail("sb-403-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Done by member");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode();
+
+        var resp = await SendBackAsync(memberToken, task.Id, "I disagree");
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Send_back_of_a_non_done_task_returns_409()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("sb-409"), "Admin");
+        await CreateHouseholdAsync(token, "Send Back 409 House");
+        var task = await CreateTaskAsync(token, "Only claimed");
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var resp = await SendBackAsync(token, task.Id, "Not done yet though");
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("oversized")]
+    public async Task Send_back_with_a_blank_or_oversized_reason_returns_400(string kind)
+    {
+        var token = await RegisterAndLoginAsync(NewEmail($"sb-400-{kind.Trim()}"), "Admin");
+        await CreateHouseholdAsync(token, "Send Back 400 House");
+        var task = await CreateTaskAsync(token, "Reason validation");
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(token, task.Id, "done")).EnsureSuccessStatusCode();
+
+        var comment = kind == "oversized" ? new string('x', 281) : "   ";
+        var resp = await SendBackAsync(token, task.Id, comment);
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Non_admin_edit_returns_403()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("ed-403-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Edit 403 House");
+
+        var memberEmail = NewEmail("ed-403-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Members may not edit");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", memberToken,
+            new { title = "Member tried", description = (string?)null, category = (string?)null }));
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_edits_a_done_task_returns_200()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("ed-done"), "Admin");
+        await CreateHouseholdAsync(token, "Edit Done House");
+        var task = await CreateTaskAsync(token, "Will be done");
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(token, task.Id, "done")).EnsureSuccessStatusCode();
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
+            new { title = "Edited while done", description = (string?)null, category = (string?)null }));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Affordance_flags_report_unclaim_and_send_back_per_role_and_status()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("aff-uc-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Affordance Recovery House");
+
+        var memberEmail = NewEmail("aff-uc-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Recovery affordances");
+
+        // To do: nobody can unclaim or send back; only the admin can edit.
+        var todoMember = (await GetBoardAsync(memberToken)).Single(t => t.Id == task.Id);
+        Assert.False(todoMember.CanUnclaim);
+        Assert.False(todoMember.CanSendBack);
+        Assert.False(todoMember.CanEdit);
+        var todoAdmin = (await GetBoardAsync(adminToken)).Single(t => t.Id == task.Id);
+        Assert.True(todoAdmin.CanEdit);
+
+        // In progress (claimed by member): claimer + admin can unclaim; nobody can send back yet.
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+        var ipMember = (await GetBoardAsync(memberToken)).Single(t => t.Id == task.Id);
+        var ipAdmin = (await GetBoardAsync(adminToken)).Single(t => t.Id == task.Id);
+        Assert.True(ipMember.CanUnclaim);   // the claimer
+        Assert.True(ipAdmin.CanUnclaim);    // any admin
+        Assert.False(ipMember.CanSendBack);
+        Assert.False(ipAdmin.CanSendBack);
+
+        // Done: only the admin can send back; unclaim no longer applies.
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode();
+        var doneMember = (await GetBoardAsync(memberToken)).Single(t => t.Id == task.Id);
+        var doneAdmin = (await GetBoardAsync(adminToken)).Single(t => t.Id == task.Id);
+        Assert.False(doneMember.CanSendBack);
+        Assert.True(doneAdmin.CanSendBack);
+        Assert.False(doneAdmin.CanUnclaim);
+    }
+
+    [Fact]
+    public async Task Unclaim_and_send_back_on_a_foreign_household_task_return_404()
+    {
+        var aToken = await RegisterAndLoginAsync(NewEmail("rec-a"), "Alice");
+        await CreateHouseholdAsync(aToken, "House A");
+        var task = await CreateTaskAsync(aToken, "Belongs to A");
+        (await ActionAsync(aToken, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var bToken = await RegisterAndLoginAsync(NewEmail("rec-b"), "Bob");
+        await CreateHouseholdAsync(bToken, "House B");
+
+        var unclaim = await ActionAsync(bToken, task.Id, "unclaim");
+        Assert.Equal(HttpStatusCode.NotFound, unclaim.StatusCode);
+
+        var sendback = await SendBackAsync(bToken, task.Id, "Not yours");
+        Assert.Equal(HttpStatusCode.NotFound, sendback.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_unclaim_and_send_back_return_401()
+    {
+        var id = Guid.NewGuid();
+
+        var unclaim = await _client.PostAsync($"/api/tasks/{id}/unclaim", null);
+        Assert.Equal(HttpStatusCode.Unauthorized, unclaim.StatusCode);
+
+        var sendback = await _client.PostAsJsonAsync($"/api/tasks/{id}/sendback", new { comment = "x" });
+        Assert.Equal(HttpStatusCode.Unauthorized, sendback.StatusCode);
     }
 
     // --- S-05: comments foundation --------------------------------------------------------------------
@@ -692,6 +963,8 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         bool WillSelfAttest,
         bool CanEdit,
         bool CanDelete,
+        bool CanUnclaim,
+        bool CanSendBack,
         int CommentCount);
 
     private sealed record CommentBody(

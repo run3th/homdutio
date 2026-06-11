@@ -198,7 +198,107 @@ public static class TaskEndpoints
             return Results.Ok(ToResponse(task, caller, names, counts));
         });
 
-        // PUT /api/tasks/{id} — edit a task's title/description/category while it is still un-claimed (FR-011).
+        // POST /api/tasks/{id}/unclaim — return an in-progress task to To do, unassigned (FR-022, S-05).
+        // The claimer frees a task they can't finish, or any admin frees one whose claimer has gone absent.
+        group.MapPost("/{id:guid}/unclaim", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveMemberAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            if (task is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (task.Status != HouseholdTaskStatus.InProgress)
+            {
+                return Results.Conflict(new { message = "Only an in-progress task can be unclaimed." });
+            }
+
+            // Usable by the claimer (freeing their own task) or any admin (freeing an absent member's).
+            if (task.ClaimedById != caller.UserId && caller.Role != HouseholdRole.Admin)
+            {
+                return Results.Forbid();
+            }
+
+            var now = DateTime.UtcNow;
+            task.Status = HouseholdTaskStatus.ToDo;
+            task.ClaimedById = null;
+            task.ClaimedAtUtc = null;
+            // Append to the bottom of To do so the freed task joins its new neighbours in order.
+            task.SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, HouseholdTaskStatus.ToDo);
+            db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Unclaimed, caller.UserId, now));
+            await db.SaveChangesAsync();
+
+            var names = await ResolveNamesAsync(db, [task]);
+            var counts = await CountCommentsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts));
+        });
+
+        // POST /api/tasks/{id}/sendback — an admin returns a Done task to In progress with a required reason
+        // (FR-023, S-05). The original claimer stays attached; the reason enters the comment thread atomically.
+        group.MapPost("/{id:guid}/sendback", async (Guid id, SendBackRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveMemberAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            if (task is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (caller.Role != HouseholdRole.Admin)
+            {
+                return Results.Forbid();
+            }
+
+            if (task.Status != HouseholdTaskStatus.Done)
+            {
+                return Results.Conflict(new { message = "Only a task that is done can be sent back." });
+            }
+
+            var comment = request.Comment?.Trim();
+            if (string.IsNullOrWhiteSpace(comment) || comment.Length > 280)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["Comment"] = ["A send-back reason must be between 1 and 280 characters."],
+                });
+            }
+
+            var now = DateTime.UtcNow;
+            task.Status = HouseholdTaskStatus.InProgress;
+            task.DoneAtUtc = null; // Keep ClaimedById — the original claimer remains attached (FR-023).
+            // Append to the bottom of In progress so the returned task joins its new neighbours in order.
+            task.SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, HouseholdTaskStatus.InProgress);
+            // The SentBack event and its reason comment land in the SAME SaveChanges as the status flip, so the
+            // thread can never show a reason for a transition that didn't persist.
+            db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.SentBack, caller.UserId, now));
+            db.TaskComments.Add(new TaskComment
+            {
+                Id = Guid.NewGuid(),
+                TaskId = task.Id,
+                AuthorId = caller.UserId,
+                Body = comment,
+                Kind = TaskCommentKind.SendBack,
+                CreatedAtUtc = now,
+            });
+            await db.SaveChangesAsync();
+
+            var names = await ResolveNamesAsync(db, [task]);
+            var counts = await CountCommentsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts));
+        });
+
+        // PUT /api/tasks/{id} — edit a task's title/description/category; admin-only, any column (FR-011, S-05).
         group.MapPut("/{id:guid}", async (Guid id, UpdateTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
             var caller = await ResolveMemberAsync(principal, db);
@@ -213,9 +313,10 @@ public static class TaskEndpoints
                 return Results.NotFound();
             }
 
-            if (task.Status != HouseholdTaskStatus.ToDo)
+            // Editing is admin-only as of S-05 (members comment instead); an admin may edit in any column.
+            if (caller.Role != HouseholdRole.Admin)
             {
-                return Results.Conflict(new { message = "Only a task that is still to do can be edited." });
+                return Results.Forbid();
             }
 
             if (string.IsNullOrWhiteSpace(request.Title))
@@ -491,8 +592,12 @@ public static class TaskEndpoints
         var canMarkDone = task.Status == HouseholdTaskStatus.InProgress && task.ClaimedById == caller.UserId;
         var canConfirm = caller.Role == HouseholdRole.Admin && task.Status == HouseholdTaskStatus.Done;
         var willSelfAttest = canConfirm && task.ClaimedById == caller.UserId;
-        // Edit/delete are constrained to "To do" (FR-011/012) — a claimed task has entered the lifecycle.
-        var canEdit = task.Status == HouseholdTaskStatus.ToDo;
+        // Loop-recovery (S-05): the claimer or any admin may free an in-progress task; an admin may send a Done one back.
+        var canUnclaim = task.Status == HouseholdTaskStatus.InProgress
+            && (task.ClaimedById == caller.UserId || caller.Role == HouseholdRole.Admin);
+        var canSendBack = caller.Role == HouseholdRole.Admin && task.Status == HouseholdTaskStatus.Done;
+        // Editing is admin-only/any-column as of S-05 (members comment instead); delete stays To-do-only (FR-012).
+        var canEdit = caller.Role == HouseholdRole.Admin;
         var canDelete = task.Status == HouseholdTaskStatus.ToDo;
 
         return new TaskResponse(
@@ -510,6 +615,8 @@ public static class TaskEndpoints
             willSelfAttest,
             canEdit,
             canDelete,
+            canUnclaim,
+            canSendBack,
             counts.TryGetValue(task.Id, out var commentCount) ? commentCount : 0);
     }
 
@@ -521,6 +628,8 @@ public sealed record CreateTaskRequest(string Title, string? Description, string
 public sealed record UpdateTaskRequest(string Title, string? Description, string? Category);
 
 public sealed record ReorderRequest(string Status, Guid[] OrderedIds);
+
+public sealed record SendBackRequest(string Comment);
 
 public sealed record CreateCommentRequest(string Body);
 
@@ -546,4 +655,6 @@ public sealed record TaskResponse(
     bool WillSelfAttest,
     bool CanEdit,
     bool CanDelete,
+    bool CanUnclaim,
+    bool CanSendBack,
     int CommentCount);
