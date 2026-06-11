@@ -69,6 +69,23 @@ describe('AuthService', () => {
     expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-def');
   });
 
+  it('refresh recovers the email from the access token claim so identity survives a reload', () => {
+    localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-abc');
+    // A real (unsigned) JWT with an `email` claim — header.payload.signature.
+    const payload = btoa(JSON.stringify({ sub: 'u1', email: 'reload@example.com' }));
+    const jwt = `header.${payload}.sig`;
+
+    service.refresh().subscribe();
+
+    httpMock.expectOne('/api/auth/refresh').flush({
+      accessToken: jwt,
+      expiresAtUtc: '2099-01-01T00:00:00Z',
+      refreshToken: 'refresh-def',
+    } satisfies LoginResponse);
+
+    expect(service.email()).toBe('reload@example.com');
+  });
+
   it('refresh with no stored token resolves false without a request', () => {
     let result: boolean | undefined;
     service.refresh().subscribe((ok) => (result = ok));

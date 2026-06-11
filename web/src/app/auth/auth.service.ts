@@ -103,6 +103,9 @@ export class AuthService {
       .pipe(
         map((response) => {
           this._token.set(response.accessToken);
+          // Refresh carries no email field, but the access token's `email` claim is the same source
+          // of truth login uses — recover it so the topbar identity survives a reload (S-10).
+          this._email.set(emailFromAccessToken(response.accessToken));
           this.writeRefreshToken(response.refreshToken);
           return true;
         }),
@@ -150,5 +153,25 @@ export class AuthService {
 
   private clearRefreshToken(): void {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
+
+/**
+ * Reads the `email` claim from a JWT access token without verifying its signature (the server already
+ * vouched for it — this is display-only). Returns `null` for any malformed/non-JWT token so a bad value
+ * never poisons the topbar identity.
+ */
+function emailFromAccessToken(accessToken: string): string | null {
+  const payload = accessToken.split('.')[1];
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const claims = JSON.parse(json) as { email?: unknown };
+    return typeof claims.email === 'string' && claims.email.length > 0 ? claims.email : null;
+  } catch {
+    return null;
   }
 }
