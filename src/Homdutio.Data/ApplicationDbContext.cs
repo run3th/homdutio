@@ -25,6 +25,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
 
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+
     public DbSet<HouseholdInvite> HouseholdInvites => Set<HouseholdInvite>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -96,6 +98,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
 
             // ActorId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
+        });
+
+        builder.Entity<TaskComment>(comment =>
+        {
+            comment.Property(c => c.Body).IsRequired().HasMaxLength(280);
+
+            // Stored as a readable string (matching Status/Type) so the enum can grow without a numeric remap.
+            comment.Property(c => c.Kind).HasConversion<string>().HasMaxLength(20);
+
+            // Backs both the per-task thread query and the grouped commentCount on the board.
+            comment.HasIndex(c => c.TaskId);
+
+            comment.HasOne(c => c.Task)
+                .WithMany()
+                .HasForeignKey(c => c.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // AuthorId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
         });
 
         builder.Entity<HouseholdInvite>(invite =>

@@ -549,6 +549,130 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, reorder.StatusCode);
     }
 
+    // --- S-05: comments foundation --------------------------------------------------------------------
+
+    private Task<HttpResponseMessage> PostCommentAsync(string token, Guid taskId, string body) =>
+        _client.SendAsync(Authed(HttpMethod.Post, $"/api/tasks/{taskId}/comments", token, new { body }));
+
+    private async Task<List<CommentBody>> GetCommentsAsync(string token, Guid taskId)
+    {
+        var resp = await _client.SendAsync(Authed(HttpMethod.Get, $"/api/tasks/{taskId}/comments", token));
+        resp.EnsureSuccessStatusCode();
+        return (await resp.Content.ReadFromJsonAsync<List<CommentBody>>())!;
+    }
+
+    [Fact]
+    public async Task Posting_a_comment_returns_201_and_persists()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("cmt"), "Molly");
+        await CreateHouseholdAsync(token, "Comment House");
+        var task = await CreateTaskAsync(token, "Has a thread");
+
+        var resp = await PostCommentAsync(token, task.Id, "First note");
+        Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+        var created = (await resp.Content.ReadFromJsonAsync<CommentBody>())!;
+        Assert.Equal("First note", created.Body);
+        Assert.Equal("Member", created.Kind);
+        Assert.Equal("Molly", created.AuthorName);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var row = await db.TaskComments.SingleAsync(c => c.Id == created.Id);
+        Assert.Equal("First note", row.Body);
+        Assert.Equal(TaskCommentKind.Member, row.Kind);
+        Assert.Equal(task.Id, row.TaskId);
+    }
+
+    [Fact]
+    public async Task Listing_comments_returns_them_in_order_with_author_names()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("cl-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Thread House");
+
+        var memberEmail = NewEmail("cl-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Discuss me");
+        (await PostCommentAsync(adminToken, task.Id, "From admin")).EnsureSuccessStatusCode();
+        (await PostCommentAsync(memberToken, task.Id, "From member")).EnsureSuccessStatusCode();
+
+        var comments = await GetCommentsAsync(memberToken, task.Id);
+        Assert.Equal(2, comments.Count);
+        Assert.Equal("From admin", comments[0].Body);
+        Assert.Equal("Admin", comments[0].AuthorName);
+        Assert.Equal("From member", comments[1].Body);
+        Assert.Equal("Member", comments[1].AuthorName);
+        Assert.True(comments[0].CreatedAtUtc <= comments[1].CreatedAtUtc);
+    }
+
+    [Fact]
+    public async Task Posting_a_blank_comment_returns_400()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("cmt-blank"), "Molly");
+        await CreateHouseholdAsync(token, "Blank Comment House");
+        var task = await CreateTaskAsync(token, "No empty notes");
+
+        var resp = await PostCommentAsync(token, task.Id, "   ");
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Posting_an_oversized_comment_returns_400()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("cmt-big"), "Molly");
+        await CreateHouseholdAsync(token, "Big Comment House");
+        var task = await CreateTaskAsync(token, "No essays");
+
+        var resp = await PostCommentAsync(token, task.Id, new string('x', 281));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Commenting_on_a_foreign_household_task_returns_404()
+    {
+        var aToken = await RegisterAndLoginAsync(NewEmail("cmt-a"), "Alice");
+        await CreateHouseholdAsync(aToken, "House A");
+        var task = await CreateTaskAsync(aToken, "Belongs to A");
+
+        var bToken = await RegisterAndLoginAsync(NewEmail("cmt-b"), "Bob");
+        await CreateHouseholdAsync(bToken, "House B");
+
+        var post = await PostCommentAsync(bToken, task.Id, "Sneaking in");
+        Assert.Equal(HttpStatusCode.NotFound, post.StatusCode);
+
+        var list = await _client.SendAsync(Authed(HttpMethod.Get, $"/api/tasks/{task.Id}/comments", bToken));
+        Assert.Equal(HttpStatusCode.NotFound, list.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_comment_routes_return_401()
+    {
+        var id = Guid.NewGuid();
+
+        var post = await _client.PostAsJsonAsync($"/api/tasks/{id}/comments", new { body = "x" });
+        Assert.Equal(HttpStatusCode.Unauthorized, post.StatusCode);
+
+        var list = await _client.GetAsync($"/api/tasks/{id}/comments");
+        Assert.Equal(HttpStatusCode.Unauthorized, list.StatusCode);
+    }
+
+    [Fact]
+    public async Task Board_dto_reports_the_comment_count_per_task()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("cmt-count"), "Molly");
+        await CreateHouseholdAsync(token, "Count House");
+        var withComments = await CreateTaskAsync(token, "Chatty");
+        var quiet = await CreateTaskAsync(token, "Silent");
+
+        (await PostCommentAsync(token, withComments.Id, "one")).EnsureSuccessStatusCode();
+        (await PostCommentAsync(token, withComments.Id, "two")).EnsureSuccessStatusCode();
+
+        var board = await GetBoardAsync(token);
+        Assert.Equal(2, board.Single(t => t.Id == withComments.Id).CommentCount);
+        Assert.Equal(0, board.Single(t => t.Id == quiet.Id).CommentCount);
+    }
+
     private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);
 
     private sealed record HouseholdBody(Guid Id, string Name, string Role);
@@ -567,5 +691,13 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         bool CanConfirm,
         bool WillSelfAttest,
         bool CanEdit,
-        bool CanDelete);
+        bool CanDelete,
+        int CommentCount);
+
+    private sealed record CommentBody(
+        Guid Id,
+        string Body,
+        string Kind,
+        string AuthorName,
+        DateTime CreatedAtUtc);
 }

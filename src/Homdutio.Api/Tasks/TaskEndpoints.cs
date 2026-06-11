@@ -39,8 +39,9 @@ public static class TaskEndpoints
                 .ToListAsync();
 
             var names = await ResolveNamesAsync(db, tasks);
+            var counts = await CountCommentsAsync(db, tasks);
 
-            return Results.Ok(tasks.Select(t => ToResponse(t, caller, names)).ToList());
+            return Results.Ok(tasks.Select(t => ToResponse(t, caller, names, counts)).ToList());
         });
 
         // POST /api/tasks — create a task in the caller's household; it lands unassigned in To do.
@@ -80,7 +81,8 @@ public static class TaskEndpoints
             await db.SaveChangesAsync();
 
             var names = await ResolveNamesAsync(db, [task]);
-            return Results.Created($"/api/tasks/{task.Id}", ToResponse(task, caller, names));
+            // A brand-new task has no comments yet; an empty count map renders commentCount = 0.
+            return Results.Created($"/api/tasks/{task.Id}", ToResponse(task, caller, names, new Dictionary<Guid, int>()));
         });
 
         // POST /api/tasks/{id}/claim — a To-do task → In progress, carrying the claimer.
@@ -113,7 +115,8 @@ public static class TaskEndpoints
             await db.SaveChangesAsync();
 
             var names = await ResolveNamesAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names));
+            var counts = await CountCommentsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts));
         });
 
         // POST /api/tasks/{id}/done — the claimer marks their In-progress task Done.
@@ -150,7 +153,8 @@ public static class TaskEndpoints
             await db.SaveChangesAsync();
 
             var names = await ResolveNamesAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names));
+            var counts = await CountCommentsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts));
         });
 
         // POST /api/tasks/{id}/confirm — an admin confirms a Done task, closing it off the board.
@@ -190,7 +194,8 @@ public static class TaskEndpoints
             await db.SaveChangesAsync();
 
             var names = await ResolveNamesAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names));
+            var counts = await CountCommentsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts));
         });
 
         // PUT /api/tasks/{id} — edit a task's title/description/category while it is still un-claimed (FR-011).
@@ -227,7 +232,8 @@ public static class TaskEndpoints
             await db.SaveChangesAsync(); // Management action — no TaskEvent (the log stays the lifecycle record).
 
             var names = await ResolveNamesAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names));
+            var counts = await CountCommentsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts));
         });
 
         // DELETE /api/tasks/{id} — remove a mistaken/obsolete task while it is still un-claimed (FR-012).
@@ -299,6 +305,72 @@ public static class TaskEndpoints
             return Results.NoContent();
         });
 
+        // POST /api/tasks/{id}/comments — any household member posts an immutable comment on a task (S-05).
+        group.MapPost("/{id:guid}/comments", async (Guid id, CreateCommentRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveMemberAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            if (task is null)
+            {
+                return Results.NotFound();
+            }
+
+            var body = request.Body?.Trim();
+            if (string.IsNullOrWhiteSpace(body) || body.Length > 280)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["Body"] = ["A comment must be between 1 and 280 characters."],
+                });
+            }
+
+            var now = DateTime.UtcNow;
+            var comment = new TaskComment
+            {
+                Id = Guid.NewGuid(),
+                TaskId = task.Id,
+                AuthorId = caller.UserId,
+                Body = body,
+                Kind = TaskCommentKind.Member,
+                CreatedAtUtc = now,
+            };
+            db.TaskComments.Add(comment);
+            await db.SaveChangesAsync();
+
+            var names = await ResolveCommentNamesAsync(db, [comment]);
+            return Results.Created($"/api/tasks/{task.Id}/comments/{comment.Id}", ToCommentResponse(comment, names));
+        });
+
+        // GET /api/tasks/{id}/comments — the task's full thread, oldest first, with author display names.
+        group.MapGet("/{id:guid}/comments", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveMemberAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            if (task is null)
+            {
+                return Results.NotFound();
+            }
+
+            var comments = await db.TaskComments
+                .AsNoTracking()
+                .Where(c => c.TaskId == task.Id)
+                .OrderBy(c => c.CreatedAtUtc)
+                .ToListAsync();
+
+            var names = await ResolveCommentNamesAsync(db, comments);
+            return Results.Ok(comments.Select(c => ToCommentResponse(c, names)).ToList());
+        });
+
         return app;
     }
 
@@ -360,6 +432,48 @@ public static class TaskEndpoints
             .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
     }
 
+    /// <summary>Grouped comment count per task in one query (no N+1) — backs the board's per-card 💬 badge.</summary>
+    private static async Task<Dictionary<Guid, int>> CountCommentsAsync(
+        ApplicationDbContext db, IReadOnlyCollection<HouseholdTask> tasks)
+    {
+        var ids = tasks.Select(t => t.Id).ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        return await db.TaskComments
+            .AsNoTracking()
+            .Where(c => ids.Contains(c.TaskId))
+            .GroupBy(c => c.TaskId)
+            .Select(g => new { TaskId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TaskId, x => x.Count);
+    }
+
+    /// <summary>Resolves the display names of a set of comments' authors in one query — no N+1.</summary>
+    private static async Task<Dictionary<string, string>> ResolveCommentNamesAsync(
+        ApplicationDbContext db, IReadOnlyCollection<TaskComment> comments)
+    {
+        var ids = comments.Select(c => c.AuthorId).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
+    }
+
+    private static CommentResponse ToCommentResponse(TaskComment comment, IReadOnlyDictionary<string, string> names) =>
+        new(
+            comment.Id,
+            comment.Body,
+            comment.Kind.ToString(),
+            names.TryGetValue(comment.AuthorId, out var author) ? author : string.Empty,
+            comment.CreatedAtUtc);
+
     private static TaskEvent NewEvent(Guid taskId, TaskEventType type, string actorId, DateTime occurredAtUtc) =>
         new()
         {
@@ -370,7 +484,8 @@ public static class TaskEndpoints
             OccurredAtUtc = occurredAtUtc,
         };
 
-    private static TaskResponse ToResponse(HouseholdTask task, CallerContext caller, IReadOnlyDictionary<string, string> names)
+    private static TaskResponse ToResponse(
+        HouseholdTask task, CallerContext caller, IReadOnlyDictionary<string, string> names, IReadOnlyDictionary<Guid, int> counts)
     {
         var canClaim = task.Status == HouseholdTaskStatus.ToDo;
         var canMarkDone = task.Status == HouseholdTaskStatus.InProgress && task.ClaimedById == caller.UserId;
@@ -394,7 +509,8 @@ public static class TaskEndpoints
             canConfirm,
             willSelfAttest,
             canEdit,
-            canDelete);
+            canDelete,
+            counts.TryGetValue(task.Id, out var commentCount) ? commentCount : 0);
     }
 
     private sealed record CallerContext(Guid HouseholdId, HouseholdRole Role, string UserId);
@@ -405,6 +521,15 @@ public sealed record CreateTaskRequest(string Title, string? Description, string
 public sealed record UpdateTaskRequest(string Title, string? Description, string? Category);
 
 public sealed record ReorderRequest(string Status, Guid[] OrderedIds);
+
+public sealed record CreateCommentRequest(string Body);
+
+public sealed record CommentResponse(
+    Guid Id,
+    string Body,
+    string Kind,
+    string AuthorName,
+    DateTime CreatedAtUtc);
 
 public sealed record TaskResponse(
     Guid Id,
@@ -420,4 +545,5 @@ public sealed record TaskResponse(
     bool CanConfirm,
     bool WillSelfAttest,
     bool CanEdit,
-    bool CanDelete);
+    bool CanDelete,
+    int CommentCount);
