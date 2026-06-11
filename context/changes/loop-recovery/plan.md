@@ -91,7 +91,7 @@ Verified by: the new xUnit integration tests + vitest specs pass, `dotnet build`
 Build backend-first so the contract is locked before the SPA consumes it, and land the shared
 comments store (Phase 1) before the send-back transition that reuses it (Phase 2). Each phase is
 independently verifiable. Frontend splits along the same seam: loop-recovery actions (Phase 3) then
-the comments thread + badge + admin-edit (Phase 4). Phase 5 reconciles the foundation docs.
+the comments thread + badge + admin-edit (Phase 4).
 
 ## Critical Implementation Details
 
@@ -406,61 +406,6 @@ confirm members see the read-only render with the thread + input still available
 
 ---
 
-## Phase 5: Charter reconciliation (docs)
-
-### Overview
-
-Record the two boundary overrides and the slice's completion in the foundation docs so the artifacts
-stay truthful — the comments feature contradicted a PRD Non-Goal and the edit change diverged from FR-011.
-
-### Changes Required:
-
-#### 1. PRD Non-Goal + FR-011 note
-
-**File**: `context/foundation/prd.md`
-
-**Intent**: Stop the docs from asserting behavior the product no longer has.
-
-**Contract**: Amend the *"No comments, multimedia, or chat on tasks"* Non-Goal to record that v1 now
-ships flat, immutable, text-only task comments (decided 2026-06-11, S-05), with reply/media/chat
-still out. Annotate FR-011 that field editing is admin-only/any-column as of S-05 (members comment
-instead of editing).
-
-#### 2. Roadmap status
-
-**File**: `context/foundation/roadmap.md`
-
-**Intent**: Reflect delivery + scope growth.
-
-**Contract**: Set S-05 status → `done` in the At-a-glance table, Slices section, and Backlog Handoff;
-add a one-line note that the slice grew to include free-form comments + admin-edit (Non-Goal override).
-
-#### 3. Contract-surfaces registry
-
-**File**: `docs/reference/contract-surfaces.md` (create if absent)
-
-**Intent**: Register the load-bearing names this slice introduces.
-
-**Contract**: List the new routes (`/api/tasks/{id}/unclaim`, `/sendback`, `/comments`), the
-`TaskComment` entity + `TaskCommentKind`, the new `TaskEventType` members, and the new affordance
-flags (`canUnclaim`, `canSendBack`, `commentCount`, redefined `canEdit`). If the file doesn't exist,
-seed it with just these entries (do not block on back-filling prior slices).
-
-### Success Criteria:
-
-#### Automated Verification:
-
-- The three docs exist and contain the new entries (grep for `unclaim`, `sendback`, `TaskComment`,
-  `S-05` status `done`).
-
-#### Manual Verification:
-
-- A reader of the PRD/roadmap is no longer misled by the retired Non-Goal / FR-011 wording.
-
-**Implementation Note**: Final phase — no code; commit alongside or after Phase 4.
-
----
-
 ## Testing Strategy
 
 ### Unit / component (vitest):
@@ -553,23 +498,13 @@ the F-01 "migrations stay backward-compatible" rule). New `TaskEventType` values
 
 #### Automated
 
-- [x] 4.1 SPA builds (`ng build`)
-- [x] 4.2 Lint passes
-- [x] 4.3 vitest specs pass (badge by commentCount; thread render w/ author/time + send-back kind; empty-comment blocked; valid post re-lists; admin editable vs member read-only)
+- [x] 4.1 SPA builds (`ng build`) — ed411ab
+- [x] 4.2 Lint passes — ed411ab
+- [x] 4.3 vitest specs pass (badge by commentCount; thread render w/ author/time + send-back kind; empty-comment blocked; valid post re-lists; admin editable vs member read-only) — ed411ab
 
 #### Manual
 
-- [x] 4.4 Card 💬 count matches the dialog's comment count
-- [x] 4.5 Member can comment but not edit fields; admin can do both
-- [x] 4.6 Send-back reason appears in the thread, attributed + timestamped
-- [x] 4.7 Thread + input usable at ≤400px (NFR-2)
-
-### Phase 5: Charter reconciliation (docs)
-
-#### Automated
-
-- [ ] 5.1 Docs updated (grep finds `unclaim`/`sendback`/`TaskComment` in contract-surfaces; S-05 `done` in roadmap; PRD Non-Goal + FR-011 amended)
-
-#### Manual
-
-- [ ] 5.2 PRD/roadmap no longer misstate the comments Non-Goal or FR-011 edit model
+- [x] 4.4 Card 💬 count matches the dialog's comment count — ed411ab
+- [x] 4.5 Member can comment but not edit fields; admin can do both — ed411ab
+- [x] 4.6 Send-back reason appears in the thread, attributed + timestamped — ed411ab
+- [x] 4.7 Thread + input usable at ≤400px (NFR-2) — ed411ab
