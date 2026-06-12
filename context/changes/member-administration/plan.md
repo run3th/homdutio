@@ -216,14 +216,14 @@ None. No schema change — promote/demote updates `HouseholdMember.Role` (alread
 
 #### Automated
 
-- [x] 2.1 SPA builds: `npm run build`
-- [x] 2.2 Unit tests pass: `npm test`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 SPA builds: `npm run build` — 44df789
+- [x] 2.2 Unit tests pass: `npm test` — 44df789
+- [x] 2.3 Lint passes: `npm run lint` — 44df789
 
 #### Manual
 
-- [x] 2.4 "Members" sidebar item routes to the household roster
-- [x] 2.5 Admin can promote/demote (immediate) and remove (confirm dialog drops the member)
-- [x] 2.6 Last-admin and self-actions prevented with the server message shown inline
-- [x] 2.7 Non-admin sees a read-only roster
-- [x] 2.8 No horizontal scroll at ≤400px (NFR-2)
+- [x] 2.4 "Members" sidebar item routes to the household roster — 44df789
+- [x] 2.5 Admin can promote/demote (immediate) and remove (confirm dialog drops the member) — 44df789
+- [x] 2.6 Last-admin and self-actions prevented with the server message shown inline — 44df789
+- [x] 2.7 Non-admin sees a read-only roster — 44df789
+- [x] 2.8 No horizontal scroll at ≤400px (NFR-2) — 44df789
