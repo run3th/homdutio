@@ -325,9 +325,9 @@ None — no schema change, no migration.
 
 #### Automated
 
-- [x] 3.1 The convention test passes against the current route set: `dotnet test`
-- [x] 3.2 A dummy unlisted scoped route makes the test FAIL (demonstrated, then reverted)
+- [x] 3.1 The convention test passes against the current route set: `dotnet test` — 3608790
+- [x] 3.2 A dummy unlisted scoped route makes the test FAIL (demonstrated, then reverted) — 3608790
 
 #### Manual
 
-- [x] 3.3 Reviewer confirms the exempt allowlist is minimal and each exemption is justified
+- [x] 3.3 Reviewer confirms the exempt allowlist is minimal and each exemption is justified — 3608790
