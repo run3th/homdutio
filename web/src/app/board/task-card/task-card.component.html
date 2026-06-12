@@ -85,12 +85,20 @@
   </div>
 </dl>
 
-<!-- 💬 comment count (S-05) — purely presentational; opening the thread is the existing title → openDetail. -->
-@if (task.commentCount > 0) {
-  <p class="task-comment-count" [attr.aria-label]="task.commentCount + ' comments'">
-    💬 {{ task.commentCount }}
-  </p>
-}
+<!-- 💬 comment button (S-05) — always available; opens the standalone comments dialog. The count shows
+     only when there are comments. -->
+<button
+  type="button"
+  class="task-comment-button"
+  (click)="openComments.emit(task)"
+  [attr.aria-label]="task.commentCount > 0 ? task.commentCount + ' comments' : 'Comments'"
+  title="Comments"
+>
+  <span class="task-comment-icon" aria-hidden="true">💬</span>
+  @if (task.commentCount > 0) {
+    <span class="task-comment-count">{{ task.commentCount }}</span>
+  }
+</button>
 
 <!-- Only the primary lifecycle action shows on the card; management actions live in the ⋯ menu. -->
 @if (task.canClaim || task.canMarkDone || task.canConfirm) {

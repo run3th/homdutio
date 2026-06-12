@@ -1,0 +1,162 @@
+:host {
+  display: block;
+}
+
+/* Mobile-first panel: never wider than the viewport, and never taller than it — a long thread scrolls
+   inside the list, not the whole panel, so the composer stays reachable at ≤ 400px (NFR-2). */
+.comments {
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.comments-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.icon-button {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--color-surface-2);
+}
+
+.comments-empty {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* A long thread scrolls within the panel instead of pushing the composer out of view. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.comment {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+/* A send-back reason is distinguished from a free-form note. */
+.comment--sendback {
+  background: var(--color-primary-soft);
+}
+
+.comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 0.25rem;
+}
+
+.comment-author {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.comment-tag {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.375rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.comment-time {
+  font-size: 0.75rem;
+  color: var(--color-text-subtle);
+}
+
+.comment-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+/* Composer: a field that matches the corner radius of the posted comments above it, with a round send
+   icon docked to its right. */
+.comment-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.comment-form textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  resize: none;
+  font: inherit;
+  /* Match the posted comments' line-height so a single row sits flush with no phantom scrollbar. */
+  line-height: 1.4;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  /* One row at rest (no scroll); grows for multi-line drafts, then scrolls past 6rem so the send
+     button is never shoved off-screen. */
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
+.comment-send {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  cursor: pointer;
+}
+
+.comment-send:not(:disabled):hover {
+  filter: brightness(0.95);
+}
+
+.comment-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

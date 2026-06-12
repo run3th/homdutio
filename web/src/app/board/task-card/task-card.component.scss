@@ -189,11 +189,28 @@
   overflow-wrap: anywhere;
 }
 
-/* 💬 comment-count indicator, bottom-left under the metadata (S-05). Purely presentational. */
-.task-comment-count {
+/* 💬 comment affordance, bottom-left under the metadata (S-05). Always present; opens the comments dialog.
+   The count rides alongside the icon only when the thread is non-empty. */
+.task-comment-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   margin: var(--space-2) 0 0;
+  padding: 0.15rem 0.4rem;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.task-comment-button:hover {
+  background: var(--color-surface-2);
+}
+
+.task-comment-count {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Actions wrap rather than overflow; each stays a comfortable tap target at ≤ 400px (NFR-2). */
