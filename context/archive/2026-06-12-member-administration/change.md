@@ -2,9 +2,10 @@
 change-id: member-administration
 roadmap-id: S-09
 title: Member administration — admin promote/demote and remove
-status: impl_reviewed
+status: archived
 created: 2026-06-12
 updated: 2026-06-12
+archived_at: 2026-06-12T12:27:36Z
 prd-refs: [FR-008, FR-009]
 prerequisites: [S-06]
 ---
