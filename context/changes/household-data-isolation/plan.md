@@ -314,20 +314,20 @@ None — no schema change, no migration.
 
 #### Automated
 
-- [x] 2.1 The full suite stays green with zero test changes: `dotnet test`
-- [x] 2.2 Build is clean with no dead-code warnings: `dotnet build`
+- [x] 2.1 The full suite stays green with zero test changes: `dotnet test` — cde628f
+- [x] 2.2 Build is clean with no dead-code warnings: `dotnet build` — cde628f
 
 #### Manual
 
-- [x] 2.3 Reviewer confirms one `CallerContext` + one scoping helper; no handler branch logic changed
+- [x] 2.3 Reviewer confirms one `CallerContext` + one scoping helper; no handler branch logic changed — cde628f
 
 ### Phase 3: Route-coverage convention guard
 
 #### Automated
 
-- [ ] 3.1 The convention test passes against the current route set: `dotnet test`
-- [ ] 3.2 A dummy unlisted scoped route makes the test FAIL (demonstrated, then reverted)
+- [x] 3.1 The convention test passes against the current route set: `dotnet test`
+- [x] 3.2 A dummy unlisted scoped route makes the test FAIL (demonstrated, then reverted)
 
 #### Manual
 
-- [ ] 3.3 Reviewer confirms the exempt allowlist is minimal and each exemption is justified
+- [x] 3.3 Reviewer confirms the exempt allowlist is minimal and each exemption is justified

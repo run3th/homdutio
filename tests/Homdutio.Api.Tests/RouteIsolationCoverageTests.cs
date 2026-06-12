@@ -1,0 +1,143 @@
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Homdutio.Api.Tests;
+
+/// <summary>
+/// S-07's drift backstop: the route-coverage convention guard. It enumerates every registered
+/// <c>/api/tasks</c> and <c>/api/households</c> route from the live host and asserts each is categorized as
+/// either SCOPED (household-scoped — a foreign caller must get 404 / an own-only payload, and the route MUST
+/// be exercised by <see cref="HouseholdIsolationTests"/>) or EXEMPT (no foreign-household-id surface:
+/// own-data reads, create-in-the-caller's-own-household, or token-scoped invite routes). A new endpoint
+/// added without being placed in one bucket breaks set-equality and fails the build — forcing the author to
+/// decide which it is, so a future endpoint can never silently skip the isolation sweep.
+///
+/// This guard proves COVERAGE (no route was forgotten), not query CORRECTNESS — the isolation sweep itself
+/// proves each scoped route's WHERE clause is right.
+/// </summary>
+public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
+{
+    private readonly AuthApiFactory _factory;
+
+    public RouteIsolationCoverageTests(AuthApiFactory factory)
+    {
+        _factory = factory;
+        // Force the host to build so the endpoint graph is populated before we enumerate it.
+        _ = factory.CreateClient();
+    }
+
+    /// <summary>
+    /// Household-scoped routes: a foreign caller must receive 404 / an own-only payload. Each MUST be
+    /// exercised in <see cref="HouseholdIsolationTests"/>.
+    /// </summary>
+    private static readonly HashSet<string> Scoped = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "GET /api/tasks",
+        "POST /api/tasks/{id}/claim",
+        "POST /api/tasks/{id}/done",
+        "POST /api/tasks/{id}/confirm",
+        "POST /api/tasks/{id}/unclaim",
+        "POST /api/tasks/{id}/sendback",
+        "PUT /api/tasks/{id}",
+        "DELETE /api/tasks/{id}",
+        "PUT /api/tasks/order",
+        "POST /api/tasks/{id}/comments",
+        "GET /api/tasks/{id}/comments",
+        "GET /api/households/members",
+        "POST /api/households/members/{userId}/role",
+        "DELETE /api/households/members/{userId}",
+    };
+
+    /// <summary>
+    /// Exempt routes carry no foreign-household-id surface, so the isolation sweep does not apply —
+    /// own-data-only reads, create-in-the-caller's-own-household, or token-scoped invite routes (whose
+    /// cross-household token scoping is locked by S-06's invite tests).
+    /// </summary>
+    private static readonly HashSet<string> Exempt = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "POST /api/tasks",                              // creates in the caller's own household
+        "GET /api/households/me",                       // returns the caller's own household
+        "POST /api/households",                         // create; the caller has no membership yet
+        "POST /api/households/invites",                 // generates for the caller's own household
+        "GET /api/households/invites/{token}",          // anonymous, token-scoped preview (S-06)
+        "POST /api/households/invites/{token}/accept",  // token-scoped join (S-06)
+    };
+
+    [Fact]
+    public void Every_household_domain_route_is_categorized_scoped_or_exempt()
+    {
+        var discovered = DiscoverDomainRoutes();
+
+        var expected = new HashSet<string>(Scoped, StringComparer.OrdinalIgnoreCase);
+        expected.UnionWith(Exempt);
+
+        var uncategorized = discovered.Except(expected, StringComparer.OrdinalIgnoreCase).ToList();
+        var stale = expected.Except(discovered, StringComparer.OrdinalIgnoreCase).ToList();
+
+        Assert.True(uncategorized.Count == 0 && stale.Count == 0, BuildFailureMessage(uncategorized, stale));
+    }
+
+    [Fact]
+    public void Scoped_and_exempt_sets_do_not_overlap()
+    {
+        Assert.Empty(Scoped.Intersect(Exempt, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private HashSet<string> DiscoverDomainRoutes()
+    {
+        var dataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
+        var routes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var endpoint in dataSource.Endpoints.OfType<RouteEndpoint>())
+        {
+            var pattern = NormalizePattern(endpoint.RoutePattern.RawText);
+            if (!pattern.StartsWith("/api/tasks", StringComparison.OrdinalIgnoreCase)
+                && !pattern.StartsWith("/api/households", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods;
+            if (methods is null)
+            {
+                continue;
+            }
+
+            foreach (var method in methods)
+            {
+                routes.Add($"{method} {pattern}");
+            }
+        }
+
+        return routes;
+    }
+
+    /// <summary>
+    /// Strips inline route constraints (<c>{id:guid}</c> → <c>{id}</c>) and normalizes the leading slash so a
+    /// discovered pattern matches the categorized allowlists regardless of constraint syntax.
+    /// </summary>
+    private static string NormalizePattern(string? rawText)
+    {
+        var text = "/" + (rawText ?? string.Empty).Trim('/');
+        return Regex.Replace(text, @"\{([^:}]+):[^}]+\}", "{$1}");
+    }
+
+    private static string BuildFailureMessage(IReadOnlyCollection<string> uncategorized, IReadOnlyCollection<string> stale)
+    {
+        var lines = new List<string> { "Household route coverage is out of sync with the S-07 isolation sweep." };
+        if (uncategorized.Count > 0)
+        {
+            lines.Add("Uncategorized route(s) — exercise each in HouseholdIsolationTests and add to the Scoped set, or justify it in the Exempt set:");
+            lines.AddRange(uncategorized.Select(r => "  + " + r));
+        }
+
+        if (stale.Count > 0)
+        {
+            lines.Add("Categorized route(s) no longer registered — remove from the Scoped/Exempt set:");
+            lines.AddRange(stale.Select(r => "  - " + r));
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+}
