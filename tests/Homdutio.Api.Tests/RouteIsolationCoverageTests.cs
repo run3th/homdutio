@@ -5,13 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Homdutio.Api.Tests;
 
 /// <summary>
-/// S-07's drift backstop: the route-coverage convention guard. It enumerates every registered
-/// <c>/api/tasks</c> and <c>/api/households</c> route from the live host and asserts each is categorized as
-/// either SCOPED (household-scoped — a foreign caller must get 404 / an own-only payload, and the route MUST
-/// be exercised by <see cref="HouseholdIsolationTests"/>) or EXEMPT (no foreign-household-id surface:
-/// own-data reads, create-in-the-caller's-own-household, or token-scoped invite routes). A new endpoint
-/// added without being placed in one bucket breaks set-equality and fails the build — forcing the author to
-/// decide which it is, so a future endpoint can never silently skip the isolation sweep.
+/// S-07's drift backstop: the route-coverage convention guard. It enumerates every registered <c>/api/</c>
+/// route outside the auth area from the live host and asserts each is categorized as either SCOPED
+/// (household-scoped — a foreign caller must get 404 / an own-only payload, and the route MUST be exercised
+/// by <see cref="HouseholdIsolationTests"/>) or EXEMPT (no foreign-household-id surface: own-data reads,
+/// create-in-the-caller's-own-household, or token-scoped invite routes). A new endpoint added without being
+/// placed in one bucket — including one under a brand-new route prefix — breaks set-equality and fails the
+/// build, forcing the author to decide which it is, so a future endpoint can never silently skip the sweep.
 ///
 /// This guard proves COVERAGE (no route was forgotten), not query CORRECTNESS — the isolation sweep itself
 /// proves each scoped route's WHERE clause is right.
@@ -64,6 +64,13 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
         "POST /api/households/invites/{token}/accept",  // token-scoped join (S-06)
     };
 
+    /// <summary>
+    /// Non-household <c>/api/</c> areas the isolation sweep does not govern. Anything under <c>/api/</c> that
+    /// does NOT match one of these prefixes must be categorized Scoped or Exempt — so a household-scoped route
+    /// added under a brand-new prefix fails this guard instead of slipping past a hardcoded domain allowlist.
+    /// </summary>
+    private static readonly string[] ExemptPrefixes = { "/api/auth" };
+
     [Fact]
     public void Every_household_domain_route_is_categorized_scoped_or_exempt()
     {
@@ -92,8 +99,12 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
         foreach (var endpoint in dataSource.Endpoints.OfType<RouteEndpoint>())
         {
             var pattern = NormalizePattern(endpoint.RoutePattern.RawText);
-            if (!pattern.StartsWith("/api/tasks", StringComparison.OrdinalIgnoreCase)
-                && !pattern.StartsWith("/api/households", StringComparison.OrdinalIgnoreCase))
+
+            // Consider every /api/* route except those under a non-household exempt prefix (e.g. auth).
+            // Inverting the filter this way means a future household-scoped route under a NEW prefix
+            // surfaces as uncategorized and fails the build — the guard isn't blind to unforeseen prefixes.
+            if (!pattern.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
+                || ExemptPrefixes.Any(p => pattern.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
