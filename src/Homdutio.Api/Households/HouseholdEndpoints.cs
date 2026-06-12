@@ -186,8 +186,269 @@ public static class HouseholdEndpoints
             return Results.Ok(new HouseholdResponse(household.Id, household.Name, HouseholdRole.Member.ToString()));
         });
 
+        // GET /api/households/members — the caller's household roster (any member may read it). Each row
+        // carries server-computed isSelf/canManage flags so the SPA renders controls from flags, never by
+        // re-deriving authorization (mirrors the affordance flags on TaskResponse, S-09).
+        group.MapGet("/members", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveCallerAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var callerIsAdmin = caller.Role == HouseholdRole.Admin;
+            var rows = await db.HouseholdMembers
+                .AsNoTracking()
+                .Where(m => m.HouseholdId == caller.HouseholdId)
+                .Join(
+                    db.Users.AsNoTracking(),
+                    m => m.UserId,
+                    u => u.Id,
+                    (m, u) => new { m.UserId, u.DisplayName, u.Email, m.Role })
+                .ToListAsync();
+
+            var members = rows
+                .OrderBy(r => r.Role) // Admin (0) before Member (1).
+                .ThenBy(r => r.DisplayName)
+                .Select(r => new MemberResponse(
+                    r.UserId,
+                    r.DisplayName,
+                    r.Email ?? string.Empty,
+                    r.Role.ToString(),
+                    r.UserId == caller.UserId,
+                    callerIsAdmin && r.UserId != caller.UserId))
+                .ToList();
+
+            return Results.Ok(members);
+        });
+
+        // POST /api/households/members/{userId}/role — promote/demote a member (FR-008). Admin-only; the
+        // target is scoped to the caller's household (foreign/unknown → 404, no existence leak). An admin
+        // cannot change their own role, and the last admin cannot be demoted (would orphan the household).
+        group.MapPost("/members/{userId}/role", async (string userId, UpdateMemberRoleRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveCallerAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (caller.Role != HouseholdRole.Admin)
+            {
+                return Results.Forbid();
+            }
+
+            // Reject both unparseable input and undefined enum values — Enum.TryParse returns true for any
+            // numeric string (e.g. "5" → (HouseholdRole)5), so IsDefined is what keeps this to the two roles.
+            if (!Enum.TryParse<HouseholdRole>(request.Role, out var newRole) || !Enum.IsDefined(newRole))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["Role"] = ["Role must be 'Admin' or 'Member'."],
+                });
+            }
+
+            if (userId == caller.UserId)
+            {
+                return Results.Conflict(new { message = "You cannot change your own role." });
+            }
+
+            var target = await db.HouseholdMembers
+                .SingleOrDefaultAsync(m => m.UserId == userId && m.HouseholdId == caller.HouseholdId);
+            if (target is null)
+            {
+                return Results.NotFound();
+            }
+
+            // Idempotent: setting the role the member already has is a no-op success.
+            if (target.Role != newRole)
+            {
+                // Demoting an admin is the only path that can threaten the last-admin invariant. Do the
+                // count check and the write inside one transaction, the count holding a lock on the admin
+                // rows, so a concurrent demote/remove can't also pass a stale check (the last-admin race).
+                // The retry-enabled provider requires the transaction to run via an execution strategy.
+                if (target.Role == HouseholdRole.Admin && newRole == HouseholdRole.Member)
+                {
+                    var blocked = await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+                    {
+                        await using var tx = await db.Database.BeginTransactionAsync();
+                        if (await IsLastAdminLockedAsync(db, caller.HouseholdId))
+                        {
+                            return true; // last admin — leave the role unchanged
+                        }
+
+                        target.Role = newRole;
+                        await db.SaveChangesAsync();
+                        await tx.CommitAsync();
+                        return false;
+                    });
+
+                    if (blocked)
+                    {
+                        return Results.Conflict(new { message = "The household must keep at least one admin." });
+                    }
+                }
+                else
+                {
+                    target.Role = newRole;
+                    await db.SaveChangesAsync();
+                }
+            }
+
+            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == userId);
+            return Results.Ok(new MemberResponse(
+                target.UserId, user.DisplayName, user.Email ?? string.Empty, target.Role.ToString(), IsSelf: false, CanManage: true));
+        });
+
+        // DELETE /api/households/members/{userId} — remove a member (FR-009). Admin-only; target scoped to
+        // the caller's household. An admin cannot remove themselves, and the last admin cannot be removed.
+        // The removed member's in-progress tasks are swept back to To do unassigned in the SAME SaveChanges
+        // as the membership delete, so no task is ever left claimed by a non-member.
+        group.MapDelete("/members/{userId}", async (string userId, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await ResolveCallerAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (caller.Role != HouseholdRole.Admin)
+            {
+                return Results.Forbid();
+            }
+
+            if (userId == caller.UserId)
+            {
+                return Results.Conflict(new { message = "You cannot remove yourself." });
+            }
+
+            var target = await db.HouseholdMembers
+                .SingleOrDefaultAsync(m => m.UserId == userId && m.HouseholdId == caller.HouseholdId);
+            if (target is null)
+            {
+                return Results.NotFound();
+            }
+
+            // Removing an admin is the only path that can threaten the last-admin invariant. When the target
+            // is an admin, the guard + sweep + delete run in one transaction (via the execution strategy the
+            // retry-enabled provider requires), the guard holding a lock on the admin rows so a concurrent
+            // demote/remove can't also pass a stale check. A non-admin target carries no such risk.
+            if (target.Role == HouseholdRole.Admin)
+            {
+                var blocked = await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+                {
+                    await using var tx = await db.Database.BeginTransactionAsync();
+                    if (await IsLastAdminLockedAsync(db, caller.HouseholdId))
+                    {
+                        return true; // last admin — leave the membership in place
+                    }
+
+                    await SweepAndRemoveAsync(db, caller, userId, target);
+                    await tx.CommitAsync();
+                    return false;
+                });
+
+                if (blocked)
+                {
+                    return Results.Conflict(new { message = "The household must keep at least one admin." });
+                }
+            }
+            else
+            {
+                await SweepAndRemoveAsync(db, caller, userId, target);
+            }
+
+            return Results.NoContent();
+        });
+
         return app;
     }
+
+    /// <summary>
+    /// Resolves the caller's household membership from the JWT <c>sub</c> claim. Null when they have no
+    /// membership — surfaced by callers as 404, consistent with the foreign-household rule.
+    /// </summary>
+    private static async Task<CallerContext?> ResolveCallerAsync(ClaimsPrincipal principal, ApplicationDbContext db)
+    {
+        var userId = principal.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        var member = await db.HouseholdMembers
+            .AsNoTracking()
+            .SingleOrDefaultAsync(m => m.UserId == userId);
+
+        return member is null ? null : new CallerContext(member.HouseholdId, member.Role, userId);
+    }
+
+    /// <summary>
+    /// True when the household has ≤1 admin, counted while holding an update + range lock on the admin rows
+    /// (SQL Server UPDLOCK, HOLDLOCK). MUST run inside a transaction that then performs the demote/remove: a
+    /// concurrent admin-mutating request on the same household blocks on this lock and re-reads the
+    /// post-mutation count, so the two can't both pass the guard and orphan the household (last-admin race).
+    /// The interpolated role is parameterized (no injection); the count composes as a subquery that keeps the hint.
+    /// </summary>
+    private static async Task<bool> IsLastAdminLockedAsync(ApplicationDbContext db, Guid householdId) =>
+        await db.HouseholdMembers
+            .FromSqlInterpolated(
+                $"SELECT * FROM [HouseholdMembers] WITH (UPDLOCK, HOLDLOCK) WHERE [HouseholdId] = {householdId} AND [Role] = {nameof(HouseholdRole.Admin)}")
+            .CountAsync() <= 1;
+
+    /// <summary>
+    /// Sweeps the removed member's in-progress tasks back to To do unassigned (the S-05 unclaim shape —
+    /// status→ToDo, clear claim, append to the To-do bottom, one Unclaimed event each, the removing admin as
+    /// actor) and removes the membership row, all in one <c>SaveChanges</c> so no task is ever left claimed by
+    /// a non-member. The caller wraps this in a transaction when the target is an admin (last-admin guard).
+    /// </summary>
+    private static async Task SweepAndRemoveAsync(ApplicationDbContext db, CallerContext caller, string userId, HouseholdMember target)
+    {
+        var inProgress = await db.HouseholdTasks
+            .Where(t => t.HouseholdId == caller.HouseholdId
+                && t.ClaimedById == userId
+                && t.Status == HouseholdTaskStatus.InProgress)
+            .ToListAsync();
+
+        if (inProgress.Count > 0)
+        {
+            var nextSortOrder = await NextToDoSortOrderAsync(db, caller.HouseholdId);
+            var now = DateTime.UtcNow;
+            foreach (var task in inProgress)
+            {
+                task.Status = HouseholdTaskStatus.ToDo;
+                task.ClaimedById = null;
+                task.ClaimedAtUtc = null;
+                task.SortOrder = nextSortOrder++;
+                db.TaskEvents.Add(new TaskEvent
+                {
+                    Id = Guid.NewGuid(),
+                    TaskId = task.Id,
+                    Type = TaskEventType.Unclaimed,
+                    ActorId = caller.UserId,
+                    OccurredAtUtc = now,
+                });
+            }
+        }
+
+        db.HouseholdMembers.Remove(target);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>The next To-do <c>SortOrder</c> for a household — <c>max+1</c>, or 0 when To do is empty. The
+    /// removal sweep increments from here so each freed task lands at the column bottom in order.</summary>
+    private static async Task<int> NextToDoSortOrderAsync(ApplicationDbContext db, Guid householdId)
+    {
+        var max = await db.HouseholdTasks
+            .Where(t => t.HouseholdId == householdId && t.Status == HouseholdTaskStatus.ToDo)
+            .Select(t => (int?)t.SortOrder)
+            .MaxAsync();
+
+        return (max ?? -1) + 1;
+    }
+
+    private sealed record CallerContext(Guid HouseholdId, HouseholdRole Role, string UserId);
 
     /// <summary>An invite is valid for this window after creation (FR-005 time-expiry bound).</summary>
     private static readonly TimeSpan InviteLifetime = TimeSpan.FromDays(7);
@@ -203,3 +464,7 @@ public sealed record HouseholdResponse(Guid Id, string Name, string Role);
 public sealed record InviteResponse(string Token, DateTime ExpiresAtUtc);
 
 public sealed record InvitePreviewResponse(string HouseholdName);
+
+public sealed record MemberResponse(string UserId, string DisplayName, string Email, string Role, bool IsSelf, bool CanManage);
+
+public sealed record UpdateMemberRoleRequest(string Role);

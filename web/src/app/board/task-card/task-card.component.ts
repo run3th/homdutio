@@ -36,6 +36,8 @@ export class TaskCardComponent {
 
   /** Open the detail dialog (S-04) — the title is the affordance, distinct from the drag handle. */
   @Output() readonly openDetail = new EventEmitter<Task>();
+  /** Open the standalone comments dialog (S-05) — the 💬 button is always available. */
+  @Output() readonly openComments = new EventEmitter<Task>();
   @Output() readonly claim = new EventEmitter<Task>();
   @Output() readonly markDone = new EventEmitter<Task>();
   @Output() readonly confirm = new EventEmitter<Task>();

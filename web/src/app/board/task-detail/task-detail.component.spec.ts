@@ -4,7 +4,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { of, throwError } from 'rxjs';
 
 import { TaskDetailComponent } from './task-detail.component';
-import { Comment, Task, TaskService } from '../task.service';
+import { Task, TaskService } from '../task.service';
 
 describe('TaskDetailComponent', () => {
   let update: ReturnType<typeof vi.fn>;
@@ -163,101 +163,13 @@ describe('TaskDetailComponent', () => {
     expect(el.querySelector('.form-error')?.textContent).toContain('A task title is required.');
   });
 
-  // --- S-05: comments thread -----------------------------------------------------------------------
+  // The comment thread moved to its own dialog (CommentsComponent, commit 26a676c); this panel is now a
+  // pure edit form, so its former comment-thread tests live with that component, not here.
 
-  function comment(overrides: Partial<Comment>): Comment {
-    return {
-      id: 'c1',
-      body: 'Looks good',
-      kind: 'Member',
-      authorName: 'Molly',
-      createdAtUtc: '2026-06-01T10:00:00Z',
-      ...overrides,
-    };
-  }
-
-  function renderWithComments(comments: Comment[], task = baseTask({ canEdit: true })) {
-    configure(task);
-    getComments.mockReturnValue(of(comments));
-    const fixture = TestBed.createComponent(TaskDetailComponent);
-    fixture.detectChanges();
-    return fixture;
-  }
-
-  it('lists comments with author/time and flags the send-back kind', () => {
-    const el = renderWithComments([
-      comment({ id: 'c1', body: 'On it', authorName: 'Molly', kind: 'Member' }),
-      comment({ id: 'c2', body: 'Please redo', authorName: 'Arthur', kind: 'SendBack' }),
-    ]).nativeElement as HTMLElement;
-
-    expect(el.querySelectorAll('.comment').length).toBe(2);
-    expect(el.textContent).toContain('Molly');
-    expect(el.textContent).toContain('On it');
-    expect(el.querySelector('.comment--sendback')).not.toBeNull();
-    expect(el.querySelector('.comment-tag')?.textContent?.trim()).toBe('Sent back');
-  });
-
-  it('shows the empty state when there are no comments', () => {
-    const el = renderWithComments([]).nativeElement as HTMLElement;
-    expect(el.querySelector('.comments-empty')?.textContent).toContain('No comments yet');
-  });
-
-  it('disables Post and does not call addComment while the input is empty', () => {
-    const fixture = renderWithComments([]);
-    const el = fixture.nativeElement as HTMLElement;
-    const post = el.querySelector('.comment-form button[type="submit"]') as HTMLButtonElement;
-    expect(post.disabled).toBe(true);
-
-    fixture.componentInstance.postComment();
-    expect(addComment).not.toHaveBeenCalled();
-  });
-
-  it('a valid post calls addComment and re-lists the thread', () => {
-    const fixture = renderWithComments([]);
-    expect(getComments).toHaveBeenCalledTimes(1);
-
-    fixture.componentInstance.newComment.setValue('Nice work');
-    fixture.componentInstance.postComment();
-
-    expect(addComment).toHaveBeenCalledWith('t1', 'Nice work');
-    // The thread re-lists after a successful post.
-    expect(getComments).toHaveBeenCalledTimes(2);
-  });
-
-  it('submitting the composer posts via the service and prevents native navigation', () => {
-    const fixture = renderWithComments([]);
-    const el = fixture.nativeElement as HTMLElement;
-
-    fixture.componentInstance.newComment.setValue('Via the form');
-    fixture.detectChanges();
-
-    const form = el.querySelector('.comment-form') as HTMLFormElement;
-    const submit = new Event('submit', { cancelable: true });
-    form.dispatchEvent(submit);
-
-    // The bare <form> has no formGroup, so the component must intercept submit itself: post + no reload.
-    expect(addComment).toHaveBeenCalledWith('t1', 'Via the form');
-    expect(submit.defaultPrevented).toBe(true);
-  });
-
-  it('preventDefault is a no-op when postComment is called without an event', () => {
-    const fixture = renderWithComments([]);
-    fixture.componentInstance.newComment.setValue('No event');
-    expect(() => fixture.componentInstance.postComment()).not.toThrow();
-    expect(addComment).toHaveBeenCalledWith('t1', 'No event');
-  });
-
-  it('an admin (canEdit) sees the edit form and the comment input', () => {
-    const el = renderWithComments([], baseTask({ canEdit: true })).nativeElement as HTMLElement;
-    expect(el.querySelector('#detail-title')).not.toBeNull();
-    expect(el.querySelector('.comment-form textarea')).not.toBeNull();
-  });
-
-  it('a read-only (non-admin) member sees static fields but can still comment', () => {
-    const el = renderWithComments([], baseTask({ status: 'InProgress', canEdit: false }))
-      .nativeElement as HTMLElement;
+  it('a read-only (non-admin) member sees static fields and no comment composer here', () => {
+    const el = render(baseTask({ status: 'InProgress', canEdit: false })).nativeElement as HTMLElement;
     expect(el.querySelector('#detail-title')).toBeNull();
     expect(el.querySelector('.task-detail-readonly')).not.toBeNull();
-    expect(el.querySelector('.comment-form textarea')).not.toBeNull();
+    expect(el.querySelector('.comment-form')).toBeNull();
   });
 });

@@ -1,0 +1,68 @@
+<section class="members">
+  <h1 class="members-title">Members</h1>
+
+  @if (error(); as message) {
+    <p class="members-error" role="alert">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="members-loading">Loading members…</p>
+  } @else {
+    <ul class="member-list">
+      @for (member of roster(); track member.userId) {
+        <li class="member-row">
+          <div class="member-identity">
+            <span class="member-avatar" aria-hidden="true">{{ initialOf(member) }}</span>
+            <div class="member-text">
+              <span class="member-name">
+                {{ member.displayName }}
+                @if (member.isSelf) {
+                  <span class="member-you">(you)</span>
+                }
+              </span>
+              <span class="member-email">{{ member.email }}</span>
+            </div>
+          </div>
+
+          <div class="member-meta">
+            <span class="role-badge" [class.role-badge--admin]="member.role === 'Admin'">
+              {{ member.role }}
+            </span>
+
+            @if (member.canManage) {
+              <div class="member-actions">
+                @if (member.role === 'Member') {
+                  <button
+                    type="button"
+                    class="btn btn--small"
+                    [disabled]="pending() === member.userId"
+                    (click)="promote(member)"
+                  >
+                    Make admin
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--small btn--ghost"
+                    [disabled]="pending() === member.userId"
+                    (click)="demote(member)"
+                  >
+                    Remove admin
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="btn btn--small btn--danger"
+                  [disabled]="pending() === member.userId"
+                  (click)="remove(member)"
+                >
+                  Remove
+                </button>
+              </div>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

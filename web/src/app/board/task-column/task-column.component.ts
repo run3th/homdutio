@@ -28,6 +28,7 @@ export class TaskColumnComponent {
   @Output() readonly dragStart = new EventEmitter<void>();
   @Output() readonly dragEnd = new EventEmitter<void>();
   @Output() readonly openDetail = new EventEmitter<Task>();
+  @Output() readonly openComments = new EventEmitter<Task>();
   @Output() readonly claim = new EventEmitter<Task>();
   @Output() readonly markDone = new EventEmitter<Task>();
   @Output() readonly confirm = new EventEmitter<Task>();

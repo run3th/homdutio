@@ -1,0 +1,17 @@
+<section
+  class="remove-confirm"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="remove-confirm-heading"
+>
+  <h2 id="remove-confirm-heading" class="remove-confirm-title">Remove member?</h2>
+  <p class="remove-confirm-body">
+    “{{ member.displayName }}” will be removed from the household and lose access to its board. Any task
+    they're working on returns to “To do”. This can't be undone.
+  </p>
+
+  <div class="actions">
+    <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+    <button type="button" class="btn btn--danger" (click)="confirm()">Remove</button>
+  </div>
+</section>
