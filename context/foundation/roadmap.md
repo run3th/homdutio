@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-06-11
+updated: 2026-06-12
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -37,11 +37,11 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | S-02  | household-and-board           | create a household (become admin) and see the empty shared board       | S-01          | FR-004, FR-017, NFR-2                             | done     |
 | S-03  | accountability-loop           | create → claim → mark done → admin-confirm a task into a closed record | S-02          | US-01, FR-010, FR-013, FR-014, FR-015, FR-016, FR-018, NFR-3 | done     |
 | S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | done     |
-| S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | proposed |
+| S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | done     |
 | S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | done     |
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
-| S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | proposed |
+| S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | done     |
 | S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | done     |
 | S-11  | ui-redesign                   | see a polished, minimalist board UI (sidebar + topbar shell, Claude-style cards) | S-02, S-03, S-04, S-06 | NFR-2                                  | done     |
 
@@ -193,7 +193,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Closes the two failure modes the lifecycle creates — stuck-in-progress (unclaim) and sloppy-work disputes (send-back). Both transitions must extend, not overwrite, the audit trail (NFR-3). Off the north-star path but needed before real-household use to keep the board honest.
-- **Status:** proposed
+- **Delivered (2026-06-11):** The two FR-022/FR-023 transitions — **unclaim** (claimer frees a stuck in-progress task) and admin **send-back** (Done → In progress with a short comment, original claimer preserved) — both extending the `TaskEvent` audit trail, not overwriting it (NFR-3). **Scope expanded by explicit product decision (2026-06-11)** to a **full free-form task-comments feature** (any member, anytime; immutable thread; 💬 count badge + author/timestamp history in the detail dialog) plus **admin-anytime task-field editing**. This **overrides two settled boundaries**: the PRD Non-Goal *"No comments, multimedia, or chat on tasks"* (see Parked) and FR-011's *"any member edits while in To-do"* (now admin-only, any column). Closed out with **Phases 1–4 only**; Phase 5 (charter reconciliation of PRD/contract-surfaces docs) was intentionally skipped, so the PRD Non-Goal and FR-011 wording still describe pre-S-05 behavior. Commits `a018354` (p1) / `ab19d26` (p2) / `d682f31` (p3) / `ed411ab` (p4) / `3a8303c` (epilogue). Not yet archived.
+- **Status:** done
 
 ### S-06: Invite and multiplayer board
 
@@ -243,7 +244,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Both FRs are nice-to-have, so this is sequenced last and gates nothing on the north-star path. Needs members to manage, hence the S-06 prerequisite.
-- **Status:** proposed
+- **Delivered (2026-06-12):** Admin can view the household roster and **promote a member to admin**, **demote an admin back to member** (role-string flip, no migration), and **remove a member** — removal deletes the `HouseholdMember` row while preserving durable task attribution (NFR-3) and sweeps the removed member's in-progress tasks back to To do. Roster + role/remove endpoints (p1) and the Members page + sidebar nav (p2); impl-review hardened the role/remove guards. Commits `3a3e7b5` (p1) / `44df789` (p2) / `83c620d` (epilogue) / `3ef31d5` (impl-review fixes). Not yet archived.
+- **Status:** done
 
 ### S-10: Session persistence (refresh-token flow)
 
@@ -287,13 +289,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-02       | household-and-board           | Create household + empty mobile-first kanban board          | done                  | Delivered 2026-06-01 (`b2173c2`/`9523d78`/`d027b35`); not yet archived |
 | S-03       | accountability-loop           | Task lifecycle: create → claim → done → admin-confirm        | done                  | North star; delivered 2026-06-01 (`d0b3b71`/`8e4a601`/`9a3e3a2`/`07843f8`); not yet archived |
 | S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | done                  | Delivered 2026-06-02 (`9349a6f`/`34ac8b6`/`7ce9c22`); not yet archived |
-| S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | yes                   | S-03 done; transitions must extend the audit trail (NFR-3) |
+| S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | done                  | Delivered 2026-06-11 (`a018354`/`ab19d26`/`d682f31`/`ed411ab`/`3a8303c`); scope expanded to full task-comments + admin edit (overrides PRD Non-Goal + FR-011); Phase 5 charter-reconcile skipped; not yet archived |
 | S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | done                  | Delivered 2026-06-02 (`aa1fbba`/`26f2e31`/`35a44e1`/`ff85332`); folds in F-03; not yet archived |
 | S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | yes                   | S-03 done; worst-bug guardrail |
 | S-08       | password-reset                | Password reset via emailed link                             | yes                   | S-01 done; email via SendGrid (Open Q #2 resolved) |
-| S-09       | member-administration         | Admin promote / remove member                               | yes                   | S-06 done; nice-to-have |
-| S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | planned               | Planned 2026-06-08; un-defers F-02 refresh/revocation; refresh token in `localStorage` (not httpOnly cookie) — XSS trade accepted, mitigated by rotation/replay + short access TTL |
-| S-11       | ui-redesign                   | Rebuild board UI: Claude/Scanye-inspired minimalist redesign | yes                  | Reskin of shipped board/task/invite surfaces (no API change); design must host S-04/S-05/S-06/S-09 affordances + keep NFR-2 ≤400px; components: sidebar/topbar/task-form/kanban-board/task-column/task-card |
+| S-09       | member-administration         | Admin promote / remove member                               | done                  | Delivered 2026-06-12 (`3a3e7b5`/`44df789`/`83c620d`/`3ef31d5`); promote/demote + remove with in-progress sweep-back; not yet archived |
+| S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | done                  | Delivered + archived 2026-06-11 → `context/archive/2026-06-08-session-persistence/`; refresh token in `localStorage` (XSS trade mitigated by rotation/replay + short access TTL) |
+| S-11       | ui-redesign                   | Rebuild board UI: Claude/Scanye-inspired minimalist redesign | done                 | Delivered + archived 2026-06-11 → `context/archive/2026-06-08-ui-redesign/`; reskin of shipped board/task/invite surfaces (no API change), NFR-2 ≤400px preserved |
 
 This table is the clean handoff to Jira/Linear or any MCP-backed backlog. One row per `F-NN` and `S-NN`.
 
@@ -312,7 +314,7 @@ The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward
 - **Multi-household membership + switcher** — Non-Goal + FR-007: one household per user in v1; switcher is v2.
 - **Child role and parent-managed accounts** — Non-Goal: two roles only in v1; child role + ownership-transfer flow is v2.
 - **Notifications (push / in-app / email)** — Non-Goal: a v2 conversation.
-- **Comments / multimedia / chat on tasks** — Non-Goal: turns tasks into messages; off-charter.
+- **Comments / multimedia / chat on tasks** — ~~Non-Goal~~ **superseded by S-05 (2026-06-11):** free-form text comments now shipped on tasks (multimedia/chat remain out). PRD Non-Goal wording not yet reconciled (S-05 Phase 5 skipped).
 - **Recurring / scheduled tasks** — Non-Goal: adds a scheduler + template model that doubles scope.
 - **AI-generated tasks or AI ranking** — Non-Goal: not part of the v1 accountability rule.
 - **Gamification / points / leaderboard** — Non-Goal: engagement feature that doesn't serve accountability.
