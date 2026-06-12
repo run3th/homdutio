@@ -202,28 +202,28 @@ None. No schema change — promote/demote updates `HouseholdMember.Role` (alread
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 Tests pass: `dotnet test`
-- [x] 1.3 No new migration generated: `dotnet ef migrations list` unchanged
+- [x] 1.1 Solution builds: `dotnet build` — 3a3e7b5
+- [x] 1.2 Tests pass: `dotnet test` — 3a3e7b5
+- [x] 1.3 No new migration generated: `dotnet ef migrations list` unchanged — 3a3e7b5
 
 #### Manual
 
-- [x] 1.4 Roster returns correct `isSelf`/`canManage` flags for admin vs member token
-- [x] 1.5 Promote/demote round-trips; last-admin and self-actions refused with clear message
-- [x] 1.6 Removing a member with an in-progress task returns it to To do; closed-task audit unchanged
+- [x] 1.4 Roster returns correct `isSelf`/`canManage` flags for admin vs member token — 3a3e7b5
+- [x] 1.5 Promote/demote round-trips; last-admin and self-actions refused with clear message — 3a3e7b5
+- [x] 1.6 Removing a member with an in-progress task returns it to To do; closed-task audit unchanged — 3a3e7b5
 
 ### Phase 2: Frontend — Members page + sidebar nav
 
 #### Automated
 
-- [ ] 2.1 SPA builds: `npm run build`
-- [ ] 2.2 Unit tests pass: `npm test`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 SPA builds: `npm run build`
+- [x] 2.2 Unit tests pass: `npm test`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 "Members" sidebar item routes to the household roster
-- [ ] 2.5 Admin can promote/demote (immediate) and remove (confirm dialog drops the member)
-- [ ] 2.6 Last-admin and self-actions prevented with the server message shown inline
-- [ ] 2.7 Non-admin sees a read-only roster
-- [ ] 2.8 No horizontal scroll at ≤400px (NFR-2)
+- [x] 2.4 "Members" sidebar item routes to the household roster
+- [x] 2.5 Admin can promote/demote (immediate) and remove (confirm dialog drops the member)
+- [x] 2.6 Last-admin and self-actions prevented with the server message shown inline
+- [x] 2.7 Non-admin sees a read-only roster
+- [x] 2.8 No horizontal scroll at ≤400px (NFR-2)
