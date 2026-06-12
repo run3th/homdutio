@@ -221,6 +221,23 @@ public class HouseholdMemberAdminTests : IClassFixture<AuthApiFactory>
     }
 
     [Fact]
+    public async Task Role_change_with_an_undefined_role_value_returns_400()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("badrole-admin"));
+        var householdId = await CreateHouseholdAsync(adminToken, "Bad Role House");
+
+        var memberEmail = NewEmail("badrole-member");
+        await RegisterAndLoginAsync(memberEmail);
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+        var memberId = await UserIdByEmailAsync(memberEmail);
+
+        // "5" parses via Enum.TryParse but is not a defined HouseholdRole — must be rejected, not persisted.
+        var resp = await SetRoleAsync(adminToken, memberId, "5");
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
     public async Task NonAdmin_role_change_returns_403()
     {
         var adminToken = await RegisterAndLoginAsync(NewEmail("na-admin"));
@@ -341,6 +358,30 @@ public class HouseholdMemberAdminTests : IClassFixture<AuthApiFactory>
         Assert.Null(task.ClaimedById);
         Assert.Null(task.ClaimedAtUtc);
         Assert.True(await db.TaskEvents.AnyAsync(e => e.TaskId == taskId && e.Type == TaskEventType.Unclaimed));
+    }
+
+    [Fact]
+    public async Task Admin_can_remove_another_admin_while_one_remains()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("rm2-admin"));
+        var householdId = await CreateHouseholdAsync(adminToken, "Two Admins House");
+
+        // Promote a second member to admin, then remove them — the household keeps the original admin, so
+        // the last-admin guard must NOT trip. Exercises the transactional remove-admin path.
+        var otherEmail = NewEmail("rm2-other");
+        await RegisterAndLoginAsync(otherEmail);
+        await SeedMemberAsync(otherEmail, householdId, HouseholdRole.Member);
+        var otherId = await UserIdByEmailAsync(otherEmail);
+        (await SetRoleAsync(adminToken, otherId, "Admin")).EnsureSuccessStatusCode();
+
+        var remove = await RemoveAsync(adminToken, otherId);
+
+        Assert.Equal(HttpStatusCode.NoContent, remove.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.HouseholdMembers.AnyAsync(m => m.UserId == otherId));
+        Assert.Equal(1, await db.HouseholdMembers.CountAsync(m => m.HouseholdId == householdId && m.Role == HouseholdRole.Admin));
     }
 
     [Fact]

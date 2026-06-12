@@ -2,7 +2,7 @@
 change-id: member-administration
 roadmap-id: S-09
 title: Member administration — admin promote/demote and remove
-status: implemented
+status: impl_reviewed
 created: 2026-06-12
 updated: 2026-06-12
 prd-refs: [FR-008, FR-009]
