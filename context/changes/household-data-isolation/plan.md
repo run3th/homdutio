@@ -302,24 +302,24 @@ None — no schema change, no migration.
 
 #### Automated
 
-- [x] 1.1 All new isolation tests pass: `dotnet test tests/Homdutio.Api.Tests`
-- [x] 1.2 The full suite stays green: `dotnet test`
-- [x] 1.3 `done` and `confirm` foreign-household 404 cases now exist and pass
+- [x] 1.1 All new isolation tests pass: `dotnet test tests/Homdutio.Api.Tests` — f0722ce
+- [x] 1.2 The full suite stays green: `dotnet test` — f0722ce
+- [x] 1.3 `done` and `confirm` foreign-household 404 cases now exist and pass — f0722ce
 
 #### Manual
 
-- [x] 1.4 Reviewer confirms every household-scoped endpoint is represented in the sweep
+- [x] 1.4 Reviewer confirms every household-scoped endpoint is represented in the sweep — f0722ce
 
 ### Phase 2: Extract the shared scoping helper
 
 #### Automated
 
-- [ ] 2.1 The full suite stays green with zero test changes: `dotnet test`
-- [ ] 2.2 Build is clean with no dead-code warnings: `dotnet build`
+- [x] 2.1 The full suite stays green with zero test changes: `dotnet test`
+- [x] 2.2 Build is clean with no dead-code warnings: `dotnet build`
 
 #### Manual
 
-- [ ] 2.3 Reviewer confirms one `CallerContext` + one scoping helper; no handler branch logic changed
+- [x] 2.3 Reviewer confirms one `CallerContext` + one scoping helper; no handler branch logic changed
 
 ### Phase 3: Route-coverage convention guard
 

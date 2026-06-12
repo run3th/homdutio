@@ -191,7 +191,7 @@ public static class HouseholdEndpoints
         // re-deriving authorization (mirrors the affordance flags on TaskResponse, S-09).
         group.MapGet("/members", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveCallerAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
@@ -228,7 +228,7 @@ public static class HouseholdEndpoints
         // cannot change their own role, and the last admin cannot be demoted (would orphan the household).
         group.MapPost("/members/{userId}/role", async (string userId, UpdateMemberRoleRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveCallerAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
@@ -307,7 +307,7 @@ public static class HouseholdEndpoints
         // as the membership delete, so no task is ever left claimed by a non-member.
         group.MapDelete("/members/{userId}", async (string userId, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveCallerAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
@@ -363,25 +363,6 @@ public static class HouseholdEndpoints
         });
 
         return app;
-    }
-
-    /// <summary>
-    /// Resolves the caller's household membership from the JWT <c>sub</c> claim. Null when they have no
-    /// membership — surfaced by callers as 404, consistent with the foreign-household rule.
-    /// </summary>
-    private static async Task<CallerContext?> ResolveCallerAsync(ClaimsPrincipal principal, ApplicationDbContext db)
-    {
-        var userId = principal.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(userId))
-        {
-            return null;
-        }
-
-        var member = await db.HouseholdMembers
-            .AsNoTracking()
-            .SingleOrDefaultAsync(m => m.UserId == userId);
-
-        return member is null ? null : new CallerContext(member.HouseholdId, member.Role, userId);
     }
 
     /// <summary>
@@ -447,8 +428,6 @@ public static class HouseholdEndpoints
 
         return (max ?? -1) + 1;
     }
-
-    private sealed record CallerContext(Guid HouseholdId, HouseholdRole Role, string UserId);
 
     /// <summary>An invite is valid for this window after creation (FR-005 time-expiry bound).</summary>
     private static readonly TimeSpan InviteLifetime = TimeSpan.FromDays(7);

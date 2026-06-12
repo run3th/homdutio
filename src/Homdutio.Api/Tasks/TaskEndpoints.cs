@@ -24,7 +24,7 @@ public static class TaskEndpoints
         // GET /api/tasks — the caller's open board: every non-closed task in their household.
         group.MapGet("/", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
@@ -47,7 +47,7 @@ public static class TaskEndpoints
         // POST /api/tasks — create a task in the caller's household; it lands unassigned in To do.
         group.MapPost("/", async (CreateTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
@@ -88,13 +88,13 @@ public static class TaskEndpoints
         // POST /api/tasks/{id}/claim — a To-do task → In progress, carrying the claimer.
         group.MapPost("/{id:guid}/claim", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -122,13 +122,13 @@ public static class TaskEndpoints
         // POST /api/tasks/{id}/done — the claimer marks their In-progress task Done.
         group.MapPost("/{id:guid}/done", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -160,13 +160,13 @@ public static class TaskEndpoints
         // POST /api/tasks/{id}/confirm — an admin confirms a Done task, closing it off the board.
         group.MapPost("/{id:guid}/confirm", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -202,13 +202,13 @@ public static class TaskEndpoints
         // The claimer frees a task they can't finish, or any admin frees one whose claimer has gone absent.
         group.MapPost("/{id:guid}/unclaim", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -243,13 +243,13 @@ public static class TaskEndpoints
         // (FR-023, S-05). The original claimer stays attached; the reason enters the comment thread atomically.
         group.MapPost("/{id:guid}/sendback", async (Guid id, SendBackRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -301,13 +301,13 @@ public static class TaskEndpoints
         // PUT /api/tasks/{id} — edit a task's title/description/category; admin-only, any column (FR-011, S-05).
         group.MapPut("/{id:guid}", async (Guid id, UpdateTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -340,13 +340,13 @@ public static class TaskEndpoints
         // DELETE /api/tasks/{id} — remove a mistaken/obsolete task while it is still un-claimed (FR-012).
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -368,7 +368,7 @@ public static class TaskEndpoints
         // PUT /api/tasks/order — persist a new within-column order from a drag, shared across the household (FR-021).
         group.MapPut("/order", async (ReorderRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
@@ -409,13 +409,13 @@ public static class TaskEndpoints
         // POST /api/tasks/{id}/comments — any household member posts an immutable comment on a task (S-05).
         group.MapPost("/{id:guid}/comments", async (Guid id, CreateCommentRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -450,13 +450,13 @@ public static class TaskEndpoints
         // GET /api/tasks/{id}/comments — the task's full thread, oldest first, with author display names.
         group.MapGet("/{id:guid}/comments", async (Guid id, ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
-            var caller = await ResolveMemberAsync(principal, db);
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
             {
                 return Results.NotFound();
             }
 
-            var task = await LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
             if (task is null)
             {
                 return Results.NotFound();
@@ -489,29 +489,6 @@ public static class TaskEndpoints
 
         return (max ?? -1) + 1;
     }
-
-    /// <summary>
-    /// Resolves the caller's household membership from the JWT <c>sub</c>. Null when they have no
-    /// membership — surfaced by callers as 404 (no board), consistent with the foreign-household rule.
-    /// </summary>
-    private static async Task<CallerContext?> ResolveMemberAsync(ClaimsPrincipal principal, ApplicationDbContext db)
-    {
-        var userId = principal.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(userId))
-        {
-            return null;
-        }
-
-        var member = await db.HouseholdMembers
-            .AsNoTracking()
-            .SingleOrDefaultAsync(m => m.UserId == userId);
-
-        return member is null ? null : new CallerContext(member.HouseholdId, member.Role, userId);
-    }
-
-    /// <summary>Loads a task scoped to the caller's household — foreign or missing id → null (no existence leak).</summary>
-    private static Task<HouseholdTask?> LoadScopedTaskAsync(ApplicationDbContext db, Guid id, Guid householdId) =>
-        db.HouseholdTasks.SingleOrDefaultAsync(t => t.Id == id && t.HouseholdId == householdId);
 
     /// <summary>Resolves the display names referenced by a set of tasks (creator + claimer) in one query — no N+1.</summary>
     private static async Task<Dictionary<string, string>> ResolveNamesAsync(
@@ -619,8 +596,6 @@ public static class TaskEndpoints
             canSendBack,
             counts.TryGetValue(task.Id, out var commentCount) ? commentCount : 0);
     }
-
-    private sealed record CallerContext(Guid HouseholdId, HouseholdRole Role, string UserId);
 }
 
 public sealed record CreateTaskRequest(string Title, string? Description, string? Category);
