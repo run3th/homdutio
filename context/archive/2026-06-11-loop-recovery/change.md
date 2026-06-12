@@ -1,9 +1,10 @@
 ---
 change_id: loop-recovery
 title: Loop recovery + task comments — unclaim, admin send-back, free-form comments (S-05)
-status: implemented
+status: archived
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-12
+archived_at: 2026-06-12T12:27:36Z
 ---
 
 ## Notes
