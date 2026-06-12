@@ -39,7 +39,7 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | S-04  | task-management-and-priority  | edit, delete, and reorder tasks to manage and prioritise the backlog   | S-03          | FR-011, FR-012, FR-021                            | done     |
 | S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | done     |
 | S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | done     |
-| S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | proposed |
+| S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | done     |
 | S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | done     |
 | S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | done     |
@@ -219,7 +219,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Cross-household leakage is the worst-possible bug per the PRD guardrails. Scoping must be built into every query and endpoint from the first one in S-03 — this slice exists to *harden and verify* that boundary across all surfaces (foreign-ID not-found, invite-token scoping from S-06), not to add it as an afterthought.
-- **Status:** proposed
+- **Status:** done
 
 ### S-08: Password reset
 
@@ -337,3 +337,4 @@ The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward
 - **S-10: A logged-in user stays authenticated across a full page reload instead of being bounced to `/login`. The SPA keeps the access token in memory but, on startup, silently re-mints a short-lived access token from a persisted refresh token — so a refresh, a reopened tab, or a returning session resumes without re-entering the password.** — Archived 2026-06-11 → `context/archive/2026-06-08-session-persistence/`. Lesson: —.
 - **S-11: A household member sees the board, task cards, add-task form, and member/invite controls rendered in a polished, minimalist UI — a persistent sidebar + topbar shell, a pastel palette, soft shadows and rounded cards — replacing the bare v1 shell.** — Archived 2026-06-11 → `context/archive/2026-06-08-ui-redesign/`. Lesson: —.
 - **S-09: An admin can promote an adult member to admin and remove an adult member from the household.** — Archived 2026-06-12 → `context/archive/2026-06-12-member-administration/`. Lesson: —.
+- **S-07: A user can view, create, claim, or confirm only their own household's tasks; a request for a foreign household's task returns not-found (no existence leak) and invite tokens grant access to exactly one household.** — Archived 2026-06-12 → `context/archive/2026-06-12-household-data-isolation/`. Lesson: —.

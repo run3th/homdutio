@@ -1,9 +1,10 @@
 ---
 change_id: household-data-isolation
 title: Household data isolation — harden + verify no cross-household leakage (S-07)
-status: impl_reviewed
+status: archived
 created: 2026-06-12
 updated: 2026-06-12
+archived_at: 2026-06-12T13:38:58Z
 ---
 
 ## Notes
