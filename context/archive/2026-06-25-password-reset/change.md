@@ -2,9 +2,10 @@
 change-id: password-reset
 roadmap-id: S-08
 title: Password reset — request an emailed link and set a new password
-status: impl_reviewed
+status: archived
 created: 2026-06-25
 updated: 2026-06-25
+archived_at: 2026-06-25T14:38:32Z
 prd-refs: [FR-020]
 prerequisites: [S-01]
 ---

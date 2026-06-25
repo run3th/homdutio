@@ -3,7 +3,7 @@ project: Homdutio
 version: 1
 status: draft
 created: 2026-05-29
-updated: 2026-06-12
+updated: 2026-06-25
 prd_version: 1
 main_goal: market-feedback
 top_blocker: capacity
@@ -40,7 +40,7 @@ Homdutio is a shared-household chore board where every action — create, claim,
 | S-05  | loop-recovery                 | unclaim a stuck task; admin can send sloppy work back with a comment   | S-03          | FR-022, FR-023                                    | done     |
 | S-06  | invite-and-multiplayer-board  | invite a second adult who joins and shares one live board              | S-02, F-03    | US-02, FR-005, FR-006, FR-007, NFR-1              | done     |
 | S-07  | household-data-isolation      | be certain no one sees another household's tasks                       | S-03          | US-02, FR-019                                     | done     |
-| S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | proposed |
+| S-08  | password-reset                | reset a forgotten password via an emailed link                         | S-01          | FR-020                                            | done     |
 | S-09  | member-administration         | (admin) promote a member to admin and remove a member                  | S-06          | FR-008, FR-009                                    | done     |
 | S-10  | session-persistence           | stay logged in across a page reload (refresh-token flow)               | S-01          | Access Control                                    | done     |
 | S-11  | ui-redesign                   | see a polished, minimalist board UI (sidebar + topbar shell, Claude-style cards) | S-02, S-03, S-04, S-06 | NFR-2                                  | done     |
@@ -232,7 +232,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:** —
 - **Decision (2026-05-30, REVERSED 2026-06-25):** ~~SendGrid~~ → **Azure Communication Services Email.** The 2026-05-30 choice was SendGrid, chosen over ACS because ACS was thought to require a verified sender *domain* while SendGrid offers single-sender verification. On 2026-06-25 this reversed to ACS Email: ACS's **Azure-managed domain** provides a free `*.azurecomm.net` sender subdomain with no DNS/domain ownership, dissolving the original objection, and ACS wins on first-party Azure co-location, no third-party account, and **managed-identity (Entra ID) auth — no connection string or key anywhere**. The trade is that managed-domain sends may land in spam until a custom domain is verified (deferred). The App Service managed identity is granted access to the ACS resource; the app reads only the non-secret `AcsEmail:Endpoint` + `AcsEmail:SenderAddress`. Implemented in S-08 Phase 1 via `Azure.Communication.Email` + `Azure.Identity` (`DefaultAzureCredential`).
 - **Risk:** The only email pipeline in v1 (every other path is out-of-band by Non-Goal) — keep it to one provider, reset-only, so it does not balloon into a general email surface. Connecting the ACS Email resource + managed domain is the one setup step; consider a custom verified domain later only if deliverability needs it.
-- **Status:** proposed
+- **Status:** done
 
 ### S-09: Member administration
 
@@ -335,6 +335,7 @@ The PRD's own `## Open Questions` are all marked RESOLVED, so none carry forward
 - **S-05: The claimer of an in-progress task can unclaim it back to "To do", and an admin reviewing a "Done" task can send it back to "In progress" with a short comment, keeping the original claimer attached.** — Archived 2026-06-12 → `context/archive/2026-06-11-loop-recovery/`. Lesson: scope expanded to full task-comments + admin edit, overriding the PRD Non-Goal & FR-011; Phase 5 charter-reconciliation skipped, so PRD docs still describe pre-S-05 behavior.
 - **S-06: A member can generate a single-use invite link; a second adult opening it joins the household (creating an account in the same flow if needed, bound to exactly one household), and both members see the shared board update within 5 seconds.** — Archived 2026-06-11 → `context/archive/2026-06-02-invite-and-multiplayer-board/`. Lesson: —.
 - **S-10: A logged-in user stays authenticated across a full page reload instead of being bounced to `/login`. The SPA keeps the access token in memory but, on startup, silently re-mints a short-lived access token from a persisted refresh token — so a refresh, a reopened tab, or a returning session resumes without re-entering the password.** — Archived 2026-06-11 → `context/archive/2026-06-08-session-persistence/`. Lesson: —.
+- **S-08: A registered user can request a password-reset email and set a new password from the emailed link.** — Archived 2026-06-25 → `context/archive/2026-06-25-password-reset/`. Lesson: —.
 - **S-11: A household member sees the board, task cards, add-task form, and member/invite controls rendered in a polished, minimalist UI — a persistent sidebar + topbar shell, a pastel palette, soft shadows and rounded cards — replacing the bare v1 shell.** — Archived 2026-06-11 → `context/archive/2026-06-08-ui-redesign/`. Lesson: —.
 - **S-09: An admin can promote an adult member to admin and remove an adult member from the household.** — Archived 2026-06-12 → `context/archive/2026-06-12-member-administration/`. Lesson: —.
 - **S-07: A user can view, create, claim, or confirm only their own household's tasks; a request for a foreign household's task returns not-found (no existence leak) and invite tokens grant access to exactly one household.** — Archived 2026-06-12 → `context/archive/2026-06-12-household-data-isolation/`. Lesson: —.
