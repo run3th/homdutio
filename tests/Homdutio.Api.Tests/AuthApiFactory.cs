@@ -1,9 +1,11 @@
+using Homdutio.Api.Email;
 using Homdutio.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Homdutio.Api.Tests;
 
@@ -13,7 +15,7 @@ namespace Homdutio.Api.Tests;
 /// audience supplied via in-memory configuration. Migrations are applied on first use; the database
 /// is dropped on disposal so runs are isolated and repeatable.
 /// </summary>
-public sealed class AuthApiFactory : WebApplicationFactory<Program>
+public class AuthApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
 
@@ -23,6 +25,12 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         _connectionString =
             $@"Server=(localdb)\MSSQLLocalDB;Database={databaseName};Trusted_Connection=True;MultipleActiveResultSets=true";
     }
+
+    /// <summary>Captures the reset link/token instead of sending, so reset tests can read what the endpoint built.</summary>
+    public CapturingEmailSender EmailSender { get; } = new();
+
+    /// <summary>Forgot-password rate-limit threshold for the test host. High by default so functional tests never trip it; a derived host lowers it to assert the 429.</summary>
+    protected virtual int ForgotPasswordPermitLimit => 1000;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -37,7 +45,15 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"] = "homdutio-test",
                 ["Jwt:SigningKey"] = "homdutio-integration-test-signing-key-0123456789",
                 ["Jwt:AccessTokenMinutes"] = "120",
+                ["RateLimiting:ForgotPassword:PermitLimit"] = ForgotPasswordPermitLimit.ToString(),
             });
+        });
+
+        // Swap the real ACS sender for a capturing fake — no email ever leaves the test host.
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(EmailSender);
         });
     }
 

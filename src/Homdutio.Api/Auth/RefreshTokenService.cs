@@ -118,6 +118,32 @@ public sealed class RefreshTokenService
         }
     }
 
+    /// <summary>
+    /// Password reset (S-08): revoke every live refresh token across <b>all</b> families for the user, so a
+    /// reset (often post-compromise) boots every active session — each must re-authenticate with the new
+    /// password. Unlike <see cref="RevokeFamilyAsync(string,CancellationToken)"/> this is not scoped to one
+    /// login lineage.
+    /// </summary>
+    public async Task RevokeAllForUserAsync(string userId, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var live = await _db.RefreshTokens
+            .Where(r => r.UserId == userId && r.RevokedAtUtc == null)
+            .ToListAsync(ct);
+
+        if (live.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var token in live)
+        {
+            token.RevokedAtUtc = now;
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
     /// <summary>Stamps <see cref="RefreshToken.RevokedAtUtc"/> on every not-yet-revoked row in the family.</summary>
     private async Task RevokeFamilyAsync(Guid familyId, CancellationToken ct)
     {

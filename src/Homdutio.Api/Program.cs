@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Homdutio.Api.Auth;
 using Homdutio.Api.Email;
 using Homdutio.Api.Households;
@@ -7,6 +8,7 @@ using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Azure.Communication.Email;
 using Azure.Identity;
@@ -42,7 +44,14 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.SignIn.RequireConfirmedAccount = false;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddSignInManager();
+    .AddSignInManager()
+    // Required for UserManager.GeneratePasswordResetTokenAsync (S-08) — without it the reset endpoints
+    // throw "No IUserTwoFactorTokenProvider named 'Default' is registered" at runtime.
+    .AddDefaultTokenProviders();
+
+// Reset links are valid for 1 hour. This governs all DataProtector tokens, which is fine — password
+// reset is the only one in use.
+builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromHours(1));
 
 builder.Services.AddHttpContextAccessor();
 
@@ -99,6 +108,30 @@ else
     builder.Services.AddScoped<IEmailSender, AcsEmailSender>();
 }
 
+// Per-IP fixed-window cap on the unauthenticated forgot-password endpoint (email bombing / ACS send
+// quota). The limit is bound via IOptions and read inside the policy (per request, lazily) so the
+// test host's config override applies — an eager read here would run before WebApplicationFactory
+// merges its overrides. Forgiving for humans, still bounds abuse.
+builder.Services.Configure<ForgotPasswordRateLimitOptions>(
+    builder.Configuration.GetSection(ForgotPasswordRateLimitOptions.SectionName));
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(RateLimitPolicies.ForgotPassword, httpContext =>
+    {
+        var limits = httpContext.RequestServices
+            .GetRequiredService<IOptions<ForgotPasswordRateLimitOptions>>().Value;
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = limits.PermitLimit,
+                Window = TimeSpan.FromSeconds(limits.WindowSeconds),
+                QueueLimit = 0,
+            });
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -114,6 +147,9 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Before endpoint mapping so the forgot-password policy applies to that route.
+app.UseRateLimiter();
 
 // Mapped before the SPA fallback so these routes return their payloads, not index.html.
 app.MapHealthChecks("/health");

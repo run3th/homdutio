@@ -1,6 +1,9 @@
 using System.Security.Claims;
+using System.Text;
+using Homdutio.Api.Email;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Homdutio.Api.Auth;
 
@@ -95,8 +98,89 @@ public static class AuthEndpoints
                 principal.FindFirstValue("email"))))
             .RequireAuthorization();
 
+        // Forgotten-password recovery (S-08). Only an existing account gets a token + email; the response
+        // is the same generic 200 regardless of account existence or send outcome (anti-enumeration).
+        group.MapPost("/forgot-password", async (
+            ForgotPasswordRequest request,
+            UserManager<ApplicationUser> users,
+            IEmailSender emailSender,
+            IConfiguration configuration,
+            ILoggerFactory loggerFactory) =>
+        {
+            var user = await users.FindByEmailAsync(request.Email);
+            if (user is not null)
+            {
+                var token = await users.GeneratePasswordResetTokenAsync(user);
+                // Identity's token is not URL-safe — Base64Url-encode it for the query string, and
+                // URL-encode the email. reset-password reverses both before ResetPasswordAsync.
+                var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+                var baseUrl = (configuration["AppBaseUrl"] ?? string.Empty).TrimEnd('/');
+                var link = $"{baseUrl}/reset-password?email={Uri.EscapeDataString(request.Email)}&token={encodedToken}";
+
+                var sent = await emailSender.SendPasswordResetAsync(request.Email, link);
+                if (!sent)
+                {
+                    // Logged, never surfaced — a failed send must not become an enumeration signal.
+                    loggerFactory.CreateLogger("Homdutio.Api.Auth.PasswordReset")
+                        .LogError("Password-reset email send failed.");
+                }
+            }
+
+            return Results.Ok(new ForgotPasswordResponse(
+                "If an account exists for that email, a password reset link has been sent."));
+        })
+        .RequireRateLimiting(RateLimitPolicies.ForgotPassword);
+
+        // Sets a new password from the emailed link. One generic failure for both unknown-user and
+        // invalid/expired token (anti-enumeration); password-policy errors are surfaced so the user can
+        // fix them. On success every active session for the account is revoked.
+        group.MapPost("/reset-password", async (
+            ResetPasswordRequest request,
+            UserManager<ApplicationUser> users,
+            RefreshTokenService refreshTokens) =>
+        {
+            string token;
+            try
+            {
+                token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
+            }
+            catch (FormatException)
+            {
+                return InvalidResetLink();
+            }
+
+            var user = await users.FindByEmailAsync(request.Email);
+            if (user is null)
+            {
+                return InvalidResetLink();
+            }
+
+            var result = await users.ResetPasswordAsync(user, token, request.NewPassword);
+            if (result.Succeeded)
+            {
+                await refreshTokens.RevokeAllForUserAsync(user.Id);
+                return Results.Ok();
+            }
+
+            // Invalid/expired token → generic failure; weak-password (policy) errors → surfaced.
+            if (result.Errors.Any(e => e.Code == "InvalidToken"))
+            {
+                return InvalidResetLink();
+            }
+
+            return Results.ValidationProblem(
+                result.Errors.ToDictionary(e => e.Code, e => new[] { e.Description }));
+        });
+
         return app;
     }
+
+    /// <summary>The single generic reset failure — identical for unknown-user and invalid/expired token, so neither leaks account existence.</summary>
+    private static IResult InvalidResetLink() =>
+        Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["token"] = ["This password reset link is invalid or has expired."],
+        });
 
     /// <summary>The portion of an email before the <c>@</c> — the display-name fallback. Returns the input unchanged when there is no <c>@</c>.</summary>
     private static string LocalPartOf(string email)
@@ -120,3 +204,29 @@ public sealed record RefreshRequest(string RefreshToken);
 public sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc, string RefreshToken);
 
 public sealed record MeResponse(string? Sub, string? Email);
+
+public sealed record ForgotPasswordRequest(string Email);
+
+public sealed record ForgotPasswordResponse(string Message);
+
+public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);
+
+/// <summary>Named rate-limiting policies, shared between registration (Program.cs) and endpoint mapping.</summary>
+public static class RateLimitPolicies
+{
+    public const string ForgotPassword = "forgot-password";
+}
+
+/// <summary>
+/// Forgot-password rate-limit settings bound from <c>RateLimiting:ForgotPassword</c> (non-secret,
+/// committed in appsettings.json). Read via <c>IOptions</c> inside the policy so config overrides
+/// (e.g. the test host) apply.
+/// </summary>
+public sealed class ForgotPasswordRateLimitOptions
+{
+    public const string SectionName = "RateLimiting:ForgotPassword";
+
+    public int PermitLimit { get; set; } = 5;
+
+    public int WindowSeconds { get; set; } = 900;
+}
