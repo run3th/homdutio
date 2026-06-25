@@ -138,15 +138,15 @@ NuGet package to `Homdutio.Api.csproj`.
 
 **File**: `src/Homdutio.Api/Email/AcsEmailOptions.cs` (new), `src/Homdutio.Api/appsettings.json`
 
-**Intent**: Bind an `AcsEmail` config section (`Endpoint`, `SenderAddress`) — both non-secret but
-resource-specific, so set per environment (user-secrets / appsettings.Development locally, App
-Service settings in prod) rather than hardcoded — plus an `AppBaseUrl` key used to build the reset
-link. Auth is by managed identity (no key/connection string). Commit only placeholders in `appsettings.json`.
+**Intent**: Bind an `AcsEmail` config section (`Endpoint`, `SenderAddress`) — both **non-secret**, so
+committed in `appsettings.json` like `Jwt:Issuer`/`Audience` — plus an `AppBaseUrl` key used to build
+the reset link. Auth is by managed identity (no key/connection string). `appsettings.Development.json`
+blanks `AcsEmail:Endpoint` so local dev and the test host fall back to the no-op sender.
 
 **Contract**: `AcsEmailOptions { SectionName = "AcsEmail"; Endpoint; SenderAddress }` mirroring
-`JwtOptions`. `AppBaseUrl` lives as a top-level config key. `appsettings.json` gains an `AcsEmail`
-block with empty/placeholder `Endpoint`+`SenderAddress` and `AppBaseUrl`; the real resource values
-are supplied per environment.
+`JwtOptions`. `AppBaseUrl` lives as a top-level config key. `appsettings.json` carries the real
+non-secret `AcsEmail` `Endpoint`+`SenderAddress` and `AppBaseUrl`; `appsettings.Development.json`
+overrides `Endpoint` to empty (→ no-op sender locally + tests).
 
 #### 4. DI registration + dev/test fake
 
@@ -420,9 +420,9 @@ granted access to the ACS resource (Entra ID auth — no connection string/key);
 
 #### Automated
 
-- [x] 1.1 Solution builds: `dotnet build`
-- [x] 1.2 Existing tests still pass: `dotnet test`
-- [x] 1.3 Unit test asserts reset email body contains the link and targets the recipient
+- [x] 1.1 Solution builds: `dotnet build` — 447fbd3
+- [x] 1.2 Existing tests still pass: `dotnet test` — 447fbd3
+- [x] 1.3 Unit test asserts reset email body contains the link and targets the recipient — 447fbd3
 
 #### Manual
 
