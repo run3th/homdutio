@@ -1,11 +1,12 @@
+using System.Net;
 using Homdutio.Api.Email;
 
 namespace Homdutio.Api.Tests;
 
 /// <summary>
 /// Unit-tests the pure reset-email composition (no live ACS client): the built message must target
-/// the requested recipient, send from the configured address, and carry the pre-built reset link in
-/// both the plain-text and HTML body.
+/// the requested recipient, send from the configured address, carry the raw link in the plain-text
+/// body, and carry the HTML-encoded link in the HTML body (defense-in-depth against markup injection).
 /// </summary>
 public class AcsEmailSenderTests
 {
@@ -25,7 +26,8 @@ public class AcsEmailSenderTests
         Assert.Equal(Options.SenderAddress, message.SenderAddress);
         Assert.Equal(recipient, Assert.Single(message.Recipients.To).Address);
 
+        // Plain text carries the raw link; HTML carries the HTML-encoded link (the `&` becomes `&amp;`).
         Assert.Contains(resetLink, message.Content.PlainText);
-        Assert.Contains(resetLink, message.Content.Html);
+        Assert.Contains(WebUtility.HtmlEncode(resetLink), message.Content.Html);
     }
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using Azure;
 using Azure.Communication.Email;
 using Microsoft.Extensions.Options;
@@ -60,10 +61,13 @@ public sealed class AcsEmailSender(
             $"Use this link to choose a new password (valid for 1 hour):\n{resetLink}\n\n" +
             "If you didn't request this, you can safely ignore this email.";
 
+        // HTML-encode the link before embedding it in markup — orthogonal to the caller's URL-encoding,
+        // so this primitive is safe even if a future caller passes a less-sanitized link.
+        var encodedLink = WebUtility.HtmlEncode(resetLink);
         var html =
             "<p>We received a request to reset your Homdutio password.</p>" +
             $"<p>Use this link to choose a new password (valid for 1 hour):<br>" +
-            $"<a href=\"{resetLink}\">{resetLink}</a></p>" +
+            $"<a href=\"{encodedLink}\">{encodedLink}</a></p>" +
             "<p>If you didn't request this, you can safely ignore this email.</p>";
 
         var content = new EmailContent(subject)
