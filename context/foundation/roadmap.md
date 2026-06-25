@@ -1,7 +1,7 @@
 ---
 project: Homdutio
 version: 1
-status: draft
+status: delivered
 created: 2026-05-29
 updated: 2026-06-25
 prd_version: 1
@@ -291,8 +291,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-04       | task-management-and-priority  | Edit/delete tasks + drag-reorder priority                   | done                  | Delivered 2026-06-02 (`9349a6f`/`34ac8b6`/`7ce9c22`); not yet archived |
 | S-05       | loop-recovery                 | Unclaim + admin send-back with comment                      | done                  | Delivered 2026-06-11 (`a018354`/`ab19d26`/`d682f31`/`ed411ab`/`3a8303c`); scope expanded to full task-comments + admin edit (overrides PRD Non-Goal + FR-011); Phase 5 charter-reconcile skipped; not yet archived |
 | S-06       | invite-and-multiplayer-board  | Single-use invite, join, live shared board                  | done                  | Delivered 2026-06-02 (`aa1fbba`/`26f2e31`/`35a44e1`/`ff85332`); folds in F-03; not yet archived |
-| S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | yes                   | S-03 done; worst-bug guardrail |
-| S-08       | password-reset                | Password reset via emailed link                             | yes                   | S-01 done; email via Azure Communication Services Email (switched from SendGrid 2026-06-25; see Open Q #2) |
+| S-07       | household-data-isolation      | Enforce + verify no cross-household leakage                 | done                  | Delivered + archived 2026-06-12 → `context/archive/2026-06-12-household-data-isolation/`; worst-bug guardrail |
+| S-08       | password-reset                | Password reset via emailed link                             | done                  | Delivered + archived 2026-06-25 → `context/archive/2026-06-25-password-reset/`; email via Azure Communication Services Email + managed identity (switched from SendGrid 2026-06-25; see Open Q #2) |
 | S-09       | member-administration         | Admin promote / remove member                               | done                  | Delivered 2026-06-12 (`3a3e7b5`/`44df789`/`83c620d`/`3ef31d5`); promote/demote + remove with in-progress sweep-back; not yet archived |
 | S-10       | session-persistence           | Refresh-token flow: survive reload, no re-login             | done                  | Delivered + archived 2026-06-11 → `context/archive/2026-06-08-session-persistence/`; refresh token in `localStorage` (XSS trade mitigated by rotation/replay + short access TTL) |
 | S-11       | ui-redesign                   | Rebuild board UI: Claude/Scanye-inspired minimalist redesign | done                 | Delivered + archived 2026-06-11 → `context/archive/2026-06-08-ui-redesign/`; reskin of shipped board/task/invite surfaces (no API change), NFR-2 ≤400px preserved |
