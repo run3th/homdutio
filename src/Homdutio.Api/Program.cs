@@ -1,5 +1,6 @@
 using System.Text;
 using Homdutio.Api.Auth;
+using Homdutio.Api.Email;
 using Homdutio.Api.Households;
 using Homdutio.Api.Tasks;
 using Homdutio.Data;
@@ -7,6 +8,8 @@ using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Azure.Communication.Email;
+using Azure.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -76,6 +79,25 @@ builder.Services.AddSingleton<JwtTokenService>();
 // Scoped (not singleton like JwtTokenService) because it depends on the scoped ApplicationDbContext —
 // token minting is stateless, but refresh persistence is per-request DB work.
 builder.Services.AddScoped<RefreshTokenService>();
+
+// Email is reset-only (S-08), the single permitted v1 transactional email. The live Azure
+// Communication Services sender is selected only when an endpoint is configured (App Service setting
+// in prod, optionally user-secrets locally); otherwise — local dev and the integration-test host — a
+// no-op sender logs the link instead of sending, so nothing user-facing depends on a live provider
+// or an ACS resource. Auth is by Entra ID / managed identity (DefaultAzureCredential): the App
+// Service's managed identity is granted access to the ACS resource — no connection string or key.
+builder.Services.Configure<AcsEmailOptions>(builder.Configuration.GetSection(AcsEmailOptions.SectionName));
+
+var acsEndpoint = builder.Configuration[$"{AcsEmailOptions.SectionName}:{nameof(AcsEmailOptions.Endpoint)}"];
+if (string.IsNullOrWhiteSpace(acsEndpoint))
+{
+    builder.Services.AddScoped<IEmailSender, NoOpEmailSender>();
+}
+else
+{
+    builder.Services.AddSingleton(new EmailClient(new Uri(acsEndpoint), new DefaultAzureCredential()));
+    builder.Services.AddScoped<IEmailSender, AcsEmailSender>();
+}
 
 var app = builder.Build();
 
