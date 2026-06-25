@@ -9,7 +9,7 @@ namespace Homdutio.Api.Email;
 /// plus a plain-text and minimal HTML body carrying the reset link, sends from the verified
 /// <see cref="AcsEmailOptions.SenderAddress"/>, and on a failed request logs and returns
 /// <c>false</c> — the caller still returns a generic 200 (enumeration safety). Registered only when
-/// an <see cref="AcsEmailOptions.ConnectionString"/> is configured; otherwise
+/// an <see cref="AcsEmailOptions.Endpoint"/> is configured (auth is by managed identity); otherwise
 /// <see cref="NoOpEmailSender"/> is used.
 /// </summary>
 public sealed class AcsEmailSender(
@@ -34,6 +34,14 @@ public sealed class AcsEmailSender(
         {
             // No body/recipient detail logged — the failure is operational, not user-facing.
             logger.LogError(ex, "Azure Communication Services rejected the password-reset email (status {Status}).", ex.Status);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Any other send failure (credential acquisition, transport, timeout) is swallowed and
+            // reported as failure too — a thrown exception would 500 the forgot-password request only
+            // for a known email, which is itself an account-enumeration signal.
+            logger.LogError(ex, "Sending the password-reset email failed.");
             return false;
         }
     }

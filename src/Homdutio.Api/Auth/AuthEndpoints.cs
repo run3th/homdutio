@@ -163,6 +163,9 @@ public static class AuthEndpoints
             }
 
             // Invalid/expired token → generic failure; weak-password (policy) errors → surfaced.
+            // Depends on Identity's stable "InvalidToken" error code (IdentityErrorDescriber). If that
+            // code ever changed, a bad token would fall through to ValidationProblem and surface
+            // token-validity detail — never account existence — so the fallback stays enumeration-safe.
             if (result.Errors.Any(e => e.Code == "InvalidToken"))
             {
                 return InvalidResetLink();

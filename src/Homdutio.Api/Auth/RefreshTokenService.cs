@@ -127,21 +127,13 @@ public sealed class RefreshTokenService
     public async Task RevokeAllForUserAsync(string userId, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
-        var live = await _db.RefreshTokens
+        // Single atomic UPDATE — no load→save window for a concurrent rotation to race (and no row
+        // materialization). ExecuteUpdate bypasses the change tracker, which is fine here: revoke is an
+        // unconditional stamp, not a RowVersion-guarded mutation. One statement, so the retrying
+        // execution strategy handles it without a user-initiated transaction.
+        await _db.RefreshTokens
             .Where(r => r.UserId == userId && r.RevokedAtUtc == null)
-            .ToListAsync(ct);
-
-        if (live.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var token in live)
-        {
-            token.RevokedAtUtc = now;
-        }
-
-        await _db.SaveChangesAsync(ct);
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.RevokedAtUtc, now), ct);
     }
 
     /// <summary>Stamps <see cref="RefreshToken.RevokedAtUtc"/> on every not-yet-revoked row in the family.</summary>

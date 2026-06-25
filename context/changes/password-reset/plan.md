@@ -433,19 +433,19 @@ granted access to the ACS resource (Entra ID auth — no connection string/key);
 
 #### Automated
 
-- [x] 2.1 Solution builds: `dotnet build`
-- [x] 2.2 forgot-password returns identical 200 for known and unknown email
-- [x] 2.3 Known email triggers the fake sender, capturing a non-empty link/token
-- [x] 2.4 reset-password with captured token + valid new password returns 200 and new password logs in
-- [x] 2.5 reset-password with invalid/expired token returns a generic failure (no enumeration)
-- [x] 2.6 reset-password with a weak new password returns `ValidationProblem`
-- [x] 2.7 After a successful reset, a previously issued refresh token is rejected
-- [x] 2.8 forgot-password is rate-limited (429 after threshold)
+- [x] 2.1 Solution builds: `dotnet build` — 6a7324a
+- [x] 2.2 forgot-password returns identical 200 for known and unknown email — 6a7324a
+- [x] 2.3 Known email triggers the fake sender, capturing a non-empty link/token — 6a7324a
+- [x] 2.4 reset-password with captured token + valid new password returns 200 and new password logs in — 6a7324a
+- [x] 2.5 reset-password with invalid/expired token returns a generic failure (no enumeration) — 6a7324a
+- [x] 2.6 reset-password with a weak new password returns `ValidationProblem` — 6a7324a
+- [x] 2.7 After a successful reset, a previously issued refresh token is rejected — 6a7324a
+- [x] 2.8 forgot-password is rate-limited (429 after threshold) — 6a7324a
 
 #### Manual
 
-- [x] 2.9 End-to-end against LocalDB + real ACS: request → email → reset → log in
-- [x] 2.10 A reset link older than 1 hour is rejected with the generic failure
+- [x] 2.9 End-to-end against LocalDB + real ACS: request → email → reset → log in — 6a7324a
+- [x] 2.10 A reset link older than 1 hour is rejected with the generic failure — 6a7324a
 
 ### Phase 3: SPA Reset Flow
 
