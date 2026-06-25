@@ -6,15 +6,18 @@ import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
 /**
- * Auth endpoints whose 401s are normal results, not session-expiry signals: login/register (bad
- * credentials, handled by the forms) and refresh/logout (their own 401 must never trigger another
- * refresh — that would recurse).
+ * Auth endpoints whose 4xx are normal results, not session-expiry signals: login/register (bad
+ * credentials, handled by the forms), refresh/logout (their own 401 must never trigger another
+ * refresh — that would recurse), and forgot/reset-password (their 400/401/429 render inline on the
+ * reset forms; the user is logged out during that flow, so a refresh attempt is meaningless).
  */
 const AUTH_ENDPOINTS = [
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/refresh',
   '/api/auth/logout',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
 ];
 
 /**

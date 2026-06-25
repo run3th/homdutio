@@ -6,7 +6,8 @@ import { of, throwError } from 'rxjs';
 
 import { ActivatedRoute } from '@angular/router';
 
-import { RegisterComponent, passwordPolicyValidator } from './register.component';
+import { RegisterComponent } from './register.component';
+import { passwordPolicyValidator } from '../password-policy.validator';
 import { AuthService } from '../auth.service';
 
 describe('passwordPolicyValidator', () => {

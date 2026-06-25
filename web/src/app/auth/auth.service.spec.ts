@@ -35,6 +35,33 @@ describe('AuthService', () => {
     expect(service.hasRefreshToken).toBe(false);
   });
 
+  it('requestPasswordReset posts the email and touches no auth state', () => {
+    service.requestPasswordReset('user@example.com').subscribe();
+
+    const req = httpMock.expectOne('/api/auth/forgot-password');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ email: 'user@example.com' });
+    req.flush(null);
+
+    expect(service.isAuthenticated()).toBe(false);
+  });
+
+  it('resetPassword posts email+token+newPassword and touches no auth state', () => {
+    service.resetPassword('user@example.com', 'enc-token', 'N3w!Passw0rd').subscribe();
+
+    const req = httpMock.expectOne('/api/auth/reset-password');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      email: 'user@example.com',
+      token: 'enc-token',
+      newPassword: 'N3w!Passw0rd',
+    });
+    req.flush(null);
+
+    expect(service.isAuthenticated()).toBe(false);
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+  });
+
   it('login stores the token, captures the email, persists the refresh token, and flips auth state', () => {
     service.login('user@example.com', 'Passw0rd!').subscribe();
 

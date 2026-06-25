@@ -67,6 +67,24 @@ export class AuthService {
   }
 
   /**
+   * `POST /api/auth/forgot-password` — requests a reset email (S-08). Always 200 with a generic body
+   * regardless of whether the account exists (anti-enumeration), so the caller just shows the same
+   * confirmation. Touches no auth state — the user is logged out during this flow.
+   */
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>('/api/auth/forgot-password', { email });
+  }
+
+  /**
+   * `POST /api/auth/reset-password` — sets a new password from the emailed link's token (S-08). 200 on
+   * success; 400 ValidationProblem for a weak password or an invalid/expired token. Touches no auth
+   * state; the caller routes to `/login` on success so the new credential is exercised explicitly.
+   */
+  resetPassword(email: string, token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>('/api/auth/reset-password', { email, token, newPassword });
+  }
+
+  /**
    * `POST /api/auth/login` — stores the access token + email and persists the refresh token on
    * success; 401 on bad credentials.
    */

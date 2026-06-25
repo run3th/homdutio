@@ -15,6 +15,21 @@ export const routes: Routes = [
       import('./auth/register/register.component').then((m) => m.RegisterComponent),
   },
   {
+    // Public (unguarded) reset flow — reachable while logged out (S-08).
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./auth/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent,
+      ),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./auth/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent,
+      ),
+  },
+  {
     path: 'create-household',
     canActivate: [authGuard, requireNoHousehold],
     loadComponent: () =>

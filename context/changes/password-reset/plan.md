@@ -426,8 +426,8 @@ granted access to the ACS resource (Entra ID auth — no connection string/key);
 
 #### Manual
 
-- [ ] 1.4 `dotnet run` starts with no ACS endpoint and logs (not sends) via the fake sender
-- [ ] 1.5 With a real ACS endpoint + verified sender (host identity granted ACS access), a manual send lands in an inbox
+- [x] 1.4 `dotnet run` starts with no ACS endpoint and logs (not sends) via the fake sender — 447fbd3
+- [x] 1.5 With a real ACS endpoint + verified sender (host identity granted ACS access), a manual send lands in an inbox — 447fbd3
 
 ### Phase 2: Backend Reset Endpoints
 
@@ -451,16 +451,16 @@ granted access to the ACS resource (Entra ID auth — no connection string/key);
 
 #### Automated
 
-- [ ] 3.1 Frontend builds: `npm run build`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 forgot-password component shows the generic confirmation after submit
-- [ ] 3.4 reset-password reads email+token from query, posts them, navigates to `/login` with notice + prefilled email on success
-- [ ] 3.5 reset-password maps a weak-password `ValidationProblem` to inline messages
-- [ ] 3.6 reset-password shows the generic error for a missing/invalid token
-- [ ] 3.7 Both new endpoints present in the interceptor's `AUTH_ENDPOINTS`
+- [x] 3.1 Frontend builds: `npm run build`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 forgot-password component shows the generic confirmation after submit
+- [x] 3.4 reset-password reads email+token from query, posts them, navigates to `/login` with notice + prefilled email on success
+- [x] 3.5 reset-password maps a weak-password `ValidationProblem` to inline messages
+- [x] 3.6 reset-password shows the generic error for a missing/invalid token
+- [x] 3.7 Both new endpoints present in the interceptor's `AUTH_ENDPOINTS`
 
 #### Manual
 
-- [ ] 3.8 Full browser path: login → forgot → email link → reset → login with notice + prefill → log in
-- [ ] 3.9 All four screens usable at ≤400px
-- [ ] 3.10 An expired/tampered link shows the generic error, not an account-existence signal
+- [x] 3.8 Full browser path: login → forgot → email link → reset → login with notice + prefill → log in
+- [x] 3.9 All four screens usable at ≤400px
+- [x] 3.10 An expired/tampered link shows the generic error, not an account-existence signal

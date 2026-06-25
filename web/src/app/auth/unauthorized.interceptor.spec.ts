@@ -82,6 +82,8 @@ describe('unauthorizedInterceptor', () => {
       '/api/auth/register',
       '/api/auth/refresh',
       '/api/auth/logout',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password',
     ]) {
       http.post(url, {}).subscribe({ error: () => {} });
       httpMock.expectOne(url).flush(null, { status: 401, statusText: 'Unauthorized' });
