@@ -451,16 +451,16 @@ granted access to the ACS resource (Entra ID auth — no connection string/key);
 
 #### Automated
 
-- [x] 3.1 Frontend builds: `npm run build`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 forgot-password component shows the generic confirmation after submit
-- [x] 3.4 reset-password reads email+token from query, posts them, navigates to `/login` with notice + prefilled email on success
-- [x] 3.5 reset-password maps a weak-password `ValidationProblem` to inline messages
-- [x] 3.6 reset-password shows the generic error for a missing/invalid token
-- [x] 3.7 Both new endpoints present in the interceptor's `AUTH_ENDPOINTS`
+- [x] 3.1 Frontend builds: `npm run build` — a63f574
+- [x] 3.2 Lint passes: `npm run lint` — a63f574
+- [x] 3.3 forgot-password component shows the generic confirmation after submit — a63f574
+- [x] 3.4 reset-password reads email+token from query, posts them, navigates to `/login` with notice + prefilled email on success — a63f574
+- [x] 3.5 reset-password maps a weak-password `ValidationProblem` to inline messages — a63f574
+- [x] 3.6 reset-password shows the generic error for a missing/invalid token — a63f574
+- [x] 3.7 Both new endpoints present in the interceptor's `AUTH_ENDPOINTS` — a63f574
 
 #### Manual
 
-- [x] 3.8 Full browser path: login → forgot → email link → reset → login with notice + prefill → log in
-- [x] 3.9 All four screens usable at ≤400px
-- [x] 3.10 An expired/tampered link shows the generic error, not an account-existence signal
+- [x] 3.8 Full browser path: login → forgot → email link → reset → login with notice + prefill → log in — a63f574
+- [x] 3.9 All four screens usable at ≤400px — a63f574
+- [x] 3.10 An expired/tampered link shows the generic error, not an account-existence signal — a63f574
