@@ -28,26 +28,12 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
     }
 
     /// <summary>
-    /// Household-scoped routes: a foreign caller must receive 404 / an own-only payload. Each MUST be
-    /// exercised in <see cref="HouseholdIsolationTests"/>.
+    /// Household-scoped routes: a foreign caller must receive 404 / an own-only payload. Derived from the
+    /// shared <see cref="ScopedRouteInventory"/> so the guard's coverage set and the behavioral sweep can
+    /// never disagree about which routes are scoped — a route is "categorized" here iff it is "exercised" in
+    /// <see cref="HouseholdIsolationTests"/>. To add a scoped route, add one descriptor to the inventory.
     /// </summary>
-    private static readonly HashSet<string> Scoped = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "GET /api/tasks",
-        "POST /api/tasks/{id}/claim",
-        "POST /api/tasks/{id}/done",
-        "POST /api/tasks/{id}/confirm",
-        "POST /api/tasks/{id}/unclaim",
-        "POST /api/tasks/{id}/sendback",
-        "PUT /api/tasks/{id}",
-        "DELETE /api/tasks/{id}",
-        "PUT /api/tasks/order",
-        "POST /api/tasks/{id}/comments",
-        "GET /api/tasks/{id}/comments",
-        "GET /api/households/members",
-        "POST /api/households/members/{userId}/role",
-        "DELETE /api/households/members/{userId}",
-    };
+    private static readonly HashSet<string> Scoped = new(ScopedRouteInventory.Keys, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Exempt routes carry no foreign-household-id surface, so the isolation sweep does not apply —
@@ -68,6 +54,12 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
     /// Non-household <c>/api/</c> areas the isolation sweep does not govern. Anything under <c>/api/</c> that
     /// does NOT match one of these prefixes must be categorized Scoped or Exempt — so a household-scoped route
     /// added under a brand-new prefix fails this guard instead of slipping past a hardcoded domain allowlist.
+    ///
+    /// BLIND SPOT (Gap #3): <c>/api/auth</c> is exempt UNCONDITIONALLY — every route under it skips this guard
+    /// AND the isolation sweep. A household-scoped route MUST NEVER be added under <c>/api/auth</c>: it would be
+    /// silently exempted and a foreign household could reach it undetected. Put household-scoped routes under
+    /// <c>/api/tasks</c> or <c>/api/households</c> (or a new prefix, which then surfaces as uncategorized here).
+    /// See test-plan.md §6.1 for the same rule on the authoring side.
     /// </summary>
     private static readonly string[] ExemptPrefixes = { "/api/auth" };
 
