@@ -1,9 +1,9 @@
 ---
 change_id: testing-cross-household-isolation
 title: Cross-household isolation hardening
-status: implementing
+status: implemented
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-06-29
 archived_at: null
 ---
 

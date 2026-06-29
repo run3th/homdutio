@@ -438,10 +438,10 @@ manually beyond the doc read-through.
 
 #### Automated
 
-- [x] 3.1 §6.1 no longer reads `TBD` for the backend integration pattern
-- [x] 3.2 §3 Phase 1 row reads `complete`
+- [x] 3.1 §6.1 no longer reads `TBD` for the backend integration pattern — d2e39d8
+- [x] 3.2 §3 Phase 1 row reads `complete` — d2e39d8
 
 #### Manual
 
-- [x] 3.3 A new reader can add a scoped route knowing to put it in the inventory from §6.1 alone
-- [x] 3.4 The `/api/auth` rule appears in both the guard comment and §6.1
+- [x] 3.3 A new reader can add a scoped route knowing to put it in the inventory from §6.1 alone — d2e39d8
+- [x] 3.4 The `/api/auth` rule appears in both the guard comment and §6.1 — d2e39d8
