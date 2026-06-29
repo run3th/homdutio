@@ -1,31 +1,47 @@
 /* Global styles. Mobile-first; every primary flow must be usable at ≤ 400px (NFR-2). */
 
-/* Self-hosted Inter (variable). Same-origin, works offline; renders the named font instead of
-   the silent system fallback. Imported once here so the whole app gets it. */
-@import '@fontsource-variable/inter';
+/* Self-hosted IBM Plex (the design's typeface). Same-origin, works offline; renders the named
+   font instead of the silent system fallback. Sans for body, Mono for dates/meta/links.
+   Imported once here so the whole app gets it. */
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-sans/700.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
 
 :root {
-  /* Surfaces & neutrals */
-  --color-bg: #f7f7fb; /* app background (lavender-grey) */
+  /* Surfaces & neutrals (mockup blue-greys) */
+  --color-bg: #f4f6f8; /* app background */
   --color-surface: #ffffff; /* cards, columns, dialogs */
-  --color-surface-2: #f4f4f9; /* inset surfaces (a card on a column) */
-  --color-border: #ececf3;
-  --color-text: #1d1c2b;
-  --color-text-muted: #6b6a7b;
-  --color-text-subtle: #9a99a8;
-  /* Primary (soft violet) */
-  --color-primary: #6c5ce7;
-  --color-primary-hover: #5a48d6;
-  --color-primary-soft: #eeebff; /* active nav, chips, role badge */
+  --color-surface-2: #f1f3f6; /* inset surfaces (ghost button, count pill, menu hover) */
+  --color-surface-3: #f7f8fa; /* link box / quote surface */
+  --color-input-bg: #fbfbfc; /* form input fill */
+  --color-border: #e7eaef; /* default hairline */
+  --color-border-strong: #e2e5eb; /* input + emphasized borders */
+  --color-text: #1c2330; /* ink */
+  --color-text-secondary: #3c4554; /* labels, strong body */
+  --color-text-muted: #5a6273; /* muted body */
+  --color-text-subtle: #9aa1ad; /* subtle / placeholder */
+  --color-text-faint: #a2a9b5; /* faint meta (timestamps) */
+  /* Primary (teal) */
+  --color-primary: #2c6e63;
+  --color-primary-hover: #235049;
+  --color-primary-soft: #e3efec; /* active nav, role badge, soft accent fills */
   --color-on-primary: #ffffff;
+  /* Status (board columns + lifecycle) */
+  --color-todo: #b5852f;
+  --color-progress: #2f6b8f;
+  --color-done: #3a7d52;
   /* Accent + semantic (soft pairs: fg / bg) */
-  --color-blue: #5b8def;
+  --color-blue: #2f6b8f;
   --color-blue-soft: #e8f0ff;
-  --color-success: #1f9d63;
-  --color-success-soft: #e6f7ef;
-  --color-danger: #e5484d;
-  --color-danger-soft: #fdecec;
-  --color-warning: #cc8a1a;
+  --color-success: #3a7d52;
+  --color-success-soft: #e4efdc; /* confirmed / done chip */
+  --color-danger: #c1462f;
+  --color-danger-soft: #fbeeeb;
+  --color-danger-soft-hover: #f6ded8;
+  --color-warning: #b5852f;
   --color-warning-soft: #fbf0db; /* reserved: S-05 send-back */
   /* Spacing (4px base) */
   --space-1: 0.25rem;
@@ -36,17 +52,23 @@
   --space-6: 2rem;
   --space-8: 3rem;
   /* Radius */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
+  --radius-sm: 0.625rem; /* 10px — inputs, buttons */
+  --radius-md: 0.75rem; /* 12px — cards */
+  --radius-col: 0.875rem; /* 14px — board columns */
+  --radius-lg: 1rem; /* 16px — modals */
+  --radius-xl: 1.125rem; /* 18px — auth card */
+  --radius-chip: 0.4375rem; /* 7px — tag/role chips */
   --radius-pill: 999px;
-  /* Shadows (soft) */
-  --shadow-sm: 0 1px 2px rgba(29, 28, 43, 0.06), 0 1px 3px rgba(29, 28, 43, 0.08);
-  --shadow-md: 0 4px 12px rgba(29, 28, 43, 0.08);
-  --shadow-lg: 0 12px 32px rgba(29, 28, 43, 0.12);
+  /* Shadows (soft; neutral blue-grey to match --color-text) */
+  --shadow-sm: 0 1px 2px rgba(28, 35, 48, 0.08);
+  --shadow-md: 0 4px 14px rgba(28, 35, 48, 0.07); /* card hover */
+  --shadow-lg: 0 12px 32px rgba(28, 35, 48, 0.16); /* dropdown menu */
+  --shadow-xl: 0 20px 56px rgba(28, 35, 48, 0.24); /* modal */
+  --shadow-card: 0 12px 40px rgba(28, 35, 48, 0.08); /* auth card */
   /* Typography */
   --font-sans:
-    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -58,6 +80,7 @@
   --weight-bold: 700;
   /* Focus + shell metrics */
   --focus-ring: 0 0 0 2px var(--color-primary);
+  /* Shell metrics stay at current values here; Phase 2 (shell rebuild) sets the new ones. */
   --shell-sidebar-w: 4.75rem;
   --shell-topbar-h: 3.5rem;
   --shell-bottombar-h: 3.5rem;
@@ -90,21 +113,24 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-4);
 }
 
 .card {
   width: 100%;
-  max-width: 22rem;
+  max-width: 25.5rem; /* 408px — auth card */
   background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) 2rem;
+  box-shadow: var(--shadow-card);
 }
 
 .card h1 {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-2);
   font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
 }
 
 .field {
@@ -115,21 +141,29 @@ body {
 }
 
 .field label {
-  font-size: var(--text-sm);
+  font-size: 0.78125rem; /* 12.5px */
   font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .field input {
   width: 100%;
-  padding: 0.625rem var(--space-3);
-  font-size: var(--text-base);
-  border: 1px solid var(--color-border);
+  padding: 0.75rem 0.875rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  background: var(--color-input-bg);
+  border: 1.5px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
+}
+
+.field input::placeholder {
+  color: var(--color-text-subtle);
 }
 
 .field input:focus {
   outline: none;
-  box-shadow: var(--focus-ring);
+  background: var(--color-surface);
   border-color: var(--color-primary);
 }
 
@@ -163,19 +197,25 @@ body {
 button[type='submit'],
 .btn {
   width: 100%;
-  padding: 0.7rem var(--space-4);
-  font-size: var(--text-base);
+  padding: 0.8125rem var(--space-4);
+  font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   color: var(--color-on-primary);
   background: var(--color-primary);
   border: 0;
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition:
+    background 0.12s,
+    filter 0.12s,
+    transform 0.12s;
 }
 
 button[type='submit']:hover:not(:disabled),
 .btn:hover:not(:disabled) {
   background: var(--color-primary-hover);
+  transform: translateY(-1px);
 }
 
 button[type='submit']:disabled {
@@ -186,5 +226,12 @@ button[type='submit']:disabled {
 .alt-link {
   margin: var(--space-4) 0 0;
   font-size: var(--text-sm);
+  color: var(--color-text-muted);
   text-align: center;
+}
+
+.alt-link a,
+.alt-link button {
+  color: var(--color-primary);
+  font-weight: var(--weight-semibold);
 }
