@@ -88,7 +88,9 @@ public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
             }
             catch (Exception ex)
             {
-                failures.Add($"{route.Key} [{route.Behavior}]: {ex.Message}");
+                // Prefix the exception type so triage can tell an isolation-assertion failure
+                // (XunitException) from an infrastructure/wiring throw (e.g. HttpRequestException).
+                failures.Add($"{route.Key} [{route.Behavior}]: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

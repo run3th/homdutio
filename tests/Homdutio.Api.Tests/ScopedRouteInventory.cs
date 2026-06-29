@@ -20,8 +20,10 @@ namespace Homdutio.Api.Tests;
 public static class ScopedRouteInventory
 {
     /// <summary>
-    /// The foreign-caller shape a scoped route exhibits. The sweep switches exhaustively on this — a new
-    /// value without a matching case fails to compile, so a route can never be swept the wrong way silently.
+    /// The foreign-caller shape a scoped route exhibits. The sweep dispatches on this; a new value with no
+    /// matching arm falls through the switch's discard arm and throws at runtime, turning the sweep red
+    /// (the project does not treat warnings as errors, so this runtime backstop — not a compile error — is
+    /// the enforcement). A route can never be swept the wrong way without the suite catching it.
     /// </summary>
     public enum Behavior
     {
@@ -114,6 +116,11 @@ public static class ScopedRouteInventory
         new ScopedRoute("GET", "/api/households/members", IdShape.None, Behavior.OwnOnlyCollection),
 
         // --- Member administration (foreign-id 404 + body parity) ------------------------------------
+        // NOTE: unlike the task routes (scoped lookup first), these two handlers run their admin gate
+        // (403) BEFORE the scoped target lookup (404). Their foreign-id parity therefore holds only
+        // because House B's sweep caller is an admin of House B (BuildHouseBAsync creates the household,
+        // making its caller an admin). If that fixture ever seeds a non-admin caller, these flip to 403
+        // and the parity assertion fails loud — correct, but for a confusing reason.
         new ScopedRoute("POST", "/api/households/members/{userId}/role", IdShape.MemberId, Behavior.ParityNotFound,
             () => new { role = "Admin" }),
         new ScopedRoute("DELETE", "/api/households/members/{userId}", IdShape.MemberId, Behavior.ParityNotFound),
