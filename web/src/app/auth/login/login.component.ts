@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../auth.service';
+import { AuthLogoComponent } from '../auth-logo.component';
 
 /** State handed off from RegisterComponent via the Router navigation `state`. */
 interface PostRegisterState {
@@ -12,7 +13,7 @@ interface PostRegisterState {
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthLogoComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -44,6 +45,12 @@ export class LoginComponent {
   /** Generic, field-less credential error (no leak of which field was wrong). */
   readonly error = signal<string | null>(null);
   readonly pending = signal(false);
+  /** Drives the password input's show/hide toggle (presentational only). */
+  readonly showPassword = signal(false);
+
+  togglePassword(): void {
+    this.showPassword.update((shown) => !shown);
+  }
 
   constructor() {
     // Read once at construction (during the activating navigation); never lands in the URL.

@@ -181,15 +181,17 @@ describe('TaskCardComponent', () => {
     expect(items).not.toContain('Send back');
   });
 
-  it('renders the 💬 comment count only when commentCount > 0', () => {
+  it('renders the comment count as a text label (singular vs plural), matching the mockup', () => {
     const fixture = render(baseTask({ commentCount: 0 }));
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.task-comment-count')).toBeNull();
+    expect(el.querySelector('.task-comment-count')?.textContent?.trim()).toBe('0 comments');
+
+    fixture.componentRef.setInput('task', baseTask({ commentCount: 1 }));
+    fixture.detectChanges();
+    expect(el.querySelector('.task-comment-count')?.textContent?.trim()).toBe('1 comment');
 
     fixture.componentRef.setInput('task', baseTask({ commentCount: 3 }));
     fixture.detectChanges();
-    const badge = el.querySelector('.task-comment-count');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('3');
+    expect(el.querySelector('.task-comment-count')?.textContent?.trim()).toBe('3 comments');
   });
 });

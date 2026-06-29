@@ -7,7 +7,7 @@ import { of, throwError } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 
 import { RegisterComponent } from './register.component';
-import { passwordPolicyValidator } from '../password-policy.validator';
+import { passwordPolicyValidator, passwordRuleChecklist } from '../password-policy.validator';
 import { AuthService } from '../auth.service';
 
 describe('passwordPolicyValidator', () => {
@@ -18,6 +18,32 @@ describe('passwordPolicyValidator', () => {
   it('flags a password missing required character classes', () => {
     const result = passwordPolicyValidator(new FormControl('weak'));
     expect(result?.['passwordPolicy']).toBeTruthy();
+  });
+});
+
+describe('passwordRuleChecklist', () => {
+  it('marks every rule unmet for an empty value', () => {
+    const rules = passwordRuleChecklist('');
+    expect(rules).toHaveLength(4);
+    expect(rules.every((r) => !r.met)).toBe(true);
+  });
+
+  it('marks every rule met for a fully compliant password', () => {
+    expect(passwordRuleChecklist('Passw0rd!').every((r) => r.met)).toBe(true);
+  });
+
+  it('combines upper+lower into a single rule that needs both cases', () => {
+    const upperOnly = passwordRuleChecklist('PASSWORD0!');
+    const caseRule = upperOnly[1];
+    expect(caseRule.label).toContain('uppercase and a lowercase');
+    expect(caseRule.met).toBe(false);
+  });
+
+  it('flags length, digit, and symbol rules independently', () => {
+    const [length, , digit, symbol] = passwordRuleChecklist('Ab1');
+    expect(length.met).toBe(false); // 3 chars
+    expect(digit.met).toBe(true);
+    expect(symbol.met).toBe(false);
   });
 });
 

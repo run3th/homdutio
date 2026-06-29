@@ -1,15 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../auth.service';
 import { mapValidationProblem } from '../validation-problem';
-import { passwordPolicyValidator } from '../password-policy.validator';
+import { passwordPolicyValidator, passwordRuleChecklist } from '../password-policy.validator';
+import { AuthLogoComponent } from '../auth-logo.component';
 
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthLogoComponent],
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
 })
@@ -38,6 +40,18 @@ export class RegisterComponent {
   /** Mapped server-side validation messages (duplicate email, weak password, …). */
   readonly serverErrors = signal<string[]>([]);
   readonly pending = signal(false);
+  /** Drives the password input's show/hide toggle (presentational only). */
+  readonly showPassword = signal(false);
+
+  /** Live password-rule checklist, recomputed per keystroke off the password control's value. */
+  private readonly passwordValue = toSignal(this.form.controls.password.valueChanges, {
+    initialValue: '',
+  });
+  readonly passwordRules = computed(() => passwordRuleChecklist(this.passwordValue()));
+
+  togglePassword(): void {
+    this.showPassword.update((shown) => !shown);
+  }
 
   submit(): void {
     if (this.form.invalid || this.pending()) {

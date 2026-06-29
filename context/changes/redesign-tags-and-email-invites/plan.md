@@ -596,28 +596,28 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 4.1 Build, lint, unit tests pass
-- [x] 4.2 No component style exceeds the 8 kB budget
+- [x] 4.1 Build, lint, unit tests pass — 53f30f0
+- [x] 4.2 No component style exceeds the 8 kB budget — 53f30f0
 
 #### Manual
 
-- [x] 4.3 All five dialogs match the mockup; their actions still work
-- [x] 4.4 Invite dialog shows the link box + Copy and copies a working `/join/<token>` link
-- [x] 4.5 Members page matches the mockup; make-admin/remove still work (last-admin guard intact)
+- [x] 4.3 All five dialogs match the mockup; their actions still work — 53f30f0
+- [x] 4.4 Invite dialog shows the link box + Copy and copies a working `/join/<token>` link — 53f30f0
+- [x] 4.5 Members page matches the mockup; make-admin/remove still work (last-admin guard intact) — 53f30f0
 
 ### Phase 5: Auth Screens
 
 #### Automated
 
-- [ ] 5.1 Build, lint, unit tests pass
-- [ ] 5.2 No component style exceeds the 8 kB budget
+- [x] 5.1 Build, lint, unit tests pass
+- [x] 5.2 No component style exceeds the 8 kB budget
 
 #### Manual
 
-- [ ] 5.3 Login/register/forgot/reset match the mockup card design
-- [ ] 5.4 Show/hide toggles password visibility on all password fields
-- [ ] 5.5 Register's rule checklist updates live and matches the enforced policy
-- [ ] 5.6 Forgot shows "Check your inbox" after submit; login works end-to-end
+- [x] 5.3 Login/register/forgot/reset match the mockup card design
+- [x] 5.4 Show/hide toggles password visibility on all password fields
+- [x] 5.5 Register's rule checklist updates live and matches the enforced policy
+- [x] 5.6 Forgot shows "Check your inbox" after submit; login works end-to-end
 
 ### Phase 6: Task Tags (backend + chip input into the redesigned modal)
 

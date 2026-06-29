@@ -3,7 +3,11 @@
 }
 
 .board {
-  max-width: 70rem; /* 1120px (mockup board wrap) */
+  /* content-box so the 1120px cap is the *content* width and the page gutter sits outside it — matching
+     the mockup, where the 30px padding lives on `main` around the centered 1120px board wrap. Under the
+     global border-box the padding would otherwise eat ~60px out of the columns. */
+  box-sizing: content-box;
+  max-width: 70rem; /* 1120px content (mockup board wrap) */
   margin: 0 auto;
   padding: 1.625rem 1.875rem;
 }

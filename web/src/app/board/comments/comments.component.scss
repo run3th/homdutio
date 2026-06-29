@@ -2,31 +2,31 @@
   display: block;
 }
 
-/* The panel (.modal global) is laid out as a column so a long thread scrolls inside the list, not the
-   whole panel — the composer stays reachable at ≤ 400px (NFR-2). The panel's own scroll is suppressed
-   in favour of the inner list's. */
+/* The panel (.modal global) is laid out as a column; a long thread scrolls inside the list (capped at
+   46vh, per the mockup), not the whole panel — so the composer stays reachable at ≤ 400px (NFR-2). */
 .comments {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
+/* Centered empty state with comfortable padding, matching the mockup's "no comments yet" panel. */
 .comments-empty {
-  margin: 0 0 var(--space-3);
+  margin: var(--space-4) 0;
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
 }
 
 .comment-list {
   list-style: none;
-  margin: 0 0 var(--space-3);
+  margin: var(--space-4) 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  /* A long thread scrolls within the panel instead of pushing the composer out of view. */
-  flex: 1 1 auto;
-  min-height: 0;
+  gap: 0.5625rem; /* 9px, per the mockup */
+  /* A long thread scrolls within the list (not the panel), keeping the composer in view. */
+  max-height: 46vh;
   overflow-y: auto;
 }
 

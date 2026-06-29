@@ -95,18 +95,18 @@
 </dl>
 
 <div class="card-footer">
-  <!-- 💬 comment button (S-05) — always available; opens the standalone comments dialog. -->
+  <!-- Comment button (S-05) — always available; opens the standalone comments dialog. Text label
+       (count) matches the mockup; no icon. -->
   <button
     type="button"
     class="task-comment-button"
     (click)="openComments.emit(task)"
-    [attr.aria-label]="task.commentCount > 0 ? task.commentCount + ' comments' : 'Comments'"
+    [attr.aria-label]="task.commentCount === 1 ? '1 comment' : task.commentCount + ' comments'"
     title="Comments"
   >
-    <span class="task-comment-icon" aria-hidden="true">💬</span>
-    @if (task.commentCount > 0) {
-      <span class="task-comment-count">{{ task.commentCount }}</span>
-    }
+    <span class="task-comment-count">{{
+      task.commentCount === 1 ? '1 comment' : task.commentCount + ' comments'
+    }}</span>
   </button>
 
   <!-- Only the primary lifecycle action shows on the card; management actions live in the ⋯ menu. -->
