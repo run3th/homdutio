@@ -11,16 +11,28 @@ namespace Homdutio.Api.Tests;
 /// <summary>
 /// S-07's canonical cross-household isolation sweep — the single auditable place that proves the PRD's
 /// worst-possible-bug guardrail (US-02, FR-019): a member of one household can neither act on, read, nor
-/// infer the existence of another household's data. Every household-scoped route in
-/// <c>TaskEndpoints</c> and <c>HouseholdEndpoints</c> is driven from a foreign household (House B) against
-/// House A's ids and must return 404 / an own-only payload. Two parity tests additionally assert a
-/// foreign-id 404 is byte-indistinguishable from an unknown-id 404 — so the status code can never serve as
-/// an existence oracle. A new household-scoped endpoint should be added here; the S-07 route-coverage guard
-/// (<see cref="RouteIsolationCoverageTests"/>) fails the build if it isn't.
+/// infer the existence of another household's data. The sweep is <b>inventory-driven</b>: it iterates
+/// <see cref="ScopedRouteInventory"/> (the same list the <see cref="RouteIsolationCoverageTests"/> build
+/// guard projects its scoped set from) and drives every entry from a foreign household (House B) against
+/// House A's ids, dispatching on each entry's <see cref="ScopedRouteInventory.Behavior"/>:
+///
+/// <list type="bullet">
+/// <item><c>ParityNotFound</c> — a foreign-id 404 must be byte-indistinguishable from an unknown-id 404
+/// (empty body), so the status code can never serve as an existence oracle (Gap #1).</item>
+/// <item><c>OwnOnlyCollection</c> — a foreign caller's read returns only their own rows (board / roster).</item>
+/// <item><c>MixedBatchRejected</c> — a foreign id mixed into the caller's own batch rejects the whole
+/// request and leaves the caller's order intact.</item>
+/// </list>
+///
+/// Because the sweep iterates the inventory, a route is "exercised" iff it is in the inventory — the same
+/// fact the guard uses for "categorized" (Gap #2). Adding a household-scoped route to the inventory makes
+/// both the guard and this sweep cover it with no second manual step.
 ///
 /// Reuses <see cref="AuthApiFactory"/> and the register → login → create-household → bearer pattern; House A
 /// seeds a task in every lifecycle state plus a second member directly via the DbContext (per the existing
-/// per-file test convention — the test project shares no base class).
+/// per-file test convention — the test project shares no base class). One House A / House B pair is built per
+/// sweep and reused across all entries: every foreign/unknown call resolves no row and therefore mutates
+/// nothing (including DELETE and PUT — they 404 before any write), so the shared fixture stays pristine.
 /// </summary>
 public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
 {
@@ -35,7 +47,133 @@ public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
         _client = factory.CreateClient();
     }
 
+    // --- The sweep -----------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Drives every <see cref="ScopedRouteInventory"/> entry from House B against House A and asserts its
+    /// behavior-appropriate isolation. Per-route failures are aggregated into one descriptive assertion so a
+    /// single run reports every leaking route at once. The explicit loop-count assertion locks Gap #2: the
+    /// sweep visits exactly as many routes as the guard categorizes — no entry can be silently skipped.
+    /// </summary>
+    [Fact]
+    public async Task Every_scoped_route_isolates_across_households()
+    {
+        var a = await BuildHouseAAsync("sweep");
+        var bToken = await BuildHouseBAsync("sweep");
+
+        // B's own data so the collection / batch behaviors have something of B's to assert against. Created
+        // in order, both land in To do — B's board is [bOwn1, bOwn2] and stays that way (nothing mutates it).
+        var bOwn1 = await CreateTaskAsync(bToken, "B1");
+        var bOwn2 = await CreateTaskAsync(bToken, "B2");
+
+        var failures = new List<string>();
+        var exercised = 0;
+
+        foreach (var route in ScopedRouteInventory.All)
+        {
+            exercised++;
+            try
+            {
+                // Exhaustive dispatch on Behavior: a future Behavior value with no arm falls through to the
+                // discard throw below and turns this test red (the project does not treat warnings as errors,
+                // so this runtime backstop — not a compile error — is the strongest enforcement available).
+                Task work = route.Behavior switch
+                {
+                    ScopedRouteInventory.Behavior.ParityNotFound => AssertParityAsync(route, a, bToken),
+                    ScopedRouteInventory.Behavior.OwnOnlyCollection => AssertOwnOnlyCollectionAsync(route, a, bToken, bOwn1),
+                    ScopedRouteInventory.Behavior.MixedBatchRejected => AssertMixedBatchRejectedAsync(route, a, bToken, bOwn1, bOwn2),
+                    _ => throw new InvalidOperationException($"No sweep arm for Behavior.{route.Behavior}"),
+                };
+                await work;
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"{route.Key} [{route.Behavior}]: {ex.Message}");
+            }
+        }
+
+        // Gap #2: every inventory entry was driven — the sweep's reach equals the guard's categorized set.
+        Assert.Equal(ScopedRouteInventory.All.Count, exercised);
+        Assert.True(
+            failures.Count == 0,
+            "Cross-household isolation sweep failed for:" + Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    // --- Behavior assertions -------------------------------------------------------------------------
+
+    /// <summary>
+    /// A foreign-id call and an unknown-id call must be indistinguishable: both 404 with identical (empty)
+    /// bodies (the existence-oracle seal). Locks parity for every <c>ParityNotFound</c> route — including
+    /// unclaim / sendback / comments / role, which previously had only a status-code check or none.
+    /// </summary>
+    private Task AssertParityAsync(ScopedRouteInventory.ScopedRoute route, HouseA a, string bToken)
+    {
+        var (foreignId, unknownId) = route.IdShape switch
+        {
+            // Any of A's task ids 404s for a foreign caller — the scoped lookup fails before any state guard.
+            ScopedRouteInventory.IdShape.TaskId => (a.TodoTaskId.ToString(), Guid.NewGuid().ToString()),
+            ScopedRouteInventory.IdShape.MemberId => (a.MemberId, $"{Guid.NewGuid():N}"),
+            _ => throw new InvalidOperationException($"{route.Key}: ParityNotFound requires a TaskId/MemberId shape."),
+        };
+
+        var method = new HttpMethod(route.Method);
+        var body = route.BodyFactory?.Invoke();
+        return AssertNotFoundParityAsync(method, SubstituteId(route, foreignId), SubstituteId(route, unknownId), bToken, body);
+    }
+
+    /// <summary>
+    /// A foreign caller's collection read returns 200 containing only their own rows — none of House A's data
+    /// leaks. Dispatches on the route template (the two own-only collections are the board and the roster).
+    /// </summary>
+    private async Task AssertOwnOnlyCollectionAsync(ScopedRouteInventory.ScopedRoute route, HouseA a, string bToken, Guid bOwn1)
+    {
+        switch (route.Template)
+        {
+            case "/api/tasks":
+                var board = await GetBoardAsync(bToken);
+                Assert.Contains(board, t => t.Id == bOwn1); // B sees its own board...
+                Assert.DoesNotContain(board, t => t.Id == a.TodoTaskId); // ...and none of A's three tasks.
+                Assert.DoesNotContain(board, t => t.Id == a.InProgressTaskId);
+                Assert.DoesNotContain(board, t => t.Id == a.DoneTaskId);
+                break;
+
+            case "/api/households/members":
+                var roster = await _client.SendAsync(Authed(HttpMethod.Get, route.Template, bToken));
+                roster.EnsureSuccessStatusCode();
+                var rows = (await roster.Content.ReadFromJsonAsync<MemberBody[]>())!;
+                Assert.Single(rows); // B's roster is only B's own admin...
+                Assert.DoesNotContain(rows, m => m.UserId == a.MemberId); // ...neither of A's two members appears.
+                break;
+
+            default:
+                throw new InvalidOperationException($"{route.Key}: no own-only assertion wired for this collection.");
+        }
+    }
+
+    /// <summary>
+    /// A foreign id mixed into B's own reorder batch rejects the whole request (404) and must not corrupt B's
+    /// order — no partial reindex, no leak. (PUT /api/tasks/order is the lone mixed-batch route.)
+    /// </summary>
+    private async Task AssertMixedBatchRejectedAsync(ScopedRouteInventory.ScopedRoute route, HouseA a, string bToken, Guid bOwn1, Guid bOwn2)
+    {
+        var reorder = await _client.SendAsync(Authed(HttpMethod.Put, route.Template, bToken,
+            new { status = "ToDo", orderedIds = new[] { bOwn2, a.TodoTaskId, bOwn1 } }));
+        Assert.Equal(HttpStatusCode.NotFound, reorder.StatusCode);
+
+        // B's board keeps its original creation order — the rejected reorder changed nothing.
+        var board = await GetBoardAsync(bToken);
+        Assert.Equal(new[] { bOwn1, bOwn2 }, board.Select(t => t.Id).ToArray());
+    }
+
     // --- Helpers -------------------------------------------------------------------------------------
+
+    /// <summary>Substitutes the route's id placeholder with a concrete id (foreign or unknown) of its shape.</summary>
+    private static string SubstituteId(ScopedRouteInventory.ScopedRoute route, string id) => route.IdShape switch
+    {
+        ScopedRouteInventory.IdShape.TaskId => route.Template.Replace("{id}", id),
+        ScopedRouteInventory.IdShape.MemberId => route.Template.Replace("{userId}", id),
+        _ => route.Template,
+    };
 
     private async Task<string> RegisterAndLoginAsync(string email, string? displayName = null)
     {
@@ -165,137 +303,6 @@ public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
         Assert.Equal(unknownBody, foreignBody);
         Assert.Equal(string.Empty, foreignBody);
-    }
-
-    // --- Read isolation ------------------------------------------------------------------------------
-
-    [Fact]
-    public async Task Foreign_household_board_never_shows_house_a_tasks()
-    {
-        var a = await BuildHouseAAsync("board");
-        var bToken = await BuildHouseBAsync("board");
-        var bOwn = await CreateTaskAsync(bToken, "B's own task");
-
-        var board = await GetBoardAsync(bToken);
-
-        // B sees only its own task; none of A's three tasks leak onto B's board (US-02 read scoping).
-        Assert.Contains(board, t => t.Id == bOwn);
-        Assert.DoesNotContain(board, t => t.Id == a.TodoTaskId);
-        Assert.DoesNotContain(board, t => t.Id == a.InProgressTaskId);
-        Assert.DoesNotContain(board, t => t.Id == a.DoneTaskId);
-    }
-
-    // --- Task lifecycle isolation --------------------------------------------------------------------
-
-    [Fact]
-    public async Task Every_task_lifecycle_route_returns_404_across_households()
-    {
-        var a = await BuildHouseAAsync("life");
-        var bToken = await BuildHouseBAsync("life");
-
-        // Each transition targets a House A task in the state that transition requires — so the 404 comes
-        // from household scoping, not a state guard. claim/done/confirm fill the previously-untested gaps.
-        Assert.Equal(HttpStatusCode.NotFound, (await ActionAsync(bToken, a.TodoTaskId, "claim")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await ActionAsync(bToken, a.InProgressTaskId, "done")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await ActionAsync(bToken, a.DoneTaskId, "confirm")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await ActionAsync(bToken, a.InProgressTaskId, "unclaim")).StatusCode);
-
-        var sendback = await _client.SendAsync(
-            Authed(HttpMethod.Post, $"/api/tasks/{a.DoneTaskId}/sendback", bToken, new { comment = "not yours" }));
-        Assert.Equal(HttpStatusCode.NotFound, sendback.StatusCode);
-    }
-
-    [Fact]
-    public async Task Task_management_routes_return_404_across_households()
-    {
-        var a = await BuildHouseAAsync("mgmt");
-        var bToken = await BuildHouseBAsync("mgmt");
-        var b1 = await CreateTaskAsync(bToken, "B1");
-        var b2 = await CreateTaskAsync(bToken, "B2");
-
-        var edit = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{a.TodoTaskId}", bToken,
-            new { title = "hijack", description = (string?)null, category = (string?)null }));
-        Assert.Equal(HttpStatusCode.NotFound, edit.StatusCode);
-
-        var delete = await _client.SendAsync(Authed(HttpMethod.Delete, $"/api/tasks/{a.TodoTaskId}", bToken));
-        Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
-
-        // A foreign id mixed into B's own reorder rejects the whole request — no partial reindex, no leak.
-        var reorder = await _client.SendAsync(Authed(HttpMethod.Put, "/api/tasks/order", bToken,
-            new { status = "ToDo", orderedIds = new[] { b2, a.TodoTaskId, b1 } }));
-        Assert.Equal(HttpStatusCode.NotFound, reorder.StatusCode);
-
-        // B's board keeps its original creation order — the failed reorder changed nothing.
-        var board = await GetBoardAsync(bToken);
-        Assert.Equal(new[] { b1, b2 }, board.Select(t => t.Id).ToArray());
-    }
-
-    [Fact]
-    public async Task Comment_routes_return_404_across_households()
-    {
-        var a = await BuildHouseAAsync("cmt");
-        var bToken = await BuildHouseBAsync("cmt");
-
-        var post = await _client.SendAsync(
-            Authed(HttpMethod.Post, $"/api/tasks/{a.TodoTaskId}/comments", bToken, new { body = "sneaking in" }));
-        Assert.Equal(HttpStatusCode.NotFound, post.StatusCode);
-
-        var list = await _client.SendAsync(Authed(HttpMethod.Get, $"/api/tasks/{a.TodoTaskId}/comments", bToken));
-        Assert.Equal(HttpStatusCode.NotFound, list.StatusCode);
-    }
-
-    // --- Member-administration isolation -------------------------------------------------------------
-
-    [Fact]
-    public async Task Member_admin_routes_isolate_across_households()
-    {
-        var a = await BuildHouseAAsync("mem");
-        var bToken = await BuildHouseBAsync("mem");
-
-        // B's roster lists only B's own member (its admin) — neither of A's two members appears.
-        var roster = await _client.SendAsync(Authed(HttpMethod.Get, "/api/households/members", bToken));
-        roster.EnsureSuccessStatusCode();
-        var rows = (await roster.Content.ReadFromJsonAsync<MemberBody[]>())!;
-        Assert.Single(rows);
-        Assert.DoesNotContain(rows, m => m.UserId == a.MemberId);
-
-        // B's admin cannot promote/demote or remove a member of House A — foreign target → 404 (no leak).
-        var role = await _client.SendAsync(
-            Authed(HttpMethod.Post, $"/api/households/members/{a.MemberId}/role", bToken, new { role = "Admin" }));
-        Assert.Equal(HttpStatusCode.NotFound, role.StatusCode);
-
-        var remove = await _client.SendAsync(Authed(HttpMethod.Delete, $"/api/households/members/{a.MemberId}", bToken));
-        Assert.Equal(HttpStatusCode.NotFound, remove.StatusCode);
-    }
-
-    // --- Existence-oracle seal (body-shape parity) ---------------------------------------------------
-
-    [Fact]
-    public async Task Foreign_task_id_404_is_indistinguishable_from_an_unknown_id()
-    {
-        var a = await BuildHouseAAsync("parity-task");
-        var bToken = await BuildHouseBAsync("parity-task");
-        var unknown = Guid.NewGuid();
-
-        await AssertNotFoundParityAsync(HttpMethod.Post, $"/api/tasks/{a.TodoTaskId}/claim", $"/api/tasks/{unknown}/claim", bToken);
-        await AssertNotFoundParityAsync(HttpMethod.Post, $"/api/tasks/{a.InProgressTaskId}/done", $"/api/tasks/{unknown}/done", bToken);
-        await AssertNotFoundParityAsync(HttpMethod.Post, $"/api/tasks/{a.DoneTaskId}/confirm", $"/api/tasks/{unknown}/confirm", bToken);
-        await AssertNotFoundParityAsync(HttpMethod.Put, $"/api/tasks/{a.TodoTaskId}", $"/api/tasks/{unknown}", bToken,
-            new { title = "x", description = (string?)null, category = (string?)null });
-        await AssertNotFoundParityAsync(HttpMethod.Delete, $"/api/tasks/{a.TodoTaskId}", $"/api/tasks/{unknown}", bToken);
-    }
-
-    [Fact]
-    public async Task Foreign_member_id_404_is_indistinguishable_from_an_unknown_id()
-    {
-        var a = await BuildHouseAAsync("parity-mem");
-        var bToken = await BuildHouseBAsync("parity-mem");
-        var unknown = $"{Guid.NewGuid():N}";
-
-        await AssertNotFoundParityAsync(HttpMethod.Post,
-            $"/api/households/members/{a.MemberId}/role", $"/api/households/members/{unknown}/role", bToken, new { role = "Admin" });
-        await AssertNotFoundParityAsync(HttpMethod.Delete,
-            $"/api/households/members/{a.MemberId}", $"/api/households/members/{unknown}", bToken);
     }
 
     private sealed record HouseA(

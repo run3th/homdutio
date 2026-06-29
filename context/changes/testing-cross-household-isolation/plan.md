@@ -411,22 +411,22 @@ manually beyond the doc read-through.
 
 #### Automated
 
-- [x] 1.1 Build passes: `dotnet build`
-- [x] 1.2 Full backend suite green; guard set-equality still holds: `dotnet test tests/Homdutio.Api.Tests`
-- [x] 1.3 Inventory projects to exactly the 14 previously-hardcoded `Scoped` keys
+- [x] 1.1 Build passes: `dotnet build` — 50ad576
+- [x] 1.2 Full backend suite green; guard set-equality still holds: `dotnet test tests/Homdutio.Api.Tests` — 50ad576
+- [x] 1.3 Inventory projects to exactly the 14 previously-hardcoded `Scoped` keys — 50ad576
 
 #### Manual
 
-- [ ] 1.4 Inventory templates match `NormalizePattern` output (`{id}`/`{userId}`, no constraints)
-- [ ] 1.5 Each route's `Behavior` matches its real foreign-caller shape (11 parity / 2 collection / 1 batch)
+- [x] 1.4 Inventory templates match `NormalizePattern` output (`{id}`/`{userId}`, no constraints) — 50ad576
+- [x] 1.5 Each route's `Behavior` matches its real foreign-caller shape (11 parity / 2 collection / 1 batch) — 50ad576
 
 ### Phase 2: Inventory-driven parity + behavior sweep
 
 #### Automated
 
-- [ ] 2.1 Full backend suite green: `dotnet test tests/Homdutio.Api.Tests`
-- [ ] 2.2 Sweep exercises all 14 inventory entries (loop count == `ScopedRouteInventory.Count`, asserted)
-- [ ] 2.3 Parity now asserted for unclaim, sendback, comments POST, comments GET, reorder
+- [x] 2.1 Full backend suite green: `dotnet test tests/Homdutio.Api.Tests`
+- [x] 2.2 Sweep exercises all 14 inventory entries (loop count == `ScopedRouteInventory.Count`, asserted)
+- [x] 2.3 Parity now asserted for unclaim, sendback, comments POST, comments GET, reorder
 
 #### Manual
 
