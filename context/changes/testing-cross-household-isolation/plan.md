@@ -424,24 +424,24 @@ manually beyond the doc read-through.
 
 #### Automated
 
-- [x] 2.1 Full backend suite green: `dotnet test tests/Homdutio.Api.Tests`
-- [x] 2.2 Sweep exercises all 14 inventory entries (loop count == `ScopedRouteInventory.Count`, asserted)
-- [x] 2.3 Parity now asserted for unclaim, sendback, comments POST, comments GET, reorder
+- [x] 2.1 Full backend suite green: `dotnet test tests/Homdutio.Api.Tests` — 913ecf0
+- [x] 2.2 Sweep exercises all 14 inventory entries (loop count == `ScopedRouteInventory.Count`, asserted) — 913ecf0
+- [x] 2.3 Parity now asserted for unclaim, sendback, comments POST, comments GET, reorder — 913ecf0
 
 #### Manual
 
-- [ ] 2.4 Tripwire — parity not vacuous: break one handler's 404 body → sweep red → revert
-- [ ] 2.5 Tripwire — coverage→behavior bridge real: dummy scoped route uncategorized → guard red; added to inventory → sweep drives it; revert
-- [ ] 2.6 Sweep wall-clock acceptable (one House A/House B build)
+- [x] 2.4 Tripwire — parity not vacuous: break one handler's 404 body → sweep red → revert — 913ecf0
+- [x] 2.5 Tripwire — coverage→behavior bridge real: dummy scoped route uncategorized → guard red; added to inventory → sweep drives it; revert — 913ecf0
+- [x] 2.6 Sweep wall-clock acceptable (one House A/House B build) — 913ecf0
 
 ### Phase 3: Cookbook §6 update
 
 #### Automated
 
-- [ ] 3.1 §6.1 no longer reads `TBD` for the backend integration pattern
-- [ ] 3.2 §3 Phase 1 row reads `complete`
+- [x] 3.1 §6.1 no longer reads `TBD` for the backend integration pattern
+- [x] 3.2 §3 Phase 1 row reads `complete`
 
 #### Manual
 
-- [ ] 3.3 A new reader can add a scoped route knowing to put it in the inventory from §6.1 alone
-- [ ] 3.4 The `/api/auth` rule appears in both the guard comment and §6.1
+- [x] 3.3 A new reader can add a scoped route knowing to put it in the inventory from §6.1 alone
+- [x] 3.4 The `/api/auth` rule appears in both the guard comment and §6.1
