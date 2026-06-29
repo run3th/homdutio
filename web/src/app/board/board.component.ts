@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -34,12 +34,19 @@ export class BoardComponent implements OnInit, OnDestroy {
   private readonly tasks = inject(TaskService);
   private readonly dialog = inject(Dialog);
 
-  /** The three fixed board columns: display label + the status they hold (English labels; no i18n in v1). */
-  readonly columns: readonly { label: string; status: TaskStatus }[] = [
-    { label: 'To do', status: 'ToDo' },
-    { label: 'In progress', status: 'InProgress' },
-    { label: 'Done', status: 'Done' },
+  /** The three fixed board columns: label, the status they hold, and the mockup status accent (dot color). */
+  readonly columns: readonly { label: string; status: TaskStatus; accent: string }[] = [
+    { label: 'To do', status: 'ToDo', accent: '#b5852f' },
+    { label: 'In progress', status: 'InProgress', accent: '#2f6b8f' },
+    { label: 'Done', status: 'Done', accent: '#3a7d52' },
   ];
+
+  /** Which column the mobile tab switcher shows (desktop renders all three side by side). */
+  readonly mobileCol = signal<TaskStatus>('ToDo');
+
+  setMobileCol(status: TaskStatus): void {
+    this.mobileCol.set(status);
+  }
 
   /** The caller's open tasks grouped by status, derived from the service signal. */
   private readonly grouped = computed(() => {

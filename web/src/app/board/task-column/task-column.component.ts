@@ -22,6 +22,8 @@ export class TaskColumnComponent {
   @Input({ required: true }) label!: string;
   @Input({ required: true }) status!: TaskStatus;
   @Input({ required: true }) tasks!: Task[];
+  /** The column's status accent (mockup): drives the header dot color. */
+  @Input({ required: true }) accent!: string;
 
   /** A card was dropped within this column — the board computes + persists the new order. */
   @Output() readonly dropped = new EventEmitter<CdkDragDrop<Task[]>>();

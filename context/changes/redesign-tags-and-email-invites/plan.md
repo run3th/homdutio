@@ -568,29 +568,29 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 2.1 Build, lint, unit tests pass
-- [x] 2.2 No component style exceeds the 8 kB budget
+- [x] 2.1 Build, lint, unit tests pass — 2df6abe
+- [x] 2.2 No component style exceeds the 8 kB budget — 2df6abe
 
 #### Manual
 
-- [x] 2.3 Header shows logo lockup, workspace pill + ADMIN badge, Invite / ＋New task, avatar menu
-- [x] 2.4 Sidebar shows text labels with dots + active state; navigates Board/Members
-- [x] 2.5 ≤400px collapses to bottom nav with FAB; no horizontal scroll
-- [x] 2.6 Avatar dropdown opens/closes and logs out
+- [x] 2.3 Header shows logo lockup, workspace pill + ADMIN badge, Invite / ＋New task, avatar menu — 2df6abe
+- [x] 2.4 Sidebar shows text labels with dots + active state; navigates Board/Members — 2df6abe
+- [x] 2.5 ≤400px collapses to bottom nav with FAB; no horizontal scroll — 2df6abe
+- [x] 2.6 Avatar dropdown opens/closes and logs out — 2df6abe
 
 ### Phase 3: Board & Cards
 
 #### Automated
 
-- [ ] 3.1 Build, lint, unit tests pass
-- [ ] 3.2 No component style exceeds the 8 kB budget
+- [x] 3.1 Build, lint, unit tests pass
+- [x] 3.2 No component style exceeds the 8 kB budget
 
 #### Manual
 
-- [ ] 3.3 Board + columns match the mockup; mobile tab switcher works
-- [ ] 3.4 Cards show chip, avatars, mono date, correct status-driven primary action
-- [ ] 3.5 Drag-reorder and cross-column lifecycle moves still work
-- [ ] 3.6 Kebab actions (edit/unclaim/send-back/delete) behave as before
+- [x] 3.3 Board + columns match the mockup; mobile tab switcher works
+- [x] 3.4 Cards show chip, avatars, mono date, correct status-driven primary action
+- [x] 3.5 Drag-reorder and cross-column lifecycle moves still work
+- [x] 3.6 Kebab actions (edit/unclaim/send-back/delete) behave as before
 
 ### Phase 4: Dialogs & Members
 

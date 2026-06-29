@@ -12,6 +12,7 @@ import { DatePipe } from '@angular/common';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { Task } from '../task.service';
+import { avatarColor, tagColor } from '../tag-color';
 
 /**
  * A presentational, Claude-style pastel task card (S-11). Renders the title (an explicit open-detail
@@ -49,6 +50,15 @@ export class TaskCardComponent {
   @Output() readonly sendBack = new EventEmitter<Task>();
 
   private readonly host = inject(ElementRef<HTMLElement>);
+
+  /** Deterministic chip/avatar colors (mockup parity); template helpers. */
+  readonly tagColor = tagColor;
+  readonly avatarColor = avatarColor;
+
+  /** Uppercase first letter for an avatar glyph. */
+  initial(name: string | null | undefined): string {
+    return (name ?? '?').charAt(0).toUpperCase();
+  }
 
   /** Whether the per-task ⋯ overflow menu is open. */
   readonly menuOpen = signal(false);

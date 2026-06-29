@@ -1,9 +1,34 @@
 <div class="board">
+  <header class="board-header">
+    <h1 class="board-title">Task board</h1>
+    <p class="board-subtitle">Track who's doing what around the house.</p>
+  </header>
+
+  <!-- Mobile-only column switcher; hidden on desktop where all three columns show side by side. -->
+  <div class="board-tabs" role="tablist">
+    @for (column of columns; track column.status) {
+      <button
+        type="button"
+        role="tab"
+        class="board-tab"
+        [class.board-tab--active]="mobileCol() === column.status"
+        [attr.aria-selected]="mobileCol() === column.status"
+        (click)="setMobileCol(column.status)"
+      >
+        <span class="board-tab-dot" aria-hidden="true" [style.background]="column.accent"></span>
+        <span>{{ column.label }}</span>
+        <span class="board-tab-count">{{ tasksFor(column.status).length }}</span>
+      </button>
+    }
+  </div>
+
   <div class="columns">
     @for (column of columns; track column.status) {
       <app-task-column
+        [class.is-active-mobile]="mobileCol() === column.status"
         [label]="column.label"
         [status]="column.status"
+        [accent]="column.accent"
         [tasks]="tasksFor(column.status)"
         (dropped)="drop(column.status, $event)"
         (dragStart)="onDragStart()"

@@ -1,57 +1,68 @@
-<!-- Top-right tool cluster: the drag handle (the only drag initiator) and the ⋯ overflow menu. -->
-<div class="task-tools">
-  <button
-    type="button"
-    class="icon-button drag-handle"
-    cdkDragHandle
-    aria-label="Drag to reorder"
-    title="Drag to reorder"
-  >
-    ⠿
-  </button>
+<div class="card-top">
+  <!-- Tag chips (single category for now; multi-tag in Phase 6). -->
+  <div class="card-tags">
+    @if (task.category) {
+      <span class="tag-chip">
+        <span class="tag-dot" aria-hidden="true" [style.background]="tagColor(task.category)"></span>
+        {{ task.category }}
+      </span>
+    }
+  </div>
 
-  <div class="task-menu">
+  <!-- Drag handle (the only drag initiator) + the ⋯ overflow menu. -->
+  <div class="task-tools">
     <button
       type="button"
-      class="icon-button"
-      (click)="toggleMenu()"
-      [attr.aria-expanded]="menuOpen()"
-      aria-haspopup="menu"
-      aria-label="Task actions"
+      class="grip drag-handle"
+      cdkDragHandle
+      aria-label="Drag to reorder"
+      title="Drag to reorder or move"
     >
-      ⋯
+      ⣿
     </button>
 
-    @if (menuOpen()) {
-      <div class="task-menu-dropdown" role="menu">
-        @if (task.canEdit) {
-          <button type="button" class="task-menu-item" role="menuitem" (click)="onEdit()">
-            Edit
-          </button>
-        }
-        @if (task.canDelete) {
-          <button
-            type="button"
-            class="task-menu-item task-menu-item--danger"
-            role="menuitem"
-            (click)="onDelete()"
-          >
-            Delete
-          </button>
-        }
-        <!-- S-05 loop-recovery actions — shown only when the server grants the affordance. -->
-        @if (task.canUnclaim) {
-          <button type="button" class="task-menu-item" role="menuitem" (click)="onUnclaim()">
-            Unclaim
-          </button>
-        }
-        @if (task.canSendBack) {
-          <button type="button" class="task-menu-item" role="menuitem" (click)="onSendBack()">
-            Send back
-          </button>
-        }
-      </div>
-    }
+    <div class="task-menu">
+      <button
+        type="button"
+        class="dots-button"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-haspopup="menu"
+        aria-label="Task actions"
+      >
+        ⋯
+      </button>
+
+      @if (menuOpen()) {
+        <div class="task-menu-dropdown" role="menu">
+          @if (task.canEdit) {
+            <button type="button" class="task-menu-item" role="menuitem" (click)="onEdit()">
+              Edit
+            </button>
+          }
+          @if (task.canUnclaim) {
+            <button type="button" class="task-menu-item" role="menuitem" (click)="onUnclaim()">
+              Unclaim
+            </button>
+          }
+          @if (task.canSendBack) {
+            <button type="button" class="task-menu-item" role="menuitem" (click)="onSendBack()">
+              Send back
+            </button>
+          }
+          @if (task.canDelete) {
+            <button
+              type="button"
+              class="task-menu-item task-menu-item--danger"
+              role="menuitem"
+              (click)="onDelete()"
+            >
+              Delete
+            </button>
+          }
+        </div>
+      }
+    </div>
   </div>
 </div>
 
@@ -61,58 +72,56 @@
   </button>
 </h3>
 
-@if (task.category) {
-  <span class="task-category">{{ task.category }}</span>
-}
 @if (task.description) {
   <p class="task-description">{{ task.description }}</p>
 }
 
 <dl class="task-meta">
-  <div class="task-meta-row">
-    <dt>Created by</dt>
-    <dd>{{ task.createdByName }}</dd>
+  <div class="meta-row">
+    <span class="avatar" aria-hidden="true" [style.background]="avatarColor(task.createdByName)">{{
+      initial(task.createdByName)
+    }}</span>
+    <span>Created by <b>{{ task.createdByName }}</b></span>
   </div>
   @if (task.claimerName) {
-    <div class="task-meta-row">
-      <dt>Claimed by</dt>
-      <dd>{{ task.claimerName }}</dd>
+    <div class="meta-row">
+      <span class="avatar" aria-hidden="true" [style.background]="avatarColor(task.claimerName)">{{
+        initial(task.claimerName)
+      }}</span>
+      <span>Claimed by <b>{{ task.claimerName }}</b></span>
     </div>
   }
-  <div class="task-meta-row">
-    <dt>Created</dt>
-    <dd>{{ task.createdAtUtc | date: 'short' }}</dd>
-  </div>
+  <div class="meta-date">{{ task.createdAtUtc | date: 'MMM d · h:mm a' }}</div>
 </dl>
 
-<!-- 💬 comment button (S-05) — always available; opens the standalone comments dialog. The count shows
-     only when there are comments. -->
-<button
-  type="button"
-  class="task-comment-button"
-  (click)="openComments.emit(task)"
-  [attr.aria-label]="task.commentCount > 0 ? task.commentCount + ' comments' : 'Comments'"
-  title="Comments"
->
-  <span class="task-comment-icon" aria-hidden="true">💬</span>
-  @if (task.commentCount > 0) {
-    <span class="task-comment-count">{{ task.commentCount }}</span>
-  }
-</button>
+<div class="card-footer">
+  <!-- 💬 comment button (S-05) — always available; opens the standalone comments dialog. -->
+  <button
+    type="button"
+    class="task-comment-button"
+    (click)="openComments.emit(task)"
+    [attr.aria-label]="task.commentCount > 0 ? task.commentCount + ' comments' : 'Comments'"
+    title="Comments"
+  >
+    <span class="task-comment-icon" aria-hidden="true">💬</span>
+    @if (task.commentCount > 0) {
+      <span class="task-comment-count">{{ task.commentCount }}</span>
+    }
+  </button>
 
-<!-- Only the primary lifecycle action shows on the card; management actions live in the ⋯ menu. -->
-@if (task.canClaim || task.canMarkDone || task.canConfirm) {
-  <div class="task-actions">
-    @if (task.canClaim) {
-      <button type="button" class="task-action" (click)="claim.emit(task)">Claim</button>
-    }
-    @if (task.canMarkDone) {
-      <button type="button" class="task-action" (click)="markDone.emit(task)">Mark done</button>
-    }
-    @if (task.canConfirm) {
-      <button type="button" class="task-action" (click)="confirm.emit(task)">
-        {{ task.willSelfAttest ? 'Confirm (self-attested)' : 'Confirm' }}
-      </button>
-    }
-  </div>
-}
+  <!-- Only the primary lifecycle action shows on the card; management actions live in the ⋯ menu. -->
+  @if (task.canClaim) {
+    <button type="button" class="task-action" (click)="claim.emit(task)">Claim</button>
+  }
+  @if (task.canMarkDone) {
+    <button type="button" class="task-action" (click)="markDone.emit(task)">Mark done</button>
+  }
+  @if (task.canConfirm) {
+    <button type="button" class="task-action" (click)="confirm.emit(task)">
+      {{ task.willSelfAttest ? 'Confirm (self-attested)' : 'Confirm' }}
+    </button>
+  }
+  @if (task.status === 'Done' && !task.canConfirm) {
+    <span class="task-awaiting">Awaiting confirmation</span>
+  }
+</div>
