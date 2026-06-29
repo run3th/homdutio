@@ -161,51 +161,9 @@
   line-height: 1;
 }
 
-/* Anchor for the generated-link popover so it floats below the bar. */
-.invite {
-  position: relative;
-}
-
-.invite-error,
-.invite-panel {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  z-index: 50;
-  width: max(18rem, 100%);
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-}
-
-.invite-error {
-  color: var(--color-danger);
-  background: var(--color-danger-soft);
-  font-size: var(--text-sm);
-}
-
-.invite-panel {
-  background: var(--color-success-soft);
-}
-
-.invite-panel-note {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--color-success);
-}
-
-.invite-link {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  word-break: break-all;
-  color: var(--color-text);
-}
-
 /* Mobile (< 1000px): the workspace pill + subtitle collapse and the New-task button is replaced by
-   the bottom nav's FAB. Invite stays in the header so it remains reachable on mobile (the mockup
-   relocates it to the Members page, which Phase 4 adds; until then, keep it here to avoid a gap). */
+   the bottom nav's FAB. Invite stays in the header so it remains reachable on mobile (it opens the
+   invite modal, which is full-width-capped and works at ≤ 400px). */
 @media (max-width: 999px) {
   .header {
     padding: 0.6875rem var(--space-4);

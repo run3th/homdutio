@@ -123,28 +123,10 @@
   gap: var(--space-2);
 }
 
-/* Compact, auto-width action buttons (the global .btn is full-width by default). */
+/* Compact, auto-width action buttons (the global .btn is full-width by default). The .btn--ghost and
+   .btn--danger colour variants come from the shared global primitives in styles.scss. */
 .btn--small {
   width: auto;
   padding: 0.4rem var(--space-3);
   font-size: var(--text-sm);
-}
-
-.btn--danger {
-  background: var(--color-danger);
-}
-
-.btn--danger:hover:not(:disabled) {
-  background: var(--color-danger);
-  filter: brightness(0.92);
-}
-
-.btn--ghost {
-  color: var(--color-text-muted);
-  background: var(--color-surface-2);
-}
-
-.btn--ghost:hover:not(:disabled) {
-  background: var(--color-surface-2);
-  filter: brightness(0.96);
 }

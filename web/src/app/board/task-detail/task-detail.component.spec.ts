@@ -107,10 +107,10 @@ describe('TaskDetailComponent', () => {
     expect(el.querySelector('.confirm-delete')).toBeNull();
     expect(el.textContent).not.toContain('Delete');
     // Cancel + Save are the only edit-form actions (the comments section has its own Post button below).
-    const actions = Array.from(el.querySelectorAll('form:not(.comment-form) .actions .btn')).map(
-      (b) => b.textContent?.trim(),
-    );
-    expect(actions).toEqual(['Cancel', 'Save']);
+    const actions = Array.from(
+      el.querySelectorAll('form:not(.comment-form) .modal-actions .btn'),
+    ).map((b) => b.textContent?.trim());
+    expect(actions).toEqual(['Cancel', 'Save changes']);
     expect(deleteTask).not.toHaveBeenCalled();
   });
 
@@ -118,7 +118,7 @@ describe('TaskDetailComponent', () => {
     const fixture = render(baseTask({ canEdit: true }));
     const el = fixture.nativeElement as HTMLElement;
 
-    const cancel = Array.from(el.querySelectorAll('.actions .btn')).find(
+    const cancel = Array.from(el.querySelectorAll('.modal-actions .btn')).find(
       (b) => b.textContent?.trim() === 'Cancel',
     ) as HTMLButtonElement;
     cancel.click();

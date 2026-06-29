@@ -1,6 +1,6 @@
-<section class="send-back" role="dialog" aria-modal="true" aria-labelledby="send-back-heading">
-  <h2 id="send-back-heading" class="send-back-title">Send back?</h2>
-  <p class="send-back-body">
+<section class="modal send-back" role="dialog" aria-modal="true" aria-labelledby="send-back-heading">
+  <h2 id="send-back-heading" class="modal-title">Send back?</h2>
+  <p class="dialog-body">
     “{{ task.title }}” will return to In progress for {{ task.claimerName ?? 'the claimer' }}. Add a
     short reason — it's posted to the task's comments.
   </p>
@@ -16,7 +16,7 @@
     ></textarea>
   </label>
 
-  <div class="actions">
+  <div class="modal-actions">
     <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
     <button type="button" class="btn" [disabled]="comment.invalid" (click)="submit()">
       Send back

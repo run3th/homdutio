@@ -28,27 +28,7 @@
   </div>
 
   <div class="header-actions">
-    <div class="invite">
-      <button type="button" class="btn-outline" (click)="invite()" [disabled]="invitePending()">
-        {{ invitePending() ? 'Generating…' : 'Invite' }}
-      </button>
-
-      @if (inviteError()) {
-        <p class="invite-error" role="alert">{{ inviteError() }}</p>
-      }
-      @if (inviteLink(); as link) {
-        <div class="invite-panel" role="status">
-          <p class="invite-panel-note">
-            {{
-              inviteCopied()
-                ? 'Link copied — share it with the person you want to invite.'
-                : 'Copy this link and share it with the person you want to invite.'
-            }}
-          </p>
-          <code class="invite-link">{{ link }}</code>
-        </div>
-      }
-    </div>
+    <button type="button" class="btn-outline" (click)="invite()">Invite</button>
 
     <button type="button" class="btn-accent" (click)="addTask()">
       <span class="btn-accent-icon" aria-hidden="true">＋</span>

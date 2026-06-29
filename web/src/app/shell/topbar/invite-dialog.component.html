@@ -1,0 +1,36 @@
+<section class="modal invite-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-heading">
+  <header class="modal-header">
+    <div>
+      <h2 id="invite-heading" class="modal-title">
+        @if (household(); as h) {
+          Invite to {{ h.name }}
+        } @else {
+          Invite a member
+        }
+      </h2>
+      <p class="modal-subtitle">They'll join the household and can claim tasks.</p>
+    </div>
+    <button type="button" class="modal-close" aria-label="Close" (click)="close()">×</button>
+  </header>
+
+  @if (inviteError(); as message) {
+    <p class="field-error" role="alert">{{ message }}</p>
+  }
+
+  <!-- Phase 7 adds an optional "Invite by email" field here, above the share-link box. -->
+
+  <label class="invite-label" for="invite-link">Or share a link</label>
+  <div class="invite-row">
+    <code id="invite-link" class="invite-link">{{
+      generating() ? 'Generating…' : inviteLink()
+    }}</code>
+    <button
+      type="button"
+      class="btn btn--ghost invite-copy"
+      [disabled]="generating() || !inviteLink()"
+      (click)="copy()"
+    >
+      {{ inviteCopied() ? 'Copied' : 'Copy' }}
+    </button>
+  </div>
+</section>

@@ -237,6 +237,102 @@ button[type='submit']:disabled {
   font-weight: var(--weight-semibold);
 }
 
+/* Secondary / destructive button variants (dialog footers + members roster). Global so each surface
+   reuses one definition rather than redeclaring them. They override the base .btn hover (which lifts
+   and recolors to the primary) since they appear later in source order at equal specificity. */
+.btn--ghost {
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  box-shadow: none;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--color-border);
+  transform: none;
+}
+
+.btn--danger {
+  background: var(--color-danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  filter: brightness(0.92);
+  transform: none;
+}
+
+/* Modal dialog primitives — the CDK dialog panels share the mockup's modalStyle so each dialog's
+   scoped SCSS stays minimal (and within the 8 kB per-component budget). */
+.modal {
+  width: min(26.875rem, calc(100vw - 2rem)); /* ≤ 430px, never wider than the viewport (NFR-2) */
+  max-height: 90dvh; /* tall content scrolls inside the panel, not the page, so footers stay reachable */
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: var(--text-lg); /* 18px */
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.modal-subtitle {
+  margin: 0.1875rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-subtle);
+}
+
+.modal-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem; /* 34px */
+  height: 2.125rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  color: var(--color-text-subtle);
+  background: var(--color-surface-2);
+  border: 0;
+  border-radius: 0.5625rem; /* 9px */
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.modal-close:hover {
+  background: var(--color-border);
+}
+
+/* Footer actions: trailing-aligned, wrap rather than overflow at ≤ 400px (the primary action leads
+   from the right). Buttons size to content rather than the full-width global default. */
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.modal-actions .btn {
+  width: auto;
+  min-width: 6rem;
+}
+
 /* Shared chip + avatar primitives (task cards now; members roster + tag-input in later phases).
    Global so they don't count against any single component's scoped-style budget. */
 .tag-chip {

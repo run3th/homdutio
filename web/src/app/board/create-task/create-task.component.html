@@ -1,7 +1,10 @@
-<section class="task-dialog" role="dialog" aria-modal="true" aria-labelledby="create-task-heading">
-  <header class="task-dialog-header">
-    <h2 id="create-task-heading">Add a task</h2>
-    <button type="button" class="icon-button" aria-label="Close" (click)="close()">×</button>
+<section class="modal" role="dialog" aria-modal="true" aria-labelledby="create-task-heading">
+  <header class="modal-header">
+    <div>
+      <h2 id="create-task-heading" class="modal-title">New task</h2>
+      <p class="modal-subtitle">Add a task to the board.</p>
+    </div>
+    <button type="button" class="modal-close" aria-label="Close" (click)="close()">×</button>
   </header>
 
   @if (errors().length) {
@@ -15,7 +18,13 @@
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <div class="field">
       <label for="task-title">Title</label>
-      <input id="task-title" type="text" formControlName="title" autocomplete="off" />
+      <input
+        id="task-title"
+        type="text"
+        formControlName="title"
+        placeholder="e.g. Take out the trash"
+        autocomplete="off"
+      />
       @if (form.controls.title.touched && form.controls.title.invalid) {
         <span class="field-error">A task title is required.</span>
       }
@@ -23,7 +32,13 @@
 
     <div class="field">
       <label for="task-description">Description <span class="optional">(optional)</span></label>
-      <input id="task-description" type="text" formControlName="description" autocomplete="off" />
+      <input
+        id="task-description"
+        type="text"
+        formControlName="description"
+        placeholder="Add any helpful details…"
+        autocomplete="off"
+      />
     </div>
 
     <div class="field">
@@ -31,7 +46,7 @@
       <input id="task-category" type="text" formControlName="category" autocomplete="off" />
     </div>
 
-    <div class="actions">
+    <div class="modal-actions">
       <button type="button" class="btn btn--ghost" [disabled]="pending()" (click)="close()">
         Cancel
       </button>

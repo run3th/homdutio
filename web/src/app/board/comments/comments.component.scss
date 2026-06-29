@@ -2,47 +2,13 @@
   display: block;
 }
 
-/* Mobile-first panel: never wider than the viewport, and never taller than it — a long thread scrolls
-   inside the list, not the whole panel, so the composer stays reachable at ≤ 400px (NFR-2). */
+/* The panel (.modal global) is laid out as a column so a long thread scrolls inside the list, not the
+   whole panel — the composer stays reachable at ≤ 400px (NFR-2). The panel's own scroll is suppressed
+   in favour of the inner list's. */
 .comments {
-  width: min(26rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 2rem);
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-lg);
-}
-
-.comments-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.comments-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-.icon-button {
-  flex: 0 0 auto;
-  width: 2rem;
-  height: 2rem;
-  font-size: 1.25rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.icon-button:hover {
-  background: var(--color-surface-2);
+  overflow: hidden;
 }
 
 .comments-empty {

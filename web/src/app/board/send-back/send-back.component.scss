@@ -2,24 +2,14 @@
   display: block;
 }
 
-/* Mobile-first panel: never wider than the viewport, comfortable at ≤ 400px (NFR-2). */
-.send-back {
-  width: min(24rem, calc(100vw - 2rem));
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-lg);
-}
-
-.send-back-title {
-  margin: 0 0 var(--space-2);
-  font-size: 1.25rem;
-}
-
-.send-back-body {
-  margin: 0 0 var(--space-4);
+/* Panel (.modal), title (.modal-title), and footer (.modal-actions) come from the shared global modal
+   primitives. The send-back-specific bits are the explanatory body, the field label, and the reason
+   textarea (styled to match the global input treatment). */
+.dialog-body {
+  margin: var(--space-2) 0 var(--space-4);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
@@ -31,40 +21,26 @@
 .send-back-label {
   display: block;
   margin-bottom: var(--space-1);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: 0.78125rem;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .send-back-input {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
+  min-height: 4.375rem; /* 70px — matches the mockup textarea */
   font: inherit;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: 0.75rem 0.875rem;
+  color: var(--color-text);
+  background: var(--color-input-bg);
+  border: 1.5px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
 }
 
-/* Actions wrap rather than overflow at ≤ 400px; Send back is the trailing primary action. */
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.btn {
-  width: auto;
-  min-width: 6rem;
-}
-
-.btn--ghost {
-  color: var(--color-text-muted);
-  background: var(--color-surface-2);
-}
-
-.btn--ghost:hover {
-  background: var(--color-surface-2);
-  filter: brightness(0.96);
+.send-back-input:focus {
+  outline: none;
+  background: var(--color-surface);
+  border-color: var(--color-primary);
 }

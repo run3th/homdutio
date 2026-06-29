@@ -582,28 +582,28 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 3.1 Build, lint, unit tests pass
-- [x] 3.2 No component style exceeds the 8 kB budget
+- [x] 3.1 Build, lint, unit tests pass — 9a137eb
+- [x] 3.2 No component style exceeds the 8 kB budget — 9a137eb
 
 #### Manual
 
-- [x] 3.3 Board + columns match the mockup; mobile tab switcher works
-- [x] 3.4 Cards show chip, avatars, mono date, correct status-driven primary action
-- [x] 3.5 Drag-reorder and cross-column lifecycle moves still work
-- [x] 3.6 Kebab actions (edit/unclaim/send-back/delete) behave as before
+- [x] 3.3 Board + columns match the mockup; mobile tab switcher works — 9a137eb
+- [x] 3.4 Cards show chip, avatars, mono date, correct status-driven primary action — 9a137eb
+- [x] 3.5 Drag-reorder and cross-column lifecycle moves still work — 9a137eb
+- [x] 3.6 Kebab actions (edit/unclaim/send-back/delete) behave as before — 9a137eb
 
 ### Phase 4: Dialogs & Members
 
 #### Automated
 
-- [ ] 4.1 Build, lint, unit tests pass
-- [ ] 4.2 No component style exceeds the 8 kB budget
+- [x] 4.1 Build, lint, unit tests pass
+- [x] 4.2 No component style exceeds the 8 kB budget
 
 #### Manual
 
-- [ ] 4.3 All five dialogs match the mockup; their actions still work
-- [ ] 4.4 Invite dialog shows the link box + Copy and copies a working `/join/<token>` link
-- [ ] 4.5 Members page matches the mockup; make-admin/remove still work (last-admin guard intact)
+- [x] 4.3 All five dialogs match the mockup; their actions still work
+- [x] 4.4 Invite dialog shows the link box + Copy and copies a working `/join/<token>` link
+- [x] 4.5 Members page matches the mockup; make-admin/remove still work (last-admin guard intact)
 
 ### Phase 5: Auth Screens
 
