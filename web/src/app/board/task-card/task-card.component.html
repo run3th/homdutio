@@ -1,11 +1,14 @@
 <div class="card-top">
-  <!-- Tag chips (single category for now; multi-tag in Phase 6). -->
+  <!-- Tag chips: up to 3, then a "+N" overflow chip (S-12). -->
   <div class="card-tags">
-    @if (task.category) {
+    @for (tag of task.tags.slice(0, 3); track tag) {
       <span class="tag-chip">
-        <span class="tag-dot" aria-hidden="true" [style.background]="tagColor(task.category)"></span>
-        {{ task.category }}
+        <span class="tag-dot" aria-hidden="true" [style.background]="tagColor(tag)"></span>
+        {{ tag }}
       </span>
+    }
+    @if (task.tags.length > 3) {
+      <span class="tag-chip tag-chip--more">+{{ task.tags.length - 3 }}</span>
     }
   </div>
 

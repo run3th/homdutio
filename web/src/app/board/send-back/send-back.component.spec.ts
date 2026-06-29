@@ -12,7 +12,7 @@ describe('SendBackComponent', () => {
       id: 't1',
       title: 'Take out bins',
       description: null,
-      category: null,
+      tags: [],
       status: 'Done',
       createdByName: 'Molly',
       claimerName: 'Arthur',

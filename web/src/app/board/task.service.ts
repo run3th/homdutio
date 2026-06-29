@@ -10,7 +10,8 @@ export interface Task {
   id: string;
   title: string;
   description?: string | null;
-  category?: string | null;
+  /** Free-text tags (S-12) — the multi-value generalization of the old single `category`. */
+  tags: string[];
   status: TaskStatus;
   createdByName: string;
   claimerName?: string | null;
@@ -44,14 +45,14 @@ export interface Comment {
 export interface CreateTaskRequest {
   title: string;
   description?: string;
-  category?: string;
+  tags: string[];
 }
 
 /** Body for `PUT /api/tasks/{id}` (matches the C# UpdateTaskRequest). */
 export interface UpdateTaskRequest {
   title: string;
   description?: string;
-  category?: string;
+  tags: string[];
 }
 
 /**
@@ -163,6 +164,15 @@ export class TaskService {
     return this.http
       .put<void>('/api/tasks/order', { status, orderedIds })
       .pipe(switchMap(() => this.load()));
+  }
+
+  /**
+   * `GET /api/tasks/tags` — the household's distinct tag values (incl. closed-task tags), alphabetical, for
+   * the create/edit chip-input autocomplete. Fetched fresh when a task dialog opens (no long-lived cache —
+   * the set is small and a stale suggestion list is low-cost).
+   */
+  getTagSuggestions(): Observable<string[]> {
+    return this.http.get<string[]>('/api/tasks/tags');
   }
 
   /** `GET /api/tasks/{id}/comments` — the task's full thread, lazy-loaded when the detail dialog opens. */

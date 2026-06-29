@@ -55,4 +55,7 @@ public class HouseholdTask
     public bool SelfAttested { get; set; }
 
     public ICollection<TaskEvent> Events { get; set; } = new List<TaskEvent>();
+
+    /// <summary>The task's free-text tags (S-12) — the multi-value generalization of <see cref="Category"/>.</summary>
+    public ICollection<TaskTag> Tags { get; set; } = new List<TaskTag>();
 }

@@ -1,0 +1,65 @@
+<div class="tag-control" [class.is-disabled]="disabled()">
+  <div class="tag-field">
+    @for (tag of tags(); track tag; let i = $index) {
+      <span class="tag-chip">
+        <span class="tag-dot" aria-hidden="true" [style.background]="tagColor(tag)"></span>
+        {{ tag }}
+        @if (!disabled()) {
+          <button
+            type="button"
+            class="tag-chip-remove"
+            [attr.aria-label]="'Remove tag ' + tag"
+            (click)="removeTag(i)"
+          >
+            ✕
+          </button>
+        }
+      </span>
+    }
+    <input
+      #input
+      class="tag-text"
+      type="text"
+      [value]="query()"
+      [disabled]="disabled()"
+      [placeholder]="tags().length ? '' : 'Type a tag and press Enter…'"
+      autocomplete="off"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      (focus)="open.set(true)"
+      (blur)="onBlur()"
+    />
+  </div>
+
+  @if (open() && (filtered().length || showCreate())) {
+    <ul class="tag-suggestions">
+      @for (suggestion of filtered(); track suggestion) {
+        <li class="tag-suggestion">
+          <button
+            type="button"
+            class="tag-suggestion-button"
+            (mousedown)="addTag(suggestion); $event.preventDefault()"
+          >
+            <span class="tag-dot" aria-hidden="true" [style.background]="tagColor(suggestion)"></span>
+            {{ suggestion }}
+          </button>
+        </li>
+      }
+      @if (showCreate()) {
+        <li class="tag-suggestion tag-suggestion--create">
+          <button
+            type="button"
+            class="tag-suggestion-button"
+            (mousedown)="addTag(query()); $event.preventDefault()"
+          >
+            Create “{{ query().trim() }}”
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (error()) {
+    <span class="field-error">{{ error() }}</span>
+  }
+</div>

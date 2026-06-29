@@ -12,7 +12,7 @@ describe('TaskService', () => {
     id: 't1',
     title: 'Take out bins',
     description: null,
-    category: null,
+    tags: [],
     status: 'ToDo',
     createdByName: 'Molly',
     claimerName: null,
@@ -53,11 +53,11 @@ describe('TaskService', () => {
   });
 
   it('create POSTs the task then refetches the board', () => {
-    service.create({ title: 'Take out bins' }).subscribe();
+    service.create({ title: 'Take out bins', tags: [] }).subscribe();
 
     const post = httpMock.expectOne('/api/tasks');
     expect(post.request.method).toBe('POST');
-    expect(post.request.body).toEqual({ title: 'Take out bins' });
+    expect(post.request.body).toEqual({ title: 'Take out bins', tags: [] });
     post.flush(task);
 
     // The create chains into a load() refetch.
@@ -106,11 +106,11 @@ describe('TaskService', () => {
   });
 
   it('update PUTs /api/tasks/{id} then refetches', () => {
-    service.update('t1', { title: 'Renamed' }).subscribe();
+    service.update('t1', { title: 'Renamed', tags: [] }).subscribe();
 
     const put = httpMock.expectOne('/api/tasks/t1');
     expect(put.request.method).toBe('PUT');
-    expect(put.request.body).toEqual({ title: 'Renamed' });
+    expect(put.request.body).toEqual({ title: 'Renamed', tags: [] });
     put.flush({ ...task, title: 'Renamed' });
 
     httpMock.expectOne('/api/tasks').flush([{ ...task, title: 'Renamed' }]);
@@ -139,6 +139,17 @@ describe('TaskService', () => {
 
     httpMock.expectOne('/api/tasks').flush([task]);
     expect(service.current()).toEqual([task]);
+  });
+
+  it('getTagSuggestions GETs /api/tasks/tags and returns the values', () => {
+    let result: string[] | undefined;
+    service.getTagSuggestions().subscribe((tags) => (result = tags));
+
+    const req = httpMock.expectOne('/api/tasks/tags');
+    expect(req.request.method).toBe('GET');
+    req.flush(['Garden', 'Kitchen']);
+
+    expect(result).toEqual(['Garden', 'Kitchen']);
   });
 
   it('clearOnLogout resets the board', () => {

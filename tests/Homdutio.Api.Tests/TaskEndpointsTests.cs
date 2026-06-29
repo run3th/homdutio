@@ -406,12 +406,12 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         var task = await CreateTaskAsync(token, "Original");
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
-            new { title = "Updated", description = "Now with detail", category = "Kitchen" }));
+            new { title = "Updated", description = "Now with detail", tags = new[] { "Kitchen" } }));
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
         Assert.Equal("Updated", body.Title);
         Assert.Equal("Now with detail", body.Description);
-        Assert.Equal("Kitchen", body.Category);
+        Assert.Equal(new[] { "Kitchen" }, body.Tags);
     }
 
     [Fact]
@@ -422,7 +422,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         var task = await CreateTaskAsync(token, "Has a title");
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
-            new { title = "   ", description = (string?)null, category = (string?)null }));
+            new { title = "   ", description = (string?)null, tags = (string[]?)null }));
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
@@ -437,7 +437,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
-            new { title = "Edited while claimed", description = (string?)null, category = (string?)null }));
+            new { title = "Edited while claimed", description = (string?)null, tags = (string[]?)null }));
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
         Assert.Equal("Edited while claimed", body.Title);
@@ -454,7 +454,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         await CreateHouseholdAsync(bToken, "House B");
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", bToken,
-            new { title = "Hijack", description = (string?)null, category = (string?)null }));
+            new { title = "Hijack", description = (string?)null, tags = (string[]?)null }));
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -734,7 +734,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         var task = await CreateTaskAsync(adminToken, "Members may not edit");
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", memberToken,
-            new { title = "Member tried", description = (string?)null, category = (string?)null }));
+            new { title = "Member tried", description = (string?)null, tags = (string[]?)null }));
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
     }
 
@@ -748,7 +748,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         (await ActionAsync(token, task.Id, "done")).EnsureSuccessStatusCode();
 
         var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
-            new { title = "Edited while done", description = (string?)null, category = (string?)null }));
+            new { title = "Edited while done", description = (string?)null, tags = (string[]?)null }));
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 
@@ -944,6 +944,86 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.Equal(0, board.Single(t => t.Id == quiet.Id).CommentCount);
     }
 
+    // --- S-12: task tags + per-household suggestions --------------------------------------------------
+
+    private async Task<TaskBody> CreateTaskWithTagsAsync(string token, string title, params string[] tags)
+    {
+        var resp = await _client.SendAsync(Authed(HttpMethod.Post, "/api/tasks", token, new { title, tags }));
+        resp.EnsureSuccessStatusCode();
+        return (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
+    }
+
+    private async Task<List<string>> GetTagSuggestionsAsync(string token)
+    {
+        var resp = await _client.SendAsync(Authed(HttpMethod.Get, "/api/tasks/tags", token));
+        resp.EnsureSuccessStatusCode();
+        return (await resp.Content.ReadFromJsonAsync<List<string>>())!;
+    }
+
+    [Fact]
+    public async Task Create_with_tags_persists_them_deduped_trimmed_and_sorted()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("tags-create"), "Molly");
+        await CreateHouseholdAsync(token, "Tag House");
+
+        // Case-insensitive de-dup (first-seen "Kitchen" wins), trim/collapse, alphabetical render.
+        var created = await CreateTaskWithTagsAsync(token, "Tagged", "Kitchen", "kitchen", "  Garden ");
+        Assert.Equal(new[] { "Garden", "Kitchen" }, created.Tags);
+
+        var board = await GetBoardAsync(token);
+        Assert.Equal(new[] { "Garden", "Kitchen" }, board.Single(t => t.Id == created.Id).Tags);
+    }
+
+    [Fact]
+    public async Task Edit_rewrites_the_tag_set_wholesale()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("tags-edit"), "Molly");
+        await CreateHouseholdAsync(token, "Tag Edit House");
+        var task = await CreateTaskWithTagsAsync(token, "Re-tag me", "Kitchen", "Garden");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Put, $"/api/tasks/{task.Id}", token,
+            new { title = "Re-tag me", description = (string?)null, tags = new[] { "Pets" } }));
+        resp.EnsureSuccessStatusCode();
+        var body = (await resp.Content.ReadFromJsonAsync<TaskBody>())!;
+        Assert.Equal(new[] { "Pets" }, body.Tags); // old tags gone, only the new one remains
+    }
+
+    [Fact]
+    public async Task Tag_suggestions_are_distinct_and_include_closed_task_tags()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("tags-suggest"), "Molly");
+        await CreateHouseholdAsync(token, "Suggest House");
+
+        // An open task and one we drive to closed — "Kitchen" is shared so it must appear exactly once,
+        // and the closed task's "Pets" must still be suggested (no ClosedAtUtc filter).
+        await CreateTaskWithTagsAsync(token, "Open one", "Kitchen", "Garden");
+        var toClose = await CreateTaskWithTagsAsync(token, "Will close", "Kitchen", "Pets");
+        (await ActionAsync(token, toClose.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(token, toClose.Id, "done")).EnsureSuccessStatusCode();
+        (await ActionAsync(token, toClose.Id, "confirm")).EnsureSuccessStatusCode();
+
+        var suggestions = await GetTagSuggestionsAsync(token);
+        Assert.Equal(new[] { "Garden", "Kitchen", "Pets" }, suggestions);
+    }
+
+    [Fact]
+    public async Task Creating_with_over_limit_tags_returns_400()
+    {
+        var token = await RegisterAndLoginAsync(NewEmail("tags-overlimit"), "Molly");
+        await CreateHouseholdAsync(token, "Overlimit House");
+
+        var tooMany = Enumerable.Range(0, 11).Select(i => $"tag{i}").ToArray();
+        var resp = await _client.SendAsync(Authed(HttpMethod.Post, "/api/tasks", token, new { title = "Too many", tags = tooMany }));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_tag_suggestions_return_401()
+    {
+        var resp = await _client.GetAsync("/api/tasks/tags");
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
     private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);
 
     private sealed record HouseholdBody(Guid Id, string Name, string Role);
@@ -952,7 +1032,7 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         Guid Id,
         string Title,
         string? Description,
-        string? Category,
+        string[] Tags,
         string Status,
         string CreatedByName,
         string? ClaimerName,

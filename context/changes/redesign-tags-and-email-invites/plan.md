@@ -609,34 +609,34 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 5.1 Build, lint, unit tests pass
-- [x] 5.2 No component style exceeds the 8 kB budget
+- [x] 5.1 Build, lint, unit tests pass — bbdd9c3
+- [x] 5.2 No component style exceeds the 8 kB budget — bbdd9c3
 
 #### Manual
 
-- [x] 5.3 Login/register/forgot/reset match the mockup card design
-- [x] 5.4 Show/hide toggles password visibility on all password fields
-- [x] 5.5 Register's rule checklist updates live and matches the enforced policy
-- [x] 5.6 Forgot shows "Check your inbox" after submit; login works end-to-end
+- [x] 5.3 Login/register/forgot/reset match the mockup card design — bbdd9c3
+- [x] 5.4 Show/hide toggles password visibility on all password fields — bbdd9c3
+- [x] 5.5 Register's rule checklist updates live and matches the enforced policy — bbdd9c3
+- [x] 5.6 Forgot shows "Check your inbox" after submit; login works end-to-end — bbdd9c3
 
 ### Phase 6: Task Tags (backend + chip input into the redesigned modal)
 
 #### Automated
 
-- [ ] 6.1 Migration applies cleanly against a fresh DB
-- [ ] 6.2 Backend builds (`dotnet build`)
-- [ ] 6.3 Backend tests pass incl. new tag tests (`dotnet test`)
-- [ ] 6.4 `RouteIsolationCoverageTests` passes (suggestions route covered)
-- [ ] 6.5 Angular build + lint + unit tests pass
-- [ ] 6.6 Test-plan §6 cookbook updated for the tags test category
+- [x] 6.1 Migration applies cleanly against a fresh DB
+- [x] 6.2 Backend builds (`dotnet build`)
+- [x] 6.3 Backend tests pass incl. new tag tests (`dotnet test`)
+- [x] 6.4 `RouteIsolationCoverageTests` passes (suggestions route covered)
+- [x] 6.5 Angular build + lint + unit tests pass
+- [x] 6.6 Test-plan §6 cookbook updated for the tags test category
 
 #### Manual
 
-- [ ] 6.7 Type + Enter adds a chip; household tags suggested and filter; "Create '<x>'" appears for new tags
-- [ ] 6.8 Tags persist on create and edit; removing a chip + save removes the tag
-- [ ] 6.9 Suggestions include a tag from a closed task
-- [ ] 6.10 Over-limit input rejected gracefully with a clear message
-- [ ] 6.11 Existing `Category` values appear as initial tags after migration
+- [x] 6.7 Type + Enter adds a chip; household tags suggested and filter; "Create '<x>'" appears for new tags
+- [x] 6.8 Tags persist on create and edit; removing a chip + save removes the tag
+- [x] 6.9 Suggestions include a tag from a closed task
+- [x] 6.10 Over-limit input rejected gracefully with a clear message
+- [x] 6.11 Existing `Category` values appear as initial tags after migration
 
 ### Phase 7: Emailed Invite Links + reusable email templating
 

@@ -179,6 +179,7 @@ the relevant rollout phase ships; before that, the sub-section reads
 - **Location**: colocated as `<name>.spec.ts` next to the component/service under `web/src/app/...`.
 - **Mocking policy**: mock at the HTTP edge with Angular `HttpTestingController`; do not mock internal services.
 - **Reference test**: `web/src/app/board/task.service.spec.ts`.
+- **Custom form control (ControlValueAccessor)**: test the component instance's public methods/signals directly — no host harness needed. Set signal inputs via `fixture.componentRef.setInput('<name>', …)`, drive behavior through the public methods, and assert the CVA contract by registering a fake `onChange` (`component.registerOnChange(fn)`) and checking `writeValue`. **Reference**: `web/src/app/board/tag-input/tag-input.component.spec.ts` (chip add/remove/de-dup/caps/filter) + the pure helper `web/src/app/board/tag-color.spec.ts`.
 - **Run locally**: `cd web && npm test`.
 
 ### 6.5 Adding an e2e test (cross-stack journey)
@@ -190,6 +191,7 @@ the relevant rollout phase ships; before that, the sub-section reads
 (Optional. After each phase lands, `/10x-implement` appends a 2-3 line note here capturing anything surprising the phase taught.)
 
 - **Phase 1 — Cross-household isolation hardening (2026-06-29).** The route-coverage guard previously proved *coverage* (no route forgotten) but not *behavior* (a route could sit in the scoped set with no assertion exercising it). The shared `ScopedRouteInventory` now makes the two the same fact — categorized ⇔ exercised. Also: parity was already asserted on **7** routes, not 2 — the research "2 of 14" counted parity *facts*, not routes; the genuine gaps were unclaim / sendback / comments POST+GET (now empty-body sealed).
+- **Phase 6 — Task tags + per-household suggestions (2026-06-30).** Adding the household-scoped `GET /api/tasks/tags` route was a one-line `ScopedRouteInventory` edit (`OwnOnlyCollection`) — but `HouseholdIsolationTests.AssertOwnOnlyCollectionAsync` dispatches on the route *template*, so a new own-only collection still needs its own `case "<template>":` assertion arm + any fixture data it reads (here a seeded House A tag that must not leak vs a House B tag that must appear). The shared sweep fixture is otherwise pristine because every other entry 404s before writing; a seed for the new assertion is the rare legitimate mutation. Pure tag rules live in `TagNormalizationTests` (no host); the frontend chip control's contract lives in `tag-input.component.spec.ts`. **Migration data logic (the `Category`→`TaskTags` backfill) is intentionally left to the manual "seeded DB" check** — replaying a mid-state migration isn't worth a harness, and §7 flags generated-migration internals as out of scope.
 
 ## 7. What We Deliberately Don't Test
 

@@ -9,14 +9,16 @@ import { TaskService } from '../task.service';
 describe('CreateTaskComponent', () => {
   let create: ReturnType<typeof vi.fn>;
   let close: ReturnType<typeof vi.fn>;
+  let getTagSuggestions: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     create = vi.fn();
     close = vi.fn();
+    getTagSuggestions = vi.fn(() => of([]));
     TestBed.configureTestingModule({
       imports: [CreateTaskComponent],
       providers: [
-        { provide: TaskService, useValue: { create } },
+        { provide: TaskService, useValue: { create, getTagSuggestions } },
         { provide: DialogRef, useValue: { close } },
       ],
     });
@@ -37,29 +39,29 @@ describe('CreateTaskComponent', () => {
   it('creates the task (trimmed, optionals omitted when blank) and closes the dialog on success', () => {
     create.mockReturnValue(of([]));
     const component = instance();
-    component.form.setValue({ title: '  Take out bins  ', description: '', category: '' });
+    component.form.setValue({ title: '  Take out bins  ', description: '', tags: [] });
 
     component.submit();
 
     expect(create).toHaveBeenCalledWith({
       title: 'Take out bins',
       description: undefined,
-      category: undefined,
+      tags: [],
     });
     expect(close).toHaveBeenCalled();
   });
 
-  it('passes through description and category when provided', () => {
+  it('passes through description and tags when provided', () => {
     create.mockReturnValue(of([]));
     const component = instance();
-    component.form.setValue({ title: 'Mow lawn', description: 'Front only', category: 'Garden' });
+    component.form.setValue({ title: 'Mow lawn', description: 'Front only', tags: ['Garden'] });
 
     component.submit();
 
     expect(create).toHaveBeenCalledWith({
       title: 'Mow lawn',
       description: 'Front only',
-      category: 'Garden',
+      tags: ['Garden'],
     });
   });
 
@@ -74,7 +76,7 @@ describe('CreateTaskComponent', () => {
       ),
     );
     const component = instance();
-    component.form.setValue({ title: 'x', description: '', category: '' });
+    component.form.setValue({ title: 'x', description: '', tags: [] });
 
     component.submit();
 

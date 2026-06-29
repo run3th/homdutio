@@ -42,8 +42,12 @@
     </div>
 
     <div class="field">
-      <label for="task-category">Category <span class="optional">(optional)</span></label>
-      <input id="task-category" type="text" formControlName="category" autocomplete="off" />
+      <label for="task-tags">Tags <span class="optional">(optional)</span></label>
+      <app-tag-input
+        id="task-tags"
+        formControlName="tags"
+        [suggestions]="suggestions()"
+      ></app-tag-input>
     </div>
 
     <div class="modal-actions">

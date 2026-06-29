@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
 
+    public DbSet<TaskTag> TaskTags => Set<TaskTag>();
+
     public DbSet<HouseholdInvite> HouseholdInvites => Set<HouseholdInvite>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -116,6 +118,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
 
             // AuthorId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
+        });
+
+        builder.Entity<TaskTag>(tag =>
+        {
+            tag.Property(t => t.Value).IsRequired().HasMaxLength(50);
+
+            // Backs the per-task tag fetch / wholesale rewrite on edit.
+            tag.HasIndex(t => t.TaskId);
+
+            // Backs the per-household suggestion query (DISTINCT Value WHERE HouseholdId == …, incl. closed tasks).
+            tag.HasIndex(t => new { t.HouseholdId, t.Value });
+
+            tag.HasOne(t => t.Task)
+                .WithMany(t => t.Tags)
+                .HasForeignKey(t => t.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // HouseholdId is denormalized (copied from the task), not a second FK — a task already cascades
+            // from its household, and a second cascade path through Households would be rejected by SQL Server.
         });
 
         builder.Entity<HouseholdInvite>(invite =>

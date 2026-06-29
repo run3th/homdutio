@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogRef } from '@angular/cdk/dialog';
 
 import { TaskService } from '../task.service';
+import { TagInputComponent } from '../tag-input/tag-input.component';
 import { mapValidationProblem } from '../../auth/validation-problem';
 
 /**
@@ -17,11 +18,11 @@ import { mapValidationProblem } from '../../auth/validation-problem';
  */
 @Component({
   selector: 'app-create-task',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TagInputComponent],
   templateUrl: './create-task.component.html',
   styleUrl: './create-task.component.scss',
 })
-export class CreateTaskComponent {
+export class CreateTaskComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly tasks = inject(TaskService);
   private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
@@ -29,12 +30,19 @@ export class CreateTaskComponent {
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
     description: [''],
-    category: [''],
+    tags: [[] as string[]],
   });
 
   /** Mapped validation messages from a 400 (or a generic fallback). */
   readonly errors = signal<string[]>([]);
   readonly pending = signal(false);
+  /** Household tag values for the chip-input autocomplete, fetched when the dialog opens. */
+  readonly suggestions = signal<string[]>([]);
+
+  ngOnInit(): void {
+    // A failed suggestion fetch is non-fatal — the field still works as free-text entry.
+    this.tasks.getTagSuggestions().subscribe({ next: (tags) => this.suggestions.set(tags), error: () => {} });
+  }
 
   submit(): void {
     if (this.form.invalid || this.pending()) {
@@ -45,12 +53,12 @@ export class CreateTaskComponent {
     this.errors.set([]);
     this.pending.set(true);
 
-    const { title, description, category } = this.form.getRawValue();
+    const { title, description, tags } = this.form.getRawValue();
     this.tasks
       .create({
         title: title.trim(),
         description: description.trim() || undefined,
-        category: category.trim() || undefined,
+        tags,
       })
       .subscribe({
         next: () => {

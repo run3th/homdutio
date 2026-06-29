@@ -18,7 +18,7 @@ describe('TaskDetailComponent', () => {
       id: 't1',
       title: 'Take out bins',
       description: null,
-      category: null,
+      tags: [],
       status: 'ToDo',
       createdByName: 'Molly',
       claimerName: null,
@@ -49,7 +49,7 @@ describe('TaskDetailComponent', () => {
         { provide: DialogRef, useValue: { close } },
         {
           provide: TaskService,
-          useValue: { update, delete: deleteTask, getComments, addComment },
+          useValue: { update, delete: deleteTask, getComments, addComment, getTagSuggestions: () => of([]) },
         },
       ],
     });
@@ -94,7 +94,7 @@ describe('TaskDetailComponent', () => {
     expect(update).toHaveBeenCalledWith('t1', {
       title: 'Renamed',
       description: undefined,
-      category: undefined,
+      tags: [],
     });
     expect(close).toHaveBeenCalled();
   });
@@ -148,7 +148,7 @@ describe('TaskDetailComponent', () => {
         { provide: DialogRef, useValue: { close } },
         {
           provide: TaskService,
-          useValue: { update, delete: deleteTask, getComments, addComment },
+          useValue: { update, delete: deleteTask, getComments, addComment, getTagSuggestions: () => of([]) },
         },
       ],
     });

@@ -40,8 +40,33 @@ public static class TaskEndpoints
 
             var names = await ResolveNamesAsync(db, tasks);
             var counts = await CountCommentsAsync(db, tasks);
+            var tags = await ResolveTagsAsync(db, tasks);
 
-            return Results.Ok(tasks.Select(t => ToResponse(t, caller, names, counts)).ToList());
+            return Results.Ok(tasks.Select(t => ToResponse(t, caller, names, counts, tags)).ToList());
+        });
+
+        // GET /api/tasks/tags — distinct tag values used anywhere in the caller's household (INCLUDING closed
+        // tasks — deliberately not the board's ClosedAtUtc == null filter), alphabetical, for the create/edit
+        // chip-input autocomplete. Household-scoped server-side (S-07); registered in ScopedRouteInventory as
+        // an own-only collection or RouteIsolationCoverageTests fails. A literal segment, so it never collides
+        // with the {id:guid} lifecycle routes.
+        group.MapGet("/tags", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var tags = await db.TaskTags
+                .AsNoTracking()
+                .Where(t => t.HouseholdId == caller.HouseholdId)
+                .Select(t => t.Value)
+                .Distinct()
+                .OrderBy(v => v)
+                .ToListAsync();
+
+            return Results.Ok(tags);
         });
 
         // POST /api/tasks — create a task in the caller's household; it lands unassigned in To do.
@@ -61,6 +86,12 @@ public static class TaskEndpoints
                 });
             }
 
+            var normalized = TagNormalization.Normalize(request.Tags);
+            if (!normalized.IsValid)
+            {
+                return Results.ValidationProblem(normalized.Errors!);
+            }
+
             var now = DateTime.UtcNow;
             var task = new HouseholdTask
             {
@@ -68,7 +99,6 @@ public static class TaskEndpoints
                 HouseholdId = caller.HouseholdId,
                 Title = request.Title.Trim(),
                 Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-                Category = string.IsNullOrWhiteSpace(request.Category) ? null : request.Category.Trim(),
                 Status = HouseholdTaskStatus.ToDo,
                 // Land at the bottom of "To do" so a manual order is never scrambled by a new task (FR-021).
                 SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, HouseholdTaskStatus.ToDo),
@@ -78,11 +108,20 @@ public static class TaskEndpoints
 
             db.HouseholdTasks.Add(task);
             db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Created, caller.UserId, now));
+            // HouseholdId is copied onto each tag so the suggestion query never needs a join (incl. closed tasks).
+            db.TaskTags.AddRange(normalized.Tags.Select(value => new TaskTag
+            {
+                Id = Guid.NewGuid(),
+                TaskId = task.Id,
+                HouseholdId = caller.HouseholdId,
+                Value = value,
+            }));
             await db.SaveChangesAsync();
 
             var names = await ResolveNamesAsync(db, [task]);
+            var tags = await ResolveTagsAsync(db, [task]);
             // A brand-new task has no comments yet; an empty count map renders commentCount = 0.
-            return Results.Created($"/api/tasks/{task.Id}", ToResponse(task, caller, names, new Dictionary<Guid, int>()));
+            return Results.Created($"/api/tasks/{task.Id}", ToResponse(task, caller, names, new Dictionary<Guid, int>(), tags));
         });
 
         // POST /api/tasks/{id}/claim — a To-do task → In progress, carrying the claimer.
@@ -116,7 +155,8 @@ public static class TaskEndpoints
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names, counts));
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
         });
 
         // POST /api/tasks/{id}/done — the claimer marks their In-progress task Done.
@@ -154,7 +194,8 @@ public static class TaskEndpoints
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names, counts));
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
         });
 
         // POST /api/tasks/{id}/confirm — an admin confirms a Done task, closing it off the board.
@@ -195,7 +236,8 @@ public static class TaskEndpoints
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names, counts));
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
         });
 
         // POST /api/tasks/{id}/unclaim — return an in-progress task to To do, unassigned (FR-022, S-05).
@@ -236,7 +278,8 @@ public static class TaskEndpoints
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names, counts));
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
         });
 
         // POST /api/tasks/{id}/sendback — an admin returns a Done task to In progress with a required reason
@@ -295,7 +338,8 @@ public static class TaskEndpoints
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names, counts));
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
         });
 
         // PUT /api/tasks/{id} — edit a task's title/description/category; admin-only, any column (FR-011, S-05).
@@ -327,14 +371,32 @@ public static class TaskEndpoints
                 });
             }
 
+            var normalized = TagNormalization.Normalize(request.Tags);
+            if (!normalized.IsValid)
+            {
+                return Results.ValidationProblem(normalized.Errors!);
+            }
+
             task.Title = request.Title.Trim();
             task.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
-            task.Category = string.IsNullOrWhiteSpace(request.Category) ? null : request.Category.Trim();
+
+            // Tags are rewritten wholesale (delete-all + re-insert) — simpler than a per-tag diff and matches the
+            // append-only spirit of the child rows; the suggestion index is small so the churn is negligible.
+            var existingTags = await db.TaskTags.Where(t => t.TaskId == task.Id).ToListAsync();
+            db.TaskTags.RemoveRange(existingTags);
+            db.TaskTags.AddRange(normalized.Tags.Select(value => new TaskTag
+            {
+                Id = Guid.NewGuid(),
+                TaskId = task.Id,
+                HouseholdId = task.HouseholdId,
+                Value = value,
+            }));
             await db.SaveChangesAsync(); // Management action — no TaskEvent (the log stays the lifecycle record).
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
-            return Results.Ok(ToResponse(task, caller, names, counts));
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
         });
 
         // DELETE /api/tasks/{id} — remove a mistaken/obsolete task while it is still un-claimed (FR-012).
@@ -528,6 +590,32 @@ public static class TaskEndpoints
             .ToDictionaryAsync(x => x.TaskId, x => x.Count);
     }
 
+    /// <summary>
+    /// The tags per task in one query (no N+1), each task's set ordered alphabetically so the board renders
+    /// deterministically. Backs the card chip row and the modal's tag field.
+    /// </summary>
+    private static async Task<Dictionary<Guid, string[]>> ResolveTagsAsync(
+        ApplicationDbContext db, IReadOnlyCollection<HouseholdTask> tasks)
+    {
+        var ids = tasks.Select(t => t.Id).ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, string[]>();
+        }
+
+        var rows = await db.TaskTags
+            .AsNoTracking()
+            .Where(t => ids.Contains(t.TaskId))
+            .Select(t => new { t.TaskId, t.Value })
+            .ToListAsync();
+
+        return rows
+            .GroupBy(r => r.TaskId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(r => r.Value).OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToArray());
+    }
+
     /// <summary>Resolves the display names of a set of comments' authors in one query — no N+1.</summary>
     private static async Task<Dictionary<string, string>> ResolveCommentNamesAsync(
         ApplicationDbContext db, IReadOnlyCollection<TaskComment> comments)
@@ -563,7 +651,11 @@ public static class TaskEndpoints
         };
 
     private static TaskResponse ToResponse(
-        HouseholdTask task, CallerContext caller, IReadOnlyDictionary<string, string> names, IReadOnlyDictionary<Guid, int> counts)
+        HouseholdTask task,
+        CallerContext caller,
+        IReadOnlyDictionary<string, string> names,
+        IReadOnlyDictionary<Guid, int> counts,
+        IReadOnlyDictionary<Guid, string[]> tags)
     {
         var canClaim = task.Status == HouseholdTaskStatus.ToDo;
         var canMarkDone = task.Status == HouseholdTaskStatus.InProgress && task.ClaimedById == caller.UserId;
@@ -581,7 +673,7 @@ public static class TaskEndpoints
             task.Id,
             task.Title,
             task.Description,
-            task.Category,
+            tags.TryGetValue(task.Id, out var taskTags) ? taskTags : [],
             task.Status.ToString(),
             names.TryGetValue(task.CreatedById, out var creator) ? creator : string.Empty,
             task.ClaimedById is not null && names.TryGetValue(task.ClaimedById, out var claimer) ? claimer : null,
@@ -598,9 +690,9 @@ public static class TaskEndpoints
     }
 }
 
-public sealed record CreateTaskRequest(string Title, string? Description, string? Category);
+public sealed record CreateTaskRequest(string Title, string? Description, string[]? Tags);
 
-public sealed record UpdateTaskRequest(string Title, string? Description, string? Category);
+public sealed record UpdateTaskRequest(string Title, string? Description, string[]? Tags);
 
 public sealed record ReorderRequest(string Status, Guid[] OrderedIds);
 
@@ -619,7 +711,7 @@ public sealed record TaskResponse(
     Guid Id,
     string Title,
     string? Description,
-    string? Category,
+    string[] Tags,
     string Status,
     string CreatedByName,
     string? ClaimerName,

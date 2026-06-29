@@ -12,7 +12,7 @@ describe('DeleteConfirmComponent', () => {
       id: 't1',
       title: 'Take out bins',
       description: null,
-      category: null,
+      tags: [],
       status: 'ToDo',
       createdByName: 'Molly',
       claimerName: null,

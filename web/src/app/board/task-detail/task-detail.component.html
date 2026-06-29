@@ -47,8 +47,12 @@
       </div>
 
       <div class="field">
-        <label for="detail-category">Category <span class="optional">(optional)</span></label>
-        <input id="detail-category" type="text" formControlName="category" autocomplete="off" />
+        <label for="detail-tags">Tags <span class="optional">(optional)</span></label>
+        <app-tag-input
+          id="detail-tags"
+          formControlName="tags"
+          [suggestions]="suggestions()"
+        ></app-tag-input>
       </div>
 
       <div class="modal-actions">
@@ -66,10 +70,17 @@
         <dt>Title</dt>
         <dd>{{ task.title }}</dd>
       </div>
-      @if (task.category) {
+      @if (task.tags.length) {
         <div class="task-meta-row">
-          <dt>Category</dt>
-          <dd>{{ task.category }}</dd>
+          <dt>Tags</dt>
+          <dd class="task-detail-tags">
+            @for (tag of task.tags; track tag) {
+              <span class="tag-chip">
+                <span class="tag-dot" aria-hidden="true" [style.background]="tagColor(tag)"></span>
+                {{ tag }}
+              </span>
+            }
+          </dd>
         </div>
       }
       @if (task.description) {

@@ -36,3 +36,10 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* The read-only tag chips wrap; chip body comes from the global .tag-chip primitive. */
+.task-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

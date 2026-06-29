@@ -66,6 +66,11 @@ public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
         var bOwn1 = await CreateTaskAsync(bToken, "B1");
         var bOwn2 = await CreateTaskAsync(bToken, "B2");
 
+        // Seed a distinctive tag in each household so the GET /api/tasks/tags own-only assertion has a
+        // House A value that must NOT leak and a House B value that must appear.
+        await SeedTagAsync(a.TodoTaskId, "alpha-secret-tag");
+        await SeedTagAsync(bOwn1, "beta-own-tag");
+
         var failures = new List<string>();
         var exercised = 0;
 
@@ -145,6 +150,14 @@ public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
                 var rows = (await roster.Content.ReadFromJsonAsync<MemberBody[]>())!;
                 Assert.Single(rows); // B's roster is only B's own admin...
                 Assert.DoesNotContain(rows, m => m.UserId == a.MemberId); // ...neither of A's two members appears.
+                break;
+
+            case "/api/tasks/tags":
+                var tagsResp = await _client.SendAsync(Authed(HttpMethod.Get, route.Template, bToken));
+                tagsResp.EnsureSuccessStatusCode();
+                var tagValues = (await tagsResp.Content.ReadFromJsonAsync<string[]>())!;
+                Assert.Contains("beta-own-tag", tagValues); // B sees its own tag...
+                Assert.DoesNotContain("alpha-secret-tag", tagValues); // ...and never House A's.
                 break;
 
             default:
@@ -239,6 +252,22 @@ public class HouseholdIsolationTests : IClassFixture<AuthApiFactory>
             UserId = user.Id,
             Role = role,
             JoinedAtUtc = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Seeds a tag row on a task directly (copying the task's household id) so the suggestion sweep has data.</summary>
+    private async Task SeedTagAsync(Guid taskId, string value)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var task = await db.HouseholdTasks.AsNoTracking().SingleAsync(t => t.Id == taskId);
+        db.TaskTags.Add(new TaskTag
+        {
+            Id = Guid.NewGuid(),
+            TaskId = taskId,
+            HouseholdId = task.HouseholdId,
+            Value = value,
         });
         await db.SaveChangesAsync();
     }

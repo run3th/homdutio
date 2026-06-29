@@ -80,8 +80,8 @@ public static class ScopedRouteInventory
     }
 
     /// <summary>
-    /// The 14 household-scoped routes across <c>TaskEndpoints</c> and <c>HouseholdEndpoints</c>:
-    /// 11 <see cref="Behavior.ParityNotFound"/>, 2 <see cref="Behavior.OwnOnlyCollection"/>,
+    /// The 15 household-scoped routes across <c>TaskEndpoints</c> and <c>HouseholdEndpoints</c>:
+    /// 11 <see cref="Behavior.ParityNotFound"/>, 3 <see cref="Behavior.OwnOnlyCollection"/>,
     /// 1 <see cref="Behavior.MixedBatchRejected"/>. Body factories supply only what a handler validates before
     /// its scoped lookup returns 404 — notably the role route, which validates <c>role</c> ahead of the target
     /// lookup, so a foreign-id 404 is only reached with a parseable role.
@@ -90,6 +90,9 @@ public static class ScopedRouteInventory
     {
         // --- Task board (own-only collection) --------------------------------------------------------
         new ScopedRoute("GET", "/api/tasks", IdShape.None, Behavior.OwnOnlyCollection),
+
+        // --- Tag suggestions (own-only collection; includes closed-task tags) ------------------------
+        new ScopedRoute("GET", "/api/tasks/tags", IdShape.None, Behavior.OwnOnlyCollection),
 
         // --- Task lifecycle (foreign-id 404 + body parity) -------------------------------------------
         new ScopedRoute("POST", "/api/tasks/{id}/claim", IdShape.TaskId, Behavior.ParityNotFound),
@@ -101,7 +104,7 @@ public static class ScopedRouteInventory
 
         // --- Task management (foreign-id 404 + body parity) ------------------------------------------
         new ScopedRoute("PUT", "/api/tasks/{id}", IdShape.TaskId, Behavior.ParityNotFound,
-            () => new { title = "hijack", description = (string?)null, category = (string?)null }),
+            () => new { title = "hijack", description = (string?)null, tags = (string[]?)null }),
         new ScopedRoute("DELETE", "/api/tasks/{id}", IdShape.TaskId, Behavior.ParityNotFound),
 
         // --- Task reorder (mixed-batch rejection) ----------------------------------------------------
