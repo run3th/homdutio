@@ -2,30 +2,34 @@
   display: block;
 }
 
-/* Desktop: side rail + main column filling the viewport height. */
+/* Mockup shell: a full-width sticky header on top, then a body row of sidebar + scrolling main.
+   The header sits above the scroll area (it's a flex sibling, not inside the scroller), so it stays
+   put without sticky positioning. */
 .shell {
   display: flex;
+  flex-direction: column;
   min-height: 100dvh;
 }
 
-.shell-main {
+.shell-body {
   display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
-  /* Without this the topbar's title ellipsis and the content can't shrink inside the flex row. */
-  min-width: 0;
+  /* Without this the content (and the topbar title ellipsis) can't shrink inside the flex row. */
+  min-height: 0;
 }
 
-/* The page scrolls inside the outlet; the topbar stays put above it. */
+/* The page scrolls inside the outlet; the header + sidebar stay put above/beside it. */
 .shell-content {
   flex: 1 1 auto;
+  min-width: 0;
   overflow-y: auto;
 }
 
-/* Mobile (≤ 400px): the sidebar becomes a fixed bottom bar (leaves the flow), so the main column is
-   full-width. Reserve bottom padding equal to the bar height so the last card is never occluded (NFR-2). */
-@media (max-width: 400px) {
+/* Mobile (< 1000px, mockup breakpoint): the sidebar leaves the flow and becomes a fixed bottom nav,
+   so the main column is full-width. Reserve bottom padding for the bar + its raised FAB so the last
+   card is never occluded (NFR-2 holds at ≤ 400px, a subset of this range). */
+@media (max-width: 999px) {
   .shell-content {
-    padding-bottom: var(--shell-bottombar-h);
+    padding-bottom: calc(var(--shell-bottombar-h) + var(--space-5));
   }
 }

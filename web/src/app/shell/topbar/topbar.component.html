@@ -1,20 +1,36 @@
-<header class="topbar">
-  <div class="topbar-identity">
-    <h1 class="topbar-title">{{ household()?.name }}</h1>
+<header class="header">
+  <div class="header-left">
+    <div class="brand">
+      <span class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="22" height="22" fill="none">
+          <path
+            d="M7 25 L24 10 L41 25"
+            stroke="#fff"
+            stroke-width="4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <rect x="20.5" y="29" width="7" height="9" rx="2" fill="#fff" />
+        </svg>
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">Homdutio</span>
+        <span class="brand-subtitle">Shared chores</span>
+      </span>
+    </div>
+
     @if (household(); as h) {
-      <span class="role-badge" [class.role-badge--admin]="h.role === 'Admin'">{{ h.role }}</span>
+      <div class="workspace-pill">
+        <span class="workspace-name">{{ h.name }}</span>
+        <span class="role-badge" [class.role-badge--admin]="h.role === 'Admin'">{{ h.role }}</span>
+      </div>
     }
   </div>
 
-  <div class="topbar-actions">
-    <button type="button" class="add-task-button" (click)="addTask()">
-      <span class="add-task-icon" aria-hidden="true">+</span>
-      <span class="add-task-label">Add task</span>
-    </button>
-
+  <div class="header-actions">
     <div class="invite">
-      <button type="button" class="invite-button" (click)="invite()" [disabled]="invitePending()">
-        {{ invitePending() ? 'Generating…' : 'Invite a member' }}
+      <button type="button" class="btn-outline" (click)="invite()" [disabled]="invitePending()">
+        {{ invitePending() ? 'Generating…' : 'Invite' }}
       </button>
 
       @if (inviteError()) {
@@ -33,6 +49,11 @@
         </div>
       }
     </div>
+
+    <button type="button" class="btn-accent" (click)="addTask()">
+      <span class="btn-accent-icon" aria-hidden="true">＋</span>
+      <span>New task</span>
+    </button>
 
     <app-avatar-menu />
   </div>

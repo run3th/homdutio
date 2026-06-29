@@ -46,14 +46,14 @@ describe('TopbarComponent', () => {
 
   it('shows the household name and role badge', () => {
     const el = render().nativeElement as HTMLElement;
-    expect(el.querySelector('.topbar-title')?.textContent).toContain('The Burrow');
+    expect(el.querySelector('.workspace-name')?.textContent).toContain('The Burrow');
     expect(el.querySelector('.role-badge')?.textContent).toContain('Admin');
   });
 
   it('Invite a member generates a token and exposes the copyable link', async () => {
     const fixture = render();
     const button = (fixture.nativeElement as HTMLElement).querySelector(
-      '.invite-button',
+      '.btn-outline',
     ) as HTMLButtonElement;
 
     button.click();
@@ -72,7 +72,7 @@ describe('TopbarComponent', () => {
   it('+ Add task opens the create dialog and pauses/resumes board polling', () => {
     const fixture = render();
     const button = (fixture.nativeElement as HTMLElement).querySelector(
-      '.add-task-button',
+      '.btn-accent',
     ) as HTMLButtonElement;
 
     button.click();

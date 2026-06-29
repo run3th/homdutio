@@ -80,10 +80,11 @@
   --weight-bold: 700;
   /* Focus + shell metrics */
   --focus-ring: 0 0 0 2px var(--color-primary);
-  /* Shell metrics stay at current values here; Phase 2 (shell rebuild) sets the new ones. */
-  --shell-sidebar-w: 4.75rem;
-  --shell-topbar-h: 3.5rem;
-  --shell-bottombar-h: 3.5rem;
+  /* Shell metrics (mockup): top header ≈ 61px, text-label sidebar 176px, mobile bottom nav. */
+  --shell-sidebar-w: 11rem; /* 176px */
+  --shell-topbar-h: 3.8125rem; /* 61px */
+  --shell-bottombar-h: 3.75rem; /* 60px */
+  --bp-mobile: 999px; /* < 1000px → mobile chrome (sidebar → bottom nav); documents the breakpoint */
 }
 
 *,

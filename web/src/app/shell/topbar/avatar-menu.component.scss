@@ -9,17 +9,17 @@
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  font-size: var(--text-sm);
+  font-size: 0.8125rem;
   font-weight: var(--weight-semibold);
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  border: 1px solid var(--color-border);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 0;
   border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
 .avatar-button:hover {
-  filter: brightness(0.97);
+  background: var(--color-primary-hover);
 }
 
 .avatar-button:focus-visible {
@@ -55,9 +55,9 @@
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
   text-align: left;
-  color: var(--color-text);
+  color: var(--color-danger);
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
@@ -65,7 +65,7 @@
 }
 
 .avatar-menu-item:hover {
-  background: var(--color-surface-2);
+  background: var(--color-danger-soft);
 }
 
 .avatar-menu-item:focus-visible {

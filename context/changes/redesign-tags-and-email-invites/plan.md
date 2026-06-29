@@ -553,30 +553,30 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 1.1 Angular build succeeds (`cd web && npm run build`)
-- [x] 1.2 Lint passes (`cd web && npm run lint`)
-- [x] 1.3 Unit tests pass (`cd web && npm test`)
-- [x] 1.4 No component style exceeds the 8 kB budget
+- [x] 1.1 Angular build succeeds (`cd web && npm run build`) — c51e611
+- [x] 1.2 Lint passes (`cd web && npm run lint`) — c51e611
+- [x] 1.3 Unit tests pass (`cd web && npm test`) — c51e611
+- [x] 1.4 No component style exceeds the 8 kB budget — c51e611
 
 #### Manual
 
-- [ ] 1.5 App renders in IBM Plex + teal palette with no leftover violet
-- [ ] 1.6 Auth/create/join buttons, inputs, cards match the mockup treatment
-- [ ] 1.7 Focus rings and hover states visible and on-brand
+- [x] 1.5 App renders in IBM Plex + teal palette with no leftover violet — c51e611
+- [x] 1.6 Auth/create/join buttons, inputs, cards match the mockup treatment — c51e611
+- [x] 1.7 Focus rings and hover states visible and on-brand — c51e611
 
 ### Phase 2: Shell — top header, text-label sidebar, mobile nav
 
 #### Automated
 
-- [ ] 2.1 Build, lint, unit tests pass
-- [ ] 2.2 No component style exceeds the 8 kB budget
+- [x] 2.1 Build, lint, unit tests pass
+- [x] 2.2 No component style exceeds the 8 kB budget
 
 #### Manual
 
-- [ ] 2.3 Header shows logo lockup, workspace pill + ADMIN badge, Invite / ＋New task, avatar menu
-- [ ] 2.4 Sidebar shows text labels with dots + active state; navigates Board/Members
-- [ ] 2.5 ≤400px collapses to bottom nav with FAB; no horizontal scroll
-- [ ] 2.6 Avatar dropdown opens/closes and logs out
+- [x] 2.3 Header shows logo lockup, workspace pill + ADMIN badge, Invite / ＋New task, avatar menu
+- [x] 2.4 Sidebar shows text labels with dots + active state; navigates Board/Members
+- [x] 2.5 ≤400px collapses to bottom nav with FAB; no horizontal scroll
+- [x] 2.6 Avatar dropdown opens/closes and logs out
 
 ### Phase 3: Board & Cards
 

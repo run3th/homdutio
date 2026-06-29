@@ -1,54 +1,35 @@
 <nav class="sidebar-nav" aria-label="Primary">
   <a
-    class="sidebar-item"
+    class="nav-item"
     routerLink="/board"
-    routerLinkActive="sidebar-item--active"
+    routerLinkActive="nav-item--active"
     [routerLinkActiveOptions]="{ exact: true }"
   >
-    <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M3 11.5 12 4l9 7.5"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M5 10v9h14v-9"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-    <span class="sidebar-label">Home</span>
+    <span class="nav-dot" aria-hidden="true"></span>
+    <span>Board</span>
   </a>
 
+  <a class="nav-item" routerLink="/members" routerLinkActive="nav-item--active">
+    <span class="nav-dot" aria-hidden="true"></span>
+    <span>Members</span>
+  </a>
+</nav>
+
+<nav class="bottom-nav" aria-label="Primary">
   <a
-    class="sidebar-item"
-    routerLink="/members"
-    routerLinkActive="sidebar-item--active"
+    class="bn-item"
+    routerLink="/board"
+    routerLinkActive="bn-item--active"
+    [routerLinkActiveOptions]="{ exact: true }"
   >
-    <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2" />
-      <path
-        d="M3.5 19a5.5 5.5 0 0 1 11 0"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-      />
-      <path
-        d="M16 6.2a3 3 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-2.7-4.7"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-    <span class="sidebar-label">Members</span>
+    <span class="bn-dot" aria-hidden="true"></span>
+    <span class="bn-label">Board</span>
+  </a>
+
+  <button type="button" class="fab" (click)="addTask()" aria-label="New task">＋</button>
+
+  <a class="bn-item" routerLink="/members" routerLinkActive="bn-item--active">
+    <span class="bn-dot" aria-hidden="true"></span>
+    <span class="bn-label">Members</span>
   </a>
 </nav>
