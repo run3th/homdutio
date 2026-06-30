@@ -407,28 +407,28 @@ None — no schema or data changes.
 
 #### Automated
 
-- [x] 1.1 Build passes (`dotnet build`)
-- [x] 1.2 New Phase 1 tests pass (`dotnet test tests/Homdutio.Api.Tests --filter "FullyQualifiedName~TaskEndpointsTests"`)
-- [x] 1.3 Full API test suite still green (`dotnet test tests/Homdutio.Api.Tests`)
+- [x] 1.1 Build passes (`dotnet build`) — fbc2067
+- [x] 1.2 New Phase 1 tests pass (`dotnet test tests/Homdutio.Api.Tests --filter "FullyQualifiedName~TaskEndpointsTests"`) — fbc2067
+- [x] 1.3 Full API test suite still green (`dotnet test tests/Homdutio.Api.Tests`) — fbc2067
 
 #### Manual
 
-- [x] 1.4 Each new test asserts status/flag from the research matrix, not a fresh guard read (oracle discipline)
-- [x] 1.5 Cross-member test reads `SelfAttested` from persisted row + `Confirmed` event, not an affordance flag
+- [x] 1.4 Each new test asserts status/flag from the research matrix, not a fresh guard read (oracle discipline) — fbc2067
+- [x] 1.5 Cross-member test reads `SelfAttested` from persisted row + `Confirmed` event, not an affordance flag — fbc2067
 
 ### Phase 2: Lifecycle Completeness Sweep
 
 #### Automated
 
-- [ ] 2.1 Build passes (`dotnet build`)
-- [ ] 2.2 New Phase 2 tests pass (`dotnet test tests/Homdutio.Api.Tests`)
-- [ ] 2.3 Foreign-404 parity tests assert empty body (not just status)
+- [x] 2.1 Build passes (`dotnet build`)
+- [x] 2.2 New Phase 2 tests pass (`dotnet test tests/Homdutio.Api.Tests`)
+- [x] 2.3 Foreign-404 parity tests assert empty body (not just status)
 
 #### Manual
 
-- [ ] 2.4 Double-claim test carries the in-code note deferring the concurrent race to Phase 3
-- [ ] 2.5 Delete test carries the comment flagging the pinned-behavior assumption
-- [ ] 2.6 Member-removal test asserts persisted row + appended event, not the board view
+- [x] 2.4 Double-claim test carries the in-code note deferring the concurrent race to Phase 3
+- [x] 2.5 Delete test carries the comment flagging the pinned-behavior assumption
+- [x] 2.6 Member-removal test asserts persisted row + appended event, not the board view (existing `HouseholdMemberAdminTests.cs:332`; no duplicate written)
 
 ### Phase 3: Cookbook §6.1 Update
 

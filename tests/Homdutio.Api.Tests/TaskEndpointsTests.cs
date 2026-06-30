@@ -242,6 +242,90 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.Equal(HttpStatusCode.Conflict, done.StatusCode);
     }
 
+    // --- Phase 2 / Risk #2: lifecycle completeness sweep ----------------------------------------------
+    // Foreign-household 404 parity for done/confirm, the logical double-claim 409, and the member-open
+    // Delete pin. Statuses below are derived from the transition matrix in research.md, not a fresh guard read.
+
+    [Fact]
+    public async Task Done_and_confirm_on_a_foreign_household_task_return_404()
+    {
+        // Extends the foreign-household sweep to the two verbs research flagged untested (claim parity at
+        // :319, unclaim/sendback at :870). Scope (HouseholdScope.LoadScopedTaskAsync) fires before the
+        // state/role guards, so an outsider gets 404 with an empty body — byte-identical to an unknown-id
+        // 404 (the §6.1 existence-oracle seal: no "exists but forbidden" leak).
+        var aToken = await RegisterAndLoginAsync(NewEmail("dc-a"), "Alice");
+        await CreateHouseholdAsync(aToken, "House A");
+        var task = await CreateTaskAsync(aToken, "Belongs to A");
+
+        var bToken = await RegisterAndLoginAsync(NewEmail("dc-b"), "Bob");
+        await CreateHouseholdAsync(bToken, "House B");
+
+        var done = await ActionAsync(bToken, task.Id, "done");
+        Assert.Equal(HttpStatusCode.NotFound, done.StatusCode);
+        Assert.Empty(await done.Content.ReadAsStringAsync());
+
+        var confirm = await ActionAsync(bToken, task.Id, "confirm");
+        Assert.Equal(HttpStatusCode.NotFound, confirm.StatusCode);
+        Assert.Empty(await confirm.Content.ReadAsStringAsync());
+
+        // Parity anchor: an unknown id from B's own perspective is the same empty-body 404.
+        var unknown = await ActionAsync(bToken, Guid.NewGuid(), "done");
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        Assert.Empty(await unknown.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Claiming_an_in_progress_task_as_a_second_member_returns_409()
+    {
+        // A *different* member claiming an already-InProgress task is rejected via the in-handler status read
+        // (TaskEndpoints.cs:143) — the logical 409. Distinct from the same-claimer re-claim at :246.
+        // NOTE: this proves only the *logical* conflict. HouseholdTask has no rowversion / optimistic-
+        // concurrency token, so a *true simultaneous* double-claim is not provable at this layer — that
+        // concurrent race belongs to Phase 3 / Risk #3 (cf. lessons.md "Guard min-count invariants with an
+        // atomic check-and-mutate": the codebase locks where it cares about races, deliberately not on claim).
+        var adminToken = await RegisterAndLoginAsync(NewEmail("dbl-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Double Claim House");
+
+        var firstEmail = NewEmail("dbl-first");
+        var firstToken = await RegisterAndLoginAsync(firstEmail, "First");
+        await SeedMemberAsync(firstEmail, householdId, HouseholdRole.Member);
+
+        var secondEmail = NewEmail("dbl-second");
+        var secondToken = await RegisterAndLoginAsync(secondEmail, "Second");
+        await SeedMemberAsync(secondEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "First come first served");
+        (await ActionAsync(firstToken, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var second = await ActionAsync(secondToken, task.Id, "claim");
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deleting_a_to_do_task_as_a_non_admin_member_succeeds()
+    {
+        // PINNED BEHAVIOR (deliberate): Delete is state-gated (ToDo only) but NOT role-gated
+        // (TaskEndpoints.cs:418-420 has no caller.Role check), unlike admin-only Edit. So a non-admin
+        // member may delete a ToDo task. This pins today's behavior so a future "lock delete to admins"
+        // change is a conscious break rather than a silent regression — if that change lands, update this
+        // test as a deliberate decision.
+        var adminToken = await RegisterAndLoginAsync(NewEmail("del-mem-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Member Delete House");
+
+        var memberEmail = NewEmail("del-mem-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Any member may delete this");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Delete, $"/api/tasks/{task.Id}", memberToken));
+        Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.HouseholdTasks.AnyAsync(t => t.Id == task.Id));
+    }
+
     [Fact]
     public async Task Claiming_an_already_claimed_task_returns_409()
     {
