@@ -1,7 +1,7 @@
 ---
 change_id: redesign-tags-and-email-invites
 title: New design adoption plus task tags and emailed invite links
-status: implementing
+status: implemented
 created: 2026-06-29
 updated: 2026-06-30
 archived_at: null

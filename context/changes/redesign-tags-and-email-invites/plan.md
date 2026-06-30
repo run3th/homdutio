@@ -642,16 +642,16 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 7.1 Backend builds (`dotnet build`)
-- [x] 7.2 Reset-email tests still pass, now asserting template-rendered body/link
-- [x] 7.3 New invite-email test passes (link + household/inviter substitution)
-- [x] 7.4 Renderer unit test loads both embedded templates
-- [x] 7.5 Angular build + lint + unit tests pass
-- [x] 7.6 Test-plan §6 cookbook updated for the email/invite test category
+- [x] 7.1 Backend builds (`dotnet build`) — fdfbb86
+- [x] 7.2 Reset-email tests still pass, now asserting template-rendered body/link — fdfbb86
+- [x] 7.3 New invite-email test passes (link + household/inviter substitution) — fdfbb86
+- [x] 7.4 Renderer unit test loads both embedded templates — fdfbb86
+- [x] 7.5 Angular build + lint + unit tests pass — fdfbb86
+- [x] 7.6 Test-plan §6 cookbook updated for the email/invite test category — fdfbb86
 
 #### Manual
 
-- [x] 7.7 Invite without email behaves as today (generate + copy)
-- [x] 7.8 Invite with email sends mail with a working `/join/<token>` link, household + inviter names
-- [x] 7.9 The emailed link opens the join landing and accepts the invite
-- [x] 7.10 Password-reset email still arrives and its link still works
+- [x] 7.7 Invite without email behaves as today (generate + copy) — fdfbb86
+- [x] 7.8 Invite with email sends mail with a working `/join/<token>` link, household + inviter names — fdfbb86
+- [x] 7.9 The emailed link opens the join landing and accepts the invite — fdfbb86
+- [x] 7.10 Password-reset email still arrives and its link still works — fdfbb86
