@@ -2,17 +2,77 @@
   display: block;
 }
 
-/* The card stacks a heading, blurb, and stacked actions; spacing matches the auth screens. */
-.card p {
-  margin: 0 0 1rem;
+/* The join card centers its hero (avatar cluster, title, blurb) above stacked actions. */
+.join-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.join-card h1 {
+  text-align: center;
+}
+
+.join-sub {
+  margin: var(--space-2) 0 var(--space-5);
   font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+.join-sub strong {
+  color: var(--color-text);
 }
 
 .muted {
   color: var(--color-text-muted);
 }
 
-/* A second stacked action under a primary .btn (e.g. Register under Log in) gets breathing room. */
+/* Inviter avatar with a small house chip tucked into its bottom-right corner. */
+.invite-avatars {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+
+.house-chip {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface);
+}
+
+/* The calm "you're already in" mark: the house in a soft primary disc (no error styling). */
+.info-circle {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+}
+
+/* A text-style action inside an .alt-link row (e.g. "No thanks, maybe later"). */
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font: inherit;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* A second stacked action under a primary .btn gets breathing room. */
 .btn + .alt-link {
   display: block;
 }

@@ -13,6 +13,10 @@ export interface InviteResponse {
 /** Success body of `GET /api/households/invites/{token}` (camelCase JSON of InvitePreviewResponse). */
 export interface InvitePreview {
   householdName: string;
+  /** The inviter's display name, shown on the join screens. */
+  inviterName: string;
+  /** The inviter's user id — used to build their versioned avatar URL (Phase 3); shows their initial until then. */
+  inviterId: string;
 }
 
 /**

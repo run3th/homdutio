@@ -150,7 +150,8 @@ public static class HouseholdEndpoints
         .RequireRateLimiting(RateLimitPolicies.Invite);
 
         // GET /api/households/invites/{token} — public preview so a recipient sees which household they're
-        // joining before they have an account. Leaks only the household name (US-02).
+        // joining (US-02) and who invited them, before they have an account. Leaks only the household name and
+        // the inviter's display name + id (the id lets the SPA build the versioned avatar URL once it exists).
         group.MapGet("/invites/{token}", async (string token, ApplicationDbContext db) =>
         {
             var invite = await db.HouseholdInvites
@@ -168,7 +169,15 @@ public static class HouseholdEndpoints
                 return Results.StatusCode(StatusCodes.Status410Gone);
             }
 
-            return Results.Ok(new InvitePreviewResponse(invite.Household!.Name));
+            // The inviter is recorded on the invite (CreatedById); resolve their display name for the join
+            // screens. DisplayName is never blank (register falls back to the email local-part).
+            var inviter = await db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == invite.CreatedById)
+                .Select(u => new { u.Id, u.DisplayName })
+                .SingleAsync();
+
+            return Results.Ok(new InvitePreviewResponse(invite.Household!.Name, inviter.DisplayName, inviter.Id));
         })
         .AllowAnonymous();
 
@@ -487,7 +496,7 @@ public sealed record HouseholdResponse(Guid Id, string Name, string Role);
 
 public sealed record InviteResponse(string Token, DateTime ExpiresAtUtc);
 
-public sealed record InvitePreviewResponse(string HouseholdName);
+public sealed record InvitePreviewResponse(string HouseholdName, string InviterName, string InviterId);
 
 public sealed record MemberResponse(string UserId, string DisplayName, string Email, string Role, bool IsSelf, bool CanManage);
 

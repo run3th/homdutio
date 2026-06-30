@@ -26,7 +26,7 @@ describe('JoinComponent', () => {
     isAuthenticated.set(false);
     current.set(null);
     loaded.set(false);
-    preview = vi.fn(() => of({ householdName: 'The Burrow' }));
+    preview = vi.fn(() => of({ householdName: 'The Burrow', inviterName: 'Robin', inviterId: 'inv1' }));
     accept = vi.fn();
     loadMine = vi.fn(() => of(current()));
     setMembership = vi.fn();
@@ -56,10 +56,13 @@ describe('JoinComponent', () => {
     return fixture;
   }
 
-  it('renders the household name on a valid preview', () => {
-    const el = render().nativeElement as HTMLElement;
+  it('logged-out valid preview: shows the joinLoggedOut screen naming inviter + household', () => {
+    const fixture = render();
+    const el = fixture.nativeElement as HTMLElement;
     expect(preview).toHaveBeenCalledWith(TOKEN);
+    expect(fixture.componentInstance.screen()).toBe('joinLoggedOut');
     expect(el.querySelector('h1')?.textContent).toContain('The Burrow');
+    expect(el.textContent).toContain('Robin');
   });
 
   it('shows the invalid message when preview returns 410', () => {
@@ -81,7 +84,7 @@ describe('JoinComponent', () => {
     expect(login.getAttribute('href')).toContain('returnUrl=%2Fjoin%2Fabc123');
   });
 
-  it('authenticated with no household: Join accepts the invite and routes to the board', () => {
+  it('authenticated with no household: shows the join screen and Accept joins + routes to the board', () => {
     isAuthenticated.set(true);
     loaded.set(true);
     current.set(null);
@@ -89,6 +92,9 @@ describe('JoinComponent', () => {
     accept.mockReturnValue(of(household));
 
     const fixture = render();
+    expect(fixture.componentInstance.screen()).toBe('join');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Accept & join The Burrow');
+
     fixture.componentInstance.join();
 
     expect(accept).toHaveBeenCalledWith(TOKEN);
@@ -96,14 +102,27 @@ describe('JoinComponent', () => {
     expect(navSpy).toHaveBeenCalledWith(['/board']);
   });
 
-  it('authenticated and already in a household: shows the block, no Join button', () => {
+  it('authenticated, no household, not yet loaded: stays on the loading screen (no premature join)', () => {
+    isAuthenticated.set(true);
+    loaded.set(false);
+    current.set(null);
+
+    const fixture = render();
+    expect(fixture.componentInstance.screen()).toBe('loading');
+  });
+
+  it('authenticated and already in a household: shows the calm joinTaken screen (non-error)', () => {
     isAuthenticated.set(true);
     loaded.set(true);
     current.set({ id: 'h9', name: 'Other House', role: 'Admin' });
 
-    const el = render().nativeElement as HTMLElement;
-    expect(el.querySelector('.form-error')?.textContent).toContain('already belong');
-    expect(el.querySelector('button')).toBeNull();
+    const fixture = render();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.screen()).toBe('joinTaken');
+    expect(el.textContent).toContain("You're already in");
+    expect(el.querySelector('.form-error')).toBeNull(); // calm, not an error
+    const board = el.querySelector('a[href*="/board"]') as HTMLAnchorElement;
+    expect(board).not.toBeNull();
   });
 
   it('a join-time 410 falls back to the invalid screen', () => {

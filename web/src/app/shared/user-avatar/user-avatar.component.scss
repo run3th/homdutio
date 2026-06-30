@@ -1,0 +1,22 @@
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* The photo and the initial share the same circular box; the photo crops to fill it. */
+.user-avatar__img {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-avatar__initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--color-on-primary);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+}

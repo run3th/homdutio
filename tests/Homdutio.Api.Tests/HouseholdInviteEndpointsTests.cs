@@ -137,9 +137,9 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
     }
 
     [Fact]
-    public async Task Preview_returns_household_name_for_a_valid_token()
+    public async Task Preview_returns_household_name_and_inviter_for_a_valid_token()
     {
-        var token = await RegisterAndLoginAsync(NewEmail("prev"));
+        var token = await RegisterAndLoginWithNameAsync(NewEmail("prev"), "Robin");
         await CreateHouseholdAsync(token, "Preview House");
         var invite = await GenerateInviteAsync(token);
 
@@ -148,6 +148,8 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var preview = await resp.Content.ReadFromJsonAsync<PreviewBody>();
         Assert.Equal("Preview House", preview!.HouseholdName);
+        Assert.Equal("Robin", preview.InviterName);
+        Assert.False(string.IsNullOrWhiteSpace(preview.InviterId));
     }
 
     [Fact]
@@ -349,7 +351,7 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
 
     private sealed record InviteBody(string Token, DateTime ExpiresAtUtc);
 
-    private sealed record PreviewBody(string HouseholdName);
+    private sealed record PreviewBody(string HouseholdName, string InviterName, string InviterId);
 }
 
 /// <summary>Lowers the invite rate limit so the per-user 429 can be asserted deterministically.</summary>

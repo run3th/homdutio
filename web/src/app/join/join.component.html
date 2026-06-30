@@ -1,45 +1,108 @@
 <div class="page">
-  <div class="card">
-    @switch (previewState()) {
+  <div class="card join-card">
+    <app-auth-logo />
+
+    @switch (screen()) {
       @case ('loading') {
         <p class="muted" role="status">Loading invite…</p>
       }
+
       @case ('invalid') {
         <h1>Invite unavailable</h1>
         <p class="form-error" role="alert">This invite is no longer valid.</p>
         <a class="alt-link" routerLink="/board">Go to the board</a>
       }
-      @case ('valid') {
-        <h1>Join {{ householdName() }}</h1>
 
-        @if (!isAuthenticated()) {
-          <p>You've been invited to join this household. Log in or create an account to continue.</p>
-          <a
-            class="btn"
-            [routerLink]="['/login']"
-            [queryParams]="{ returnUrl: returnUrl }"
-            role="button"
-            >Log in</a
-          >
-          <a
-            class="alt-link"
-            [routerLink]="['/register']"
-            [queryParams]="{ returnUrl: returnUrl }"
-            >No account? Register</a
-          >
-        } @else if (!membershipLoaded()) {
-          <p class="muted" role="status">Checking your membership…</p>
-        } @else if (household()) {
-          <p class="form-error" role="alert">You already belong to a household.</p>
-          <a class="alt-link" routerLink="/board">Go to your board</a>
-        } @else {
-          @if (joinError()) {
-            <p class="form-error" role="alert">{{ joinError() }}</p>
-          }
-          <button type="button" class="btn" (click)="join()" [disabled]="joining()">
-            {{ joining() ? 'Joining…' : 'Join household' }}
-          </button>
+      @case ('joinLoggedOut') {
+        <div class="join-hero">
+          <div class="invite-avatars">
+            <app-user-avatar [name]="inviterName()" size="lg" />
+            <span class="house-chip" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="19" height="19" fill="none">
+                <path
+                  d="M7 25 L24 10 L41 25"
+                  stroke="#fff"
+                  stroke-width="4.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <rect x="20.5" y="29" width="7" height="9" rx="2" fill="#fff" />
+              </svg>
+            </span>
+          </div>
+          <h1>Join {{ householdName() }}</h1>
+          <p class="join-sub">
+            <strong>{{ inviterName() }}</strong> invited you to join this household. Log in or create
+            an account to continue.
+          </p>
+        </div>
+
+        <a class="btn" [routerLink]="['/login']" [queryParams]="{ returnUrl }" role="button"
+          >Log in to continue</a
+        >
+        <p class="alt-link">
+          No account?
+          <a [routerLink]="['/register']" [queryParams]="{ returnUrl }">Create one</a>
+        </p>
+      }
+
+      @case ('join') {
+        <div class="join-hero">
+          <div class="invite-avatars">
+            <app-user-avatar [name]="inviterName()" size="lg" />
+            <span class="house-chip" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="19" height="19" fill="none">
+                <path
+                  d="M7 25 L24 10 L41 25"
+                  stroke="#fff"
+                  stroke-width="4.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <rect x="20.5" y="29" width="7" height="9" rx="2" fill="#fff" />
+              </svg>
+            </span>
+          </div>
+          <h1>Join {{ householdName() }}</h1>
+          <p class="join-sub">
+            <strong>{{ inviterName() }}</strong> invited you to share household chores on Homdutio.
+            Claim tasks, leave comments and keep everyone in sync.
+          </p>
+        </div>
+
+        @if (joinError()) {
+          <p class="form-error" role="alert">{{ joinError() }}</p>
         }
+        <button type="button" class="btn" (click)="join()" [disabled]="joining()">
+          {{ joining() ? 'Joining…' : 'Accept & join ' + householdName() }}
+        </button>
+        <p class="alt-link">
+          <button type="button" class="link-btn" (click)="decline()">No thanks, maybe later</button>
+        </p>
+      }
+
+      @case ('joinTaken') {
+        <div class="join-hero">
+          <span class="info-circle" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="24" height="24" fill="none">
+              <path
+                d="M7 25 L24 10 L41 25"
+                stroke="var(--color-primary)"
+                stroke-width="4.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <rect x="20.5" y="29" width="7" height="9" rx="2" fill="var(--color-primary)" />
+            </svg>
+          </span>
+          <h1>You're already in</h1>
+          <p class="join-sub">
+            You already belong to <strong>{{ householdName() }}</strong>. Head to your board to pick
+            up where you left off.
+          </p>
+        </div>
+
+        <a class="btn" routerLink="/board" role="button">Go to your board</a>
       }
     }
   </div>
