@@ -298,27 +298,27 @@ One additive EF migration adds nullable avatar columns to `AspNetUsers`; no back
 
 #### Automated
 
-- [x] 1.1 Backend builds: `dotnet build`
-- [x] 1.2 Preview-inviter endpoint test passes
-- [x] 1.3 Frontend builds: `npm --prefix web run build`
-- [x] 1.4 Lint passes: `npm --prefix web run lint`
-- [x] 1.5 Join-component spec passes
+- [x] 1.1 Backend builds: `dotnet build` — 2bb4078
+- [x] 1.2 Preview-inviter endpoint test passes — 2bb4078
+- [x] 1.3 Frontend builds: `npm --prefix web run build` — 2bb4078
+- [x] 1.4 Lint passes: `npm --prefix web run lint` — 2bb4078
+- [x] 1.5 Join-component spec passes — 2bb4078
 
 #### Manual
 
-- [x] 1.6 Logged-out `/join` shows inviter + household; auth links carry `returnUrl`
-- [x] 1.7 Logged-in joinable: "Accept & join" joins and routes to `/board`
-- [x] 1.8 Already-member shows calm `joinTaken` (non-error) + working "Go to your board"
-- [x] 1.9 Expired/consumed/unknown token still shows invalid state
+- [x] 1.6 Logged-out `/join` shows inviter + household; auth links carry `returnUrl` — 2bb4078
+- [x] 1.7 Logged-in joinable: "Accept & join" joins and routes to `/board` — 2bb4078
+- [x] 1.8 Already-member shows calm `joinTaken` (non-error) + working "Go to your board" — 2bb4078
+- [x] 1.9 Expired/consumed/unknown token still shows invalid state — 2bb4078
 
 ### Phase 2: Display-Name Editing + Identity Surfacing
 
 #### Automated
 
-- [ ] 2.1 Backend builds: `dotnet build`
-- [ ] 2.2 Profile + `/me` tests pass
-- [ ] 2.3 Frontend builds + lint
-- [ ] 2.4 Settings dialog spec passes
+- [x] 2.1 Backend builds: `dotnet build`
+- [x] 2.2 Profile + `/me` tests pass
+- [x] 2.3 Frontend builds + lint
+- [x] 2.4 Settings dialog spec passes
 
 #### Manual
 

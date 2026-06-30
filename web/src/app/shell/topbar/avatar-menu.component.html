@@ -6,13 +6,26 @@
   aria-haspopup="menu"
   aria-label="Account menu"
 >
-  {{ initial() }}
+  <app-user-avatar [name]="displayName() ?? email()" [avatarUrl]="avatarUrl()" size="md" />
 </button>
 
 @if (open()) {
   <div class="avatar-menu" role="menu">
-    <p class="avatar-menu-email">{{ email() }}</p>
-    <button type="button" class="avatar-menu-item" role="menuitem" (click)="logout()">
+    <div class="avatar-menu-identity">
+      @if (displayName(); as name) {
+        <p class="avatar-menu-name">{{ name }}</p>
+      }
+      <p class="avatar-menu-email">{{ email() }}</p>
+    </div>
+    <button type="button" class="avatar-menu-item" role="menuitem" (click)="openSettings()">
+      Settings
+    </button>
+    <button
+      type="button"
+      class="avatar-menu-item avatar-menu-item--danger"
+      role="menuitem"
+      (click)="logout()"
+    >
       Log out
     </button>
   </div>

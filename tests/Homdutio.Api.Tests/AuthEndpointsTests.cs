@@ -216,6 +216,10 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
         var me = await response.Content.ReadFromJsonAsync<MeBody>();
         Assert.Equal(email, me!.Email);
         Assert.False(string.IsNullOrEmpty(me.Sub));
+        // No display name supplied at registration → backend falls back to the email local-part.
+        Assert.Equal(email.Split('@')[0], me.DisplayName);
+        // Avatar storage arrives in S-09 Phase 3; until then /me carries a null avatar URL.
+        Assert.Null(me.AvatarUrl);
     }
 
     [Fact]
@@ -238,5 +242,5 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
 
     private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc, string RefreshToken);
 
-    private sealed record MeBody(string? Sub, string? Email);
+    private sealed record MeBody(string? Sub, string? Email, string? DisplayName, string? AvatarUrl);
 }

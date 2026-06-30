@@ -70,9 +70,15 @@ describe('AuthService', () => {
     expect(req.request.body).toEqual({ email: 'user@example.com', password: 'Passw0rd!' });
     req.flush(loginResponse);
 
+    // Login pulls the profile (display name + avatar) from /me now that the bearer is set.
+    const meReq = httpMock.expectOne('/api/auth/me');
+    expect(meReq.request.method).toBe('GET');
+    meReq.flush({ sub: 'u1', email: 'user@example.com', displayName: 'Molly', avatarUrl: null });
+
     expect(service.token).toBe('jwt-123');
     expect(service.isAuthenticated()).toBe(true);
     expect(service.email()).toBe('user@example.com');
+    expect(service.displayName()).toBe('Molly');
     expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-abc');
   });
 
@@ -90,6 +96,9 @@ describe('AuthService', () => {
       expiresAtUtc: '2099-01-01T00:00:00Z',
       refreshToken: 'refresh-def',
     } satisfies LoginResponse);
+
+    // A successful refresh restores the profile from /me too.
+    httpMock.expectOne('/api/auth/me').flush({ sub: 'u1', email: null, displayName: 'Molly', avatarUrl: null });
 
     expect(result).toBe(true);
     expect(service.token).toBe('jwt-456');
@@ -109,6 +118,9 @@ describe('AuthService', () => {
       expiresAtUtc: '2099-01-01T00:00:00Z',
       refreshToken: 'refresh-def',
     } satisfies LoginResponse);
+
+    // /me carries no email here, so the claim-recovered email is preserved.
+    httpMock.expectOne('/api/auth/me').flush({ sub: 'u1', email: null, displayName: 'Reload', avatarUrl: null });
 
     expect(service.email()).toBe('reload@example.com');
   });
@@ -150,12 +162,17 @@ describe('AuthService', () => {
       refreshToken: 'refresh-def',
     } satisfies LoginResponse);
 
+    // The single shared refresh triggers a single /me restore.
+    httpMock.expectOne('/api/auth/me').flush({ sub: 'u1', email: null, displayName: 'Molly', avatarUrl: null });
+
     expect(results).toEqual([true, true]);
   });
 
   it('logout posts to the logout endpoint, clears auth state, and clears localStorage', () => {
     service.login('user@example.com', 'Passw0rd!').subscribe();
     httpMock.expectOne('/api/auth/login').flush(loginResponse);
+    // Drain the login-triggered /me before logging out.
+    httpMock.expectOne('/api/auth/me').flush({ sub: 'u1', email: 'user@example.com', displayName: 'Molly', avatarUrl: null });
 
     service.logout();
 
@@ -167,6 +184,7 @@ describe('AuthService', () => {
     expect(service.token).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
     expect(service.email()).toBeNull();
+    expect(service.displayName()).toBeNull();
     expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
   });
 

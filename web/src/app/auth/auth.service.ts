@@ -18,6 +18,14 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+/** Body of `GET /api/auth/me` (camelCase JSON of the C# MeResponse). `avatarUrl` is null until S-09 Phase 3. */
+export interface MeResponse {
+  sub: string | null;
+  email: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
 /** The single `localStorage` key holding the current (rotating) refresh token. */
 export const REFRESH_TOKEN_KEY = 'homdutio.refreshToken';
 
@@ -39,6 +47,10 @@ export class AuthService {
   private readonly _token = signal<string | null>(null);
   /** Email of the signed-in user, captured at login for display on the home page. */
   private readonly _email = signal<string | null>(null);
+  /** Display name of the signed-in user, resolved from `/api/auth/me`; `null` until it loads. */
+  private readonly _displayName = signal<string | null>(null);
+  /** Avatar URL of the signed-in user, resolved from `/api/auth/me`; `null` when they have no photo. */
+  private readonly _avatarUrl = signal<string | null>(null);
 
   /** Shared in-flight refresh so concurrent 401s (and a double-fired startup) collapse to one call. */
   private refreshInFlight: Observable<boolean> | null = null;
@@ -47,6 +59,10 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._token() !== null);
   /** Public read-only email of the signed-in user (or `null`). */
   readonly email = this._email.asReadonly();
+  /** Public read-only display name of the signed-in user (or `null` until `/me` resolves). */
+  readonly displayName = this._displayName.asReadonly();
+  /** Public read-only avatar URL of the signed-in user (or `null` when they have no photo). */
+  readonly avatarUrl = this._avatarUrl.asReadonly();
 
   /** Raw token accessor for the bearer interceptor. */
   get token(): string | null {
@@ -96,6 +112,8 @@ export class AuthService {
           this._token.set(response.accessToken);
           this._email.set(email);
           this.writeRefreshToken(response.refreshToken);
+          // Pull the real display name + avatar into state now that the bearer is set (S-09).
+          this.loadMe();
         }),
       );
   }
@@ -125,6 +143,8 @@ export class AuthService {
           // of truth login uses — recover it so the topbar identity survives a reload (S-10).
           this._email.set(emailFromAccessToken(response.accessToken));
           this.writeRefreshToken(response.refreshToken);
+          // Restore the display name + avatar after a silent refresh/reopen (S-09 / S-10).
+          this.loadMe();
           return true;
         }),
         catchError(() => {
@@ -156,9 +176,45 @@ export class AuthService {
 
     this._token.set(null);
     this._email.set(null);
+    this._displayName.set(null);
+    this._avatarUrl.set(null);
     this.clearRefreshToken();
     this.households.clearOnLogout();
     this.tasks.clearOnLogout();
+  }
+
+  /**
+   * `GET /api/auth/me` — pulls the signed-in user's display name + avatar into state. Fire-and-forget:
+   * the header/menu update reactively when it resolves, and a failure leaves prior values intact (the
+   * bearer is already set by the caller, so this carries it). Called after login and after a silent
+   * refresh so the identity survives a reload (S-09 / S-10).
+   */
+  loadMe(): void {
+    this.http.get<MeResponse>('/api/auth/me').subscribe({
+      next: (me) => {
+        if (me.email) {
+          this._email.set(me.email);
+        }
+        this._displayName.set(me.displayName ?? null);
+        this._avatarUrl.set(me.avatarUrl ?? null);
+      },
+      error: () => {
+        // Display-only state — a failed /me must not disrupt the session.
+      },
+    });
+  }
+
+  /**
+   * Applies a profile change made via {@link ProfileService} so the header/menu update immediately,
+   * without re-fetching `/me`. Only the provided fields are touched (pass `undefined` to leave one as-is).
+   */
+  setProfile(profile: { displayName?: string | null; avatarUrl?: string | null }): void {
+    if (profile.displayName !== undefined) {
+      this._displayName.set(profile.displayName);
+    }
+    if (profile.avatarUrl !== undefined) {
+      this._avatarUrl.set(profile.avatarUrl);
+    }
   }
 
   private readRefreshToken(): string | null {

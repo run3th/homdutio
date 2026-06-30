@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using System.Text;
 using Homdutio.Api.Email;
+using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Homdutio.Api.Auth;
 
@@ -92,10 +94,23 @@ public static class AuthEndpoints
             return Results.Ok();
         });
 
-        group.MapGet("/me", (ClaimsPrincipal principal) =>
-            Results.Ok(new MeResponse(
-                principal.FindFirstValue("sub"),
-                principal.FindFirstValue("email"))))
+        // The header/menu and Settings prefill need the real display name, which is no longer derivable
+        // from claims alone (a rename would leave the token stale) — so read it from the user record.
+        // avatarUrl is null until S-09 Phase 3 adds avatar storage.
+        group.MapGet("/me", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var userId = principal.FindFirstValue("sub");
+            var displayName = await db.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.DisplayName)
+                .SingleOrDefaultAsync();
+
+            return Results.Ok(new MeResponse(
+                userId,
+                principal.FindFirstValue("email"),
+                displayName,
+                null));
+        })
             .RequireAuthorization();
 
         // Forgotten-password recovery (S-08). Only an existing account gets a token + email; the response
@@ -206,7 +221,7 @@ public sealed record RefreshRequest(string RefreshToken);
 
 public sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc, string RefreshToken);
 
-public sealed record MeResponse(string? Sub, string? Email);
+public sealed record MeResponse(string? Sub, string? Email, string? DisplayName, string? AvatarUrl);
 
 public sealed record ForgotPasswordRequest(string Email);
 

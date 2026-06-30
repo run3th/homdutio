@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Homdutio.Api.Auth;
 using Homdutio.Api.Email;
 using Homdutio.Api.Households;
+using Homdutio.Api.Profile;
 using Homdutio.Api.Tasks;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
@@ -178,6 +179,7 @@ app.UseRateLimiter();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapHouseholdEndpoints();
+app.MapProfileEndpoints();
 app.MapTaskEndpoints();
 
 app.MapFallbackToFile("index.html");

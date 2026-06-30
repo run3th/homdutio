@@ -1,38 +1,48 @@
-import { Component, computed, ElementRef, HostListener, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { Dialog } from '@angular/cdk/dialog';
 
 import { AuthService } from '../../auth/auth.service';
+import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
+import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.component';
 
 /**
- * The avatar button + dropdown that finally surfaces logout (S-11) and is the future home for S-09
- * account/settings items. Shows the signed-in email and a Log out action; logout clears auth state and
- * navigates to `/login` — the same path the unauthorized interceptor already redirects to. The menu is
- * single-open and closes on outside-click or Escape (`aria-expanded` reflects state).
+ * The avatar button + dropdown that surfaces the signed-in identity, **Settings** (S-09), and **Log out**
+ * (S-11). The button shows the user's avatar (their photo once Phase 3 lands, otherwise the colored
+ * initial); the open menu shows the display name as the primary identity with the email demoted to a
+ * secondary line, then a Settings item above Log out. Settings opens the {@link SettingsDialogComponent}
+ * (edit display name; photo upload/remove in Phase 3). Logout clears auth state and navigates to `/login`.
+ * The menu is single-open and closes on outside-click or Escape (`aria-expanded` reflects state).
  */
 @Component({
   selector: 'app-avatar-menu',
-  imports: [],
+  imports: [UserAvatarComponent],
   templateUrl: './avatar-menu.component.html',
   styleUrl: './avatar-menu.component.scss',
 })
 export class AvatarMenuComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly dialog = inject(Dialog);
   private readonly host = inject(ElementRef<HTMLElement>);
 
-  /** The signed-in user's email, shown in the menu. */
+  /** The signed-in user's display name (primary identity); `null` until `/me` resolves. */
+  readonly displayName = this.auth.displayName;
+  /** The signed-in user's email, shown as a secondary line under the name. */
   readonly email = this.auth.email;
+  /** The signed-in user's avatar URL, or `null` to fall back to the colored initial. */
+  readonly avatarUrl = this.auth.avatarUrl;
   /** Whether the dropdown is open. */
   readonly open = signal(false);
 
-  /** First letter of the email for the avatar glyph; a neutral placeholder before login resolves. */
-  readonly initial = computed(() => {
-    const email = this.email();
-    return email ? email.charAt(0).toUpperCase() : '?';
-  });
-
   toggle(): void {
     this.open.update((isOpen) => !isOpen);
+  }
+
+  /** Open the Settings modal (S-09) to edit the display name (and, from Phase 3, the profile photo). */
+  openSettings(): void {
+    this.open.set(false);
+    this.dialog.open(SettingsDialogComponent);
   }
 
   /** Clear auth state (revokes the session, drops tokens + household/task state) then land on /login. */

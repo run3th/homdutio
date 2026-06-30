@@ -1,0 +1,9 @@
+/* The dialog leans on the global `.modal`, `.field`, and `.btn` primitives (styles.scss); only the
+   helper line under the name field is scoped here. */
+.settings-hint {
+  margin: var(--space-2) 0 0;
+  font-size: 0.75rem;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-subtle);
+  line-height: 1.5;
+}

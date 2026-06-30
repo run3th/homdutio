@@ -26,8 +26,16 @@ describe('TopbarComponent', () => {
         { provide: HouseholdService, useValue: { current } },
         { provide: Dialog, useValue: { open } },
         { provide: TaskService, useValue: { setPaused } },
-        // The embedded avatar menu injects AuthService.
-        { provide: AuthService, useValue: { email: signal('molly@burrow.test'), logout: vi.fn() } },
+        // The embedded avatar menu injects AuthService (identity signals + logout).
+        {
+          provide: AuthService,
+          useValue: {
+            email: signal('molly@burrow.test'),
+            displayName: signal<string | null>('Molly Weasley'),
+            avatarUrl: signal<string | null>(null),
+            logout: vi.fn(),
+          },
+        },
       ],
     });
   });

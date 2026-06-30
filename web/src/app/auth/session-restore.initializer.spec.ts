@@ -43,6 +43,14 @@ describe('restoreSession initializer', () => {
     } satisfies LoginResponse);
     await pending;
 
+    // A successful refresh fires a fire-and-forget /me to restore the profile (display name + avatar).
+    httpMock.expectOne('/api/auth/me').flush({
+      sub: 'u1',
+      email: 'molly@burrow.test',
+      displayName: 'Molly',
+      avatarUrl: null,
+    });
+
     expect(service.isAuthenticated()).toBe(true);
     expect(service.token).toBe('jwt-456');
     expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-def');

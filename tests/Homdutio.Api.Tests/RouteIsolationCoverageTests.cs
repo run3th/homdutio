@@ -48,6 +48,7 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
         "POST /api/households/invites",                 // generates for the caller's own household
         "GET /api/households/invites/{token}",          // anonymous, token-scoped preview (S-06)
         "POST /api/households/invites/{token}/accept",  // token-scoped join (S-06)
+        "PUT /api/profile/me",                          // updates the caller's own profile (sub-scoped, S-09)
     };
 
     /// <summary>
