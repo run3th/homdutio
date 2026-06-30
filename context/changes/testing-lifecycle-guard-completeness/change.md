@@ -1,7 +1,7 @@
 ---
 change_id: testing-lifecycle-guard-completeness
 title: "Lifecycle guard completeness: block every illegal transition × role × state"
-status: implementing
+status: implemented
 created: 2026-06-30
 updated: 2026-06-30
 archived_at: null

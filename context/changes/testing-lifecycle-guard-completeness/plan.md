@@ -434,10 +434,10 @@ None — no schema or data changes.
 
 #### Automated
 
-- [x] 3.1 §6.1 lifecycle "not yet shipped" placeholder removed (`grep -n "not yet shipped"` clean for the lifecycle line)
-- [x] 3.2 Full suite remains green (`dotnet test tests/Homdutio.Api.Tests`)
+- [x] 3.1 §6.1 lifecycle "not yet shipped" placeholder removed (`grep -n "not yet shipped"` clean for the lifecycle line) — 8c8cb2a
+- [x] 3.2 Full suite remains green (`dotnet test tests/Homdutio.Api.Tests`) — 8c8cb2a
 
 #### Manual
 
-- [x] 3.3 §6.1 reads as a usable how-to that steers a newcomer away from the guard-ordering oracle trap
-- [x] 3.4 §6.6 Phase 2 note present and accurate
+- [x] 3.3 §6.1 reads as a usable how-to that steers a newcomer away from the guard-ordering oracle trap — 8c8cb2a
+- [x] 3.4 §6.6 Phase 2 note present and accurate — 8c8cb2a
