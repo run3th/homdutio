@@ -24,6 +24,11 @@
     <ProjectReference Include="..\Homdutio.Data\Homdutio.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- HTML email bodies loaded at runtime by EmailTemplateRenderer; versioned with the assembly. -->
+    <EmbeddedResource Include="Email\Templates\*.html" />
+  </ItemGroup>
+
   <Target Name="BuildAngularSpa" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
     <Message Importance="high" Text="Building Angular SPA from $(SpaRoot)..." />
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" Condition=" !Exists('$(SpaRoot)node_modules') " />

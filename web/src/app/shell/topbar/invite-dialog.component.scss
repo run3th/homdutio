@@ -40,3 +40,20 @@
   flex: 0 0 auto;
   width: auto;
 }
+
+/* Email field shares the row layout with the link box; the input inherits the global `.field input` look. */
+.invite-email {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.invite-send {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.invite-sent {
+  color: var(--color-success);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+}

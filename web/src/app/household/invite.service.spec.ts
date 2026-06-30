@@ -29,9 +29,19 @@ describe('InviteService', () => {
 
     const req = httpMock.expectOne('/api/households/invites');
     expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({}); // copy-link path sends no recipient
     req.flush(body);
 
     expect(result).toEqual(body);
+  });
+
+  it('generate with a recipient email passes it in the POST body', () => {
+    service.generate('joiner@example.com').subscribe();
+
+    const req = httpMock.expectOne('/api/households/invites');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ recipientEmail: 'joiner@example.com' });
+    req.flush({ token: 'abc123', expiresAtUtc: '2026-06-09T00:00:00Z' });
   });
 
   it('preview GETs the token route and returns the household name', () => {

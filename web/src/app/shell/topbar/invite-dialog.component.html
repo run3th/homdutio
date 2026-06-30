@@ -17,7 +17,30 @@
     <p class="field-error" role="alert">{{ message }}</p>
   }
 
-  <!-- Phase 7 adds an optional "Invite by email" field here, above the share-link box. -->
+  <div class="field invite-email-field">
+    <label for="invite-email">Invite by email</label>
+    <div class="invite-row">
+      <input
+        id="invite-email"
+        type="email"
+        class="invite-email"
+        placeholder="name@example.com"
+        autocomplete="off"
+        [formControl]="email"
+        (keydown.enter)="sendEmail()"
+      />
+      <button type="button" class="btn invite-send" [disabled]="sending()" (click)="sendEmail()">
+        {{ sending() ? 'Sending…' : 'Send' }}
+      </button>
+    </div>
+    @if (email.touched && email.invalid) {
+      <span class="field-error">Enter a valid email address.</span>
+    } @else if (sendError(); as message) {
+      <span class="field-error" role="alert">{{ message }}</span>
+    } @else if (sentTo(); as addr) {
+      <span class="invite-sent" role="status">Invite sent to {{ addr }}.</span>
+    }
+  </div>
 
   <label class="invite-label" for="invite-link">Or share a link</label>
   <div class="invite-row">

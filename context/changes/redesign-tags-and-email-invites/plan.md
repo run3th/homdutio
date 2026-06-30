@@ -623,35 +623,35 @@ Add an HTML email-templating mechanism, migrate the reset email onto it, widen `
 
 #### Automated
 
-- [x] 6.1 Migration applies cleanly against a fresh DB
-- [x] 6.2 Backend builds (`dotnet build`)
-- [x] 6.3 Backend tests pass incl. new tag tests (`dotnet test`)
-- [x] 6.4 `RouteIsolationCoverageTests` passes (suggestions route covered)
-- [x] 6.5 Angular build + lint + unit tests pass
-- [x] 6.6 Test-plan §6 cookbook updated for the tags test category
+- [x] 6.1 Migration applies cleanly against a fresh DB — 88d5685
+- [x] 6.2 Backend builds (`dotnet build`) — 88d5685
+- [x] 6.3 Backend tests pass incl. new tag tests (`dotnet test`) — 88d5685
+- [x] 6.4 `RouteIsolationCoverageTests` passes (suggestions route covered) — 88d5685
+- [x] 6.5 Angular build + lint + unit tests pass — 88d5685
+- [x] 6.6 Test-plan §6 cookbook updated for the tags test category — 88d5685
 
 #### Manual
 
-- [x] 6.7 Type + Enter adds a chip; household tags suggested and filter; "Create '<x>'" appears for new tags
-- [x] 6.8 Tags persist on create and edit; removing a chip + save removes the tag
-- [x] 6.9 Suggestions include a tag from a closed task
-- [x] 6.10 Over-limit input rejected gracefully with a clear message
-- [x] 6.11 Existing `Category` values appear as initial tags after migration
+- [x] 6.7 Type + Enter adds a chip; household tags suggested and filter; "Create '<x>'" appears for new tags — 88d5685
+- [x] 6.8 Tags persist on create and edit; removing a chip + save removes the tag — 88d5685
+- [x] 6.9 Suggestions include a tag from a closed task — 88d5685
+- [x] 6.10 Over-limit input rejected gracefully with a clear message — 88d5685
+- [x] 6.11 Existing `Category` values appear as initial tags after migration — 88d5685
 
 ### Phase 7: Emailed Invite Links + reusable email templating
 
 #### Automated
 
-- [ ] 7.1 Backend builds (`dotnet build`)
-- [ ] 7.2 Reset-email tests still pass, now asserting template-rendered body/link
-- [ ] 7.3 New invite-email test passes (link + household/inviter substitution)
-- [ ] 7.4 Renderer unit test loads both embedded templates
-- [ ] 7.5 Angular build + lint + unit tests pass
-- [ ] 7.6 Test-plan §6 cookbook updated for the email/invite test category
+- [x] 7.1 Backend builds (`dotnet build`)
+- [x] 7.2 Reset-email tests still pass, now asserting template-rendered body/link
+- [x] 7.3 New invite-email test passes (link + household/inviter substitution)
+- [x] 7.4 Renderer unit test loads both embedded templates
+- [x] 7.5 Angular build + lint + unit tests pass
+- [x] 7.6 Test-plan §6 cookbook updated for the email/invite test category
 
 #### Manual
 
-- [ ] 7.7 Invite without email behaves as today (generate + copy)
-- [ ] 7.8 Invite with email sends mail with a working `/join/<token>` link, household + inviter names
-- [ ] 7.9 The emailed link opens the join landing and accepts the invite
-- [ ] 7.10 Password-reset email still arrives and its link still works
+- [x] 7.7 Invite without email behaves as today (generate + copy)
+- [x] 7.8 Invite with email sends mail with a working `/join/<token>` link, household + inviter names
+- [x] 7.9 The emailed link opens the join landing and accepts the invite
+- [x] 7.10 Password-reset email still arrives and its link still works

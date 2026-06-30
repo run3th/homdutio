@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Homdutio.Api.Email;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -78,8 +79,14 @@ public static class HouseholdEndpoints
         });
 
         // POST /api/households/invites — any member (admin or adult member, FR-005) mints a single-use,
-        // time-expiring invite link to their household.
-        group.MapPost("/invites", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
+        // time-expiring invite link to their household. The optional RecipientEmail also emails the link:
+        // the body is bound as nullable so a no-body POST (copy-link path) still binds to a null request.
+        group.MapPost("/invites", async (
+            CreateInviteRequest? request,
+            ClaimsPrincipal principal,
+            ApplicationDbContext db,
+            IEmailSender emailSender,
+            IConfiguration configuration) =>
         {
             var userId = principal.FindFirstValue("sub");
 
@@ -104,6 +111,27 @@ public static class HouseholdEndpoints
 
             db.HouseholdInvites.Add(invite);
             await db.SaveChangesAsync();
+
+            // Optionally email the invite. The token is already persisted, so a send failure is non-fatal —
+            // the caller still gets the token back and can copy/share the link. The link is built here from
+            // AppBaseUrl (server-side, never client-supplied), mirroring the reset-email link pattern.
+            var recipientEmail = request?.RecipientEmail?.Trim();
+            if (!string.IsNullOrWhiteSpace(recipientEmail))
+            {
+                var baseUrl = (configuration["AppBaseUrl"] ?? string.Empty).TrimEnd('/');
+                var inviteLink = $"{baseUrl}/join/{invite.Token}";
+
+                var inviterName = await db.Users.AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => u.DisplayName)
+                    .SingleAsync();
+                var householdName = await db.Households.AsNoTracking()
+                    .Where(h => h.Id == member.HouseholdId)
+                    .Select(h => h.Name)
+                    .SingleAsync();
+
+                await emailSender.SendInviteAsync(recipientEmail, inviteLink, householdName, inviterName);
+            }
 
             return Results.Created($"/api/households/invites/{invite.Token}", new InviteResponse(invite.Token, invite.ExpiresAtUtc));
         });
@@ -437,6 +465,10 @@ public static class HouseholdEndpoints
 }
 
 public sealed record CreateHouseholdRequest(string Name);
+
+/// <summary>Optional body for minting an invite. A null/blank <see cref="RecipientEmail"/> is the copy-link
+/// path (no email sent); a present one also emails the invite link to that address.</summary>
+public sealed record CreateInviteRequest(string? RecipientEmail);
 
 public sealed record HouseholdResponse(Guid Id, string Name, string Role);
 

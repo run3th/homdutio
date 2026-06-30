@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { DialogRef } from '@angular/cdk/dialog';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { HouseholdService } from '../../household/household.service';
 import { buildJoinUrl, InviteService } from '../../household/invite.service';
@@ -11,12 +12,13 @@ import { buildJoinUrl, InviteService } from '../../household/invite.service';
  * `navigator.clipboard` is unavailable or denied. The API returns only the token (never a hard-coded host),
  * so the shareable URL is built client-side via {@link buildJoinUrl}.
  *
- * The markup leaves a slot above the share-link box for the optional "Invite by email" field added in a
- * later phase; for now the dialog is copy-link only.
+ * Above the share-link box an optional **Invite by email** field sends the link directly: it mints a fresh
+ * invite server-side (each is a valid single-use token) and the server emails the `/join/<token>` link to
+ * that address. The copy-link path stays fully independent of whether an email was sent.
  */
 @Component({
   selector: 'app-invite-dialog',
-  imports: [],
+  imports: [ReactiveFormsModule],
   templateUrl: './invite-dialog.component.html',
   styleUrl: './invite-dialog.component.scss',
 })
@@ -35,6 +37,18 @@ export class InviteDialogComponent {
   readonly inviteError = signal<string | null>(null);
   /** True while the token is being minted (the link box shows a placeholder until it resolves). */
   readonly generating = signal(true);
+
+  /** Optional recipient address; on submit the server mints a fresh invite and emails the link to it. */
+  readonly email = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.email],
+  });
+  /** True while an invite email is being sent (disables Send). */
+  readonly sending = signal(false);
+  /** The address the most recent invite was emailed to (drives the "Invite sent" confirmation). */
+  readonly sentTo = signal<string | null>(null);
+  /** A send-time error to surface inline. */
+  readonly sendError = signal<string | null>(null);
 
   constructor() {
     this.invites.generate().subscribe({
@@ -59,6 +73,28 @@ export class InviteDialogComponent {
       ?.writeText(link)
       .then(() => this.inviteCopied.set(true))
       .catch(() => this.inviteCopied.set(false));
+  }
+
+  /** Mint a fresh invite and have the server email it to the entered address; confirm or surface an error. */
+  sendEmail(): void {
+    if (this.sending() || this.email.invalid) {
+      this.email.markAsTouched();
+      return;
+    }
+    const recipient = this.email.value.trim();
+    this.sending.set(true);
+    this.sendError.set(null);
+    this.invites.generate(recipient).subscribe({
+      next: () => {
+        this.sending.set(false);
+        this.sentTo.set(recipient);
+        this.email.reset('');
+      },
+      error: () => {
+        this.sending.set(false);
+        this.sendError.set('Could not send the invite. Please try again.');
+      },
+    });
   }
 
   close(): void {

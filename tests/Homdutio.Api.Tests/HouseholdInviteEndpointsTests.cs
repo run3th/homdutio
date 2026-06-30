@@ -40,6 +40,16 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
         return body!.AccessToken;
     }
 
+    /// <summary>Registers with an explicit display name so the emailed-invite tests can assert the inviter name.</summary>
+    private async Task<string> RegisterAndLoginWithNameAsync(string email, string displayName)
+    {
+        (await _client.PostAsJsonAsync("/api/auth/register", new { email, password = Password, displayName })).EnsureSuccessStatusCode();
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
+        login.EnsureSuccessStatusCode();
+        var body = await login.Content.ReadFromJsonAsync<LoginBody>();
+        return body!.AccessToken;
+    }
+
     private HttpRequestMessage Authed(HttpMethod method, string uri, string token, object? body = null)
     {
         var request = new HttpRequestMessage(method, uri);
@@ -271,6 +281,54 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
         // Preview needs no auth.
         var preview = await _client.GetAsync($"/api/households/invites/{invite.Token}");
         Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+    }
+
+    [Fact]
+    public async Task Generate_with_recipient_email_sends_invite_mail_with_link_household_and_inviter()
+    {
+        var adminToken = await RegisterAndLoginWithNameAsync(NewEmail("email-admin"), "Alex");
+        await CreateHouseholdAsync(adminToken, "Emailed House");
+        var recipient = NewEmail("invitee");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Post, "/api/households/invites", adminToken, new { recipientEmail = recipient }));
+        resp.EnsureSuccessStatusCode();
+        var invite = await resp.Content.ReadFromJsonAsync<InviteBody>();
+
+        // Exactly one invite mail captured for this recipient, carrying the server-built /join/<token> link.
+        var sent = Assert.Single(_factory.EmailSender.Invites, i => i.Recipient == recipient);
+        Assert.EndsWith($"/join/{invite!.Token}", sent.Link);
+        Assert.Equal("Emailed House", sent.HouseholdName);
+        Assert.Equal("Alex", sent.InviterName);
+    }
+
+    [Fact]
+    public async Task Generate_without_recipient_email_sends_no_invite_mail()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("noemail-admin"));
+        await CreateHouseholdAsync(adminToken, "No Email House");
+
+        var invite = await GenerateInviteAsync(adminToken); // no body → copy-link path
+
+        Assert.False(string.IsNullOrWhiteSpace(invite.Token));
+        Assert.DoesNotContain(_factory.EmailSender.Invites, i => i.Link.EndsWith($"/join/{invite.Token}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Emailed_invite_link_token_can_be_accepted_by_a_new_member()
+    {
+        var adminToken = await RegisterAndLoginWithNameAsync(NewEmail("link-admin"), "Sam");
+        await CreateHouseholdAsync(adminToken, "Linkable By Mail");
+        var recipient = NewEmail("link-invitee");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Post, "/api/households/invites", adminToken, new { recipientEmail = recipient }));
+        resp.EnsureSuccessStatusCode();
+
+        var sent = Assert.Single(_factory.EmailSender.Invites, i => i.Recipient == recipient);
+        var emailedToken = sent.Link[(sent.Link.LastIndexOf("/join/", StringComparison.Ordinal) + "/join/".Length)..];
+
+        var joiner = await RegisterAndLoginAsync(NewEmail("link-joiner"));
+        var accept = await AcceptAsync(joiner, emailedToken);
+        Assert.Equal(HttpStatusCode.OK, accept.StatusCode);
     }
 
     private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);

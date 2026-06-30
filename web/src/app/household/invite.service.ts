@@ -33,9 +33,14 @@ export function buildJoinUrl(origin: string, token: string): string {
 export class InviteService {
   private readonly http = inject(HttpClient);
 
-  /** `POST /api/households/invites` — mint a single-use link for the caller's household. */
-  generate(): Observable<InviteResponse> {
-    return this.http.post<InviteResponse>('/api/households/invites', {});
+  /**
+   * `POST /api/households/invites` — mint a single-use link for the caller's household. When
+   * `recipientEmail` is supplied the server also emails the `/join/<token>` link to that address; omit it
+   * for the copy-link path. Either way the response is the freshly-minted token.
+   */
+  generate(recipientEmail?: string): Observable<InviteResponse> {
+    const body = recipientEmail ? { recipientEmail } : {};
+    return this.http.post<InviteResponse>('/api/households/invites', body);
   }
 
   /** `GET /api/households/invites/{token}` — public preview; 404 (unknown) / 410 (consumed/expired) surface as errors. */

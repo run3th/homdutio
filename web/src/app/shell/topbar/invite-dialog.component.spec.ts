@@ -64,6 +64,42 @@ describe('InviteDialogComponent', () => {
     expect(fixture.componentInstance.inviteLink()).toBeNull();
   });
 
+  it('does not send an invite email for an invalid address', () => {
+    const fixture = render();
+    generate.mockClear();
+
+    fixture.componentInstance.email.setValue('not-an-email');
+    fixture.componentInstance.sendEmail();
+
+    expect(generate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.email.touched).toBe(true);
+    expect(fixture.componentInstance.sentTo()).toBeNull();
+  });
+
+  it('sends the invite email and confirms the recipient', () => {
+    const fixture = render();
+    generate.mockClear();
+
+    fixture.componentInstance.email.setValue('joiner@example.com');
+    fixture.componentInstance.sendEmail();
+
+    expect(generate).toHaveBeenCalledWith('joiner@example.com');
+    expect(fixture.componentInstance.sentTo()).toBe('joiner@example.com');
+    expect(fixture.componentInstance.sending()).toBe(false);
+    expect(fixture.componentInstance.email.value).toBe('');
+  });
+
+  it('surfaces an error when the invite email cannot be sent', () => {
+    const fixture = render();
+    generate.mockReturnValue(throwError(() => new Error('boom')));
+
+    fixture.componentInstance.email.setValue('joiner@example.com');
+    fixture.componentInstance.sendEmail();
+
+    expect(fixture.componentInstance.sendError()).toBeTruthy();
+    expect(fixture.componentInstance.sentTo()).toBeNull();
+  });
+
   it('Close dismisses the dialog', () => {
     const fixture = render();
     fixture.componentInstance.close();

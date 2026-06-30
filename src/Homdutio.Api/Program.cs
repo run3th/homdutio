@@ -97,6 +97,10 @@ builder.Services.AddScoped<RefreshTokenService>();
 // Service's managed identity is granted access to the ACS resource — no connection string or key.
 builder.Services.Configure<AcsEmailOptions>(builder.Configuration.GetSection(AcsEmailOptions.SectionName));
 
+// Renders the embedded HTML email templates (reset + invite). Stateless + thread-safe with an internal
+// per-template cache, so a singleton — used by AcsEmailSender (the NoOp sender doesn't render).
+builder.Services.AddSingleton<EmailTemplateRenderer>();
+
 var acsEndpoint = builder.Configuration[$"{AcsEmailOptions.SectionName}:{nameof(AcsEmailOptions.Endpoint)}"];
 if (string.IsNullOrWhiteSpace(acsEndpoint))
 {
