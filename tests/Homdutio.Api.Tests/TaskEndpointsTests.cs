@@ -166,6 +166,82 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.True(confirmed.SelfAttested);
     }
 
+    // --- Phase 2 / Risk #2: lifecycle guard completeness (oracle-critical) ----------------------------
+    // Statuses/flags below are derived from the transition matrix in research.md, NOT from a fresh read
+    // of the guard code at authoring time (that would re-introduce the oracle problem the risk warns of).
+
+    [Fact]
+    public async Task Cross_member_confirm_records_self_attested_false()
+    {
+        // The missing half of "self-attested iff admin confirms own work": a *different* member claims
+        // and marks done, the admin confirms → success AND SelfAttested == false on both the projection
+        // and the Confirmed event (the true half is already covered at :150).
+        var adminEmail = NewEmail("xm-admin");
+        var adminToken = await RegisterAndLoginAsync(adminEmail, "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Cross Member House");
+
+        var memberEmail = NewEmail("xm-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Member's work, admin confirms");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode();
+
+        var confirm = await ActionAsync(adminToken, task.Id, "confirm");
+        Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+
+        // Read the flag from the persisted row and the event — the source of truth — not the
+        // willSelfAttest affordance preview (:296).
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var adminId = (await db.Users.SingleAsync(u => u.Email == adminEmail)).Id;
+
+        var row = await db.HouseholdTasks.SingleAsync(t => t.Id == task.Id);
+        Assert.False(row.SelfAttested);
+        Assert.Equal(adminId, row.ConfirmedById);
+
+        var confirmed = await db.TaskEvents.SingleAsync(e => e.TaskId == task.Id && e.Type == TaskEventType.Confirmed);
+        Assert.False(confirmed.SelfAttested);
+    }
+
+    [Fact]
+    public async Task Confirming_a_non_done_task_as_a_non_admin_returns_403()
+    {
+        // Crossed axes: caller is non-admin AND the task is not yet Done (InProgress). confirm is
+        // role-first (TaskEndpoints.cs:217 role before :222 state), so the role guard fires → 403, not 409.
+        var adminToken = await RegisterAndLoginAsync(NewEmail("cf-order-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Confirm Order House");
+
+        var memberEmail = NewEmail("cf-order-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Claimed, not done");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+
+        var confirm = await ActionAsync(memberToken, task.Id, "confirm");
+        Assert.Equal(HttpStatusCode.Forbidden, confirm.StatusCode);
+    }
+
+    [Fact]
+    public async Task Marking_done_a_to_do_task_as_a_non_claimer_returns_409()
+    {
+        // Crossed axes: caller is not the claimer AND the task is not InProgress (ToDo, unclaimed). done
+        // is state-first (TaskEndpoints.cs:178 state before :183 actor), so the state guard fires → 409, not 403.
+        var adminToken = await RegisterAndLoginAsync(NewEmail("md-order-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Done Order House");
+
+        var memberEmail = NewEmail("md-order-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Still to do");
+
+        var done = await ActionAsync(memberToken, task.Id, "done");
+        Assert.Equal(HttpStatusCode.Conflict, done.StatusCode);
+    }
+
     [Fact]
     public async Task Claiming_an_already_claimed_task_returns_409()
     {
