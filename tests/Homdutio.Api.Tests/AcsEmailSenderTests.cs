@@ -34,6 +34,7 @@ public class AcsEmailSenderTests
         Assert.Contains(WebUtility.HtmlEncode(resetLink), message.Content.Html);
         // The template fully rendered — no leftover placeholder.
         Assert.DoesNotContain("{{reset_link}}", message.Content.Html);
+        AssertInlineLogo(message);
     }
 
     [Fact]
@@ -58,5 +59,19 @@ public class AcsEmailSenderTests
         Assert.DoesNotContain("{{invite_link}}", message.Content.Html);
         Assert.DoesNotContain("{{household_name}}", message.Content.Html);
         Assert.DoesNotContain("{{inviter_name}}", message.Content.Html);
+        AssertInlineLogo(message);
+    }
+
+    // The brand logo must ride along as an inline (Content-ID) attachment the HTML references via
+    // cid:, not a data: URI — webmail clients strip data: image sources from message bodies.
+    private static void AssertInlineLogo(Azure.Communication.Email.EmailMessage message)
+    {
+        Assert.DoesNotContain("data:image", message.Content.Html);
+        Assert.Contains("cid:homdutio-logo", message.Content.Html);
+
+        var logo = Assert.Single(message.Attachments);
+        Assert.Equal("homdutio-logo", logo.ContentId);
+        Assert.Equal("image/png", logo.ContentType);
+        Assert.NotEmpty(logo.Content.ToArray());
     }
 }
