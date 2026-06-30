@@ -420,24 +420,24 @@ None — no schema or data changes.
 
 #### Automated
 
-- [x] 2.1 Build passes (`dotnet build`)
-- [x] 2.2 New Phase 2 tests pass (`dotnet test tests/Homdutio.Api.Tests`)
-- [x] 2.3 Foreign-404 parity tests assert empty body (not just status)
+- [x] 2.1 Build passes (`dotnet build`) — 418336a
+- [x] 2.2 New Phase 2 tests pass (`dotnet test tests/Homdutio.Api.Tests`) — 418336a
+- [x] 2.3 Foreign-404 parity tests assert empty body (not just status) — 418336a
 
 #### Manual
 
-- [x] 2.4 Double-claim test carries the in-code note deferring the concurrent race to Phase 3
-- [x] 2.5 Delete test carries the comment flagging the pinned-behavior assumption
-- [x] 2.6 Member-removal test asserts persisted row + appended event, not the board view (existing `HouseholdMemberAdminTests.cs:332`; no duplicate written)
+- [x] 2.4 Double-claim test carries the in-code note deferring the concurrent race to Phase 3 — 418336a
+- [x] 2.5 Delete test carries the comment flagging the pinned-behavior assumption — 418336a
+- [x] 2.6 Member-removal test asserts persisted row + appended event, not the board view (existing `HouseholdMemberAdminTests.cs:332`; no duplicate written) — 418336a
 
 ### Phase 3: Cookbook §6.1 Update
 
 #### Automated
 
-- [ ] 3.1 §6.1 lifecycle "not yet shipped" placeholder removed (`grep -n "not yet shipped"` clean for the lifecycle line)
-- [ ] 3.2 Full suite remains green (`dotnet test tests/Homdutio.Api.Tests`)
+- [x] 3.1 §6.1 lifecycle "not yet shipped" placeholder removed (`grep -n "not yet shipped"` clean for the lifecycle line)
+- [x] 3.2 Full suite remains green (`dotnet test tests/Homdutio.Api.Tests`)
 
 #### Manual
 
-- [ ] 3.3 §6.1 reads as a usable how-to that steers a newcomer away from the guard-ordering oracle trap
-- [ ] 3.4 §6.6 Phase 2 note present and accurate
+- [x] 3.3 §6.1 reads as a usable how-to that steers a newcomer away from the guard-ordering oracle trap
+- [x] 3.4 §6.6 Phase 2 note present and accurate
