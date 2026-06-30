@@ -302,6 +302,18 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
     }
 
     [Fact]
+    public async Task Generate_with_malformed_recipient_email_returns_400_and_mints_nothing()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("bademail-admin"));
+        await CreateHouseholdAsync(adminToken, "Bad Email House");
+
+        var resp = await _client.SendAsync(Authed(HttpMethod.Post, "/api/households/invites", adminToken, new { recipientEmail = "not-an-email" }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.DoesNotContain(_factory.EmailSender.Invites, i => i.Recipient == "not-an-email");
+    }
+
+    [Fact]
     public async Task Generate_without_recipient_email_sends_no_invite_mail()
     {
         var adminToken = await RegisterAndLoginAsync(NewEmail("noemail-admin"));
@@ -338,4 +350,58 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
     private sealed record InviteBody(string Token, DateTime ExpiresAtUtc);
 
     private sealed record PreviewBody(string HouseholdName);
+}
+
+/// <summary>Lowers the invite rate limit so the per-user 429 can be asserted deterministically.</summary>
+public sealed class InviteRateLimitedApiFactory : AuthApiFactory
+{
+    protected override int InvitePermitLimit => 3;
+}
+
+/// <summary>Invite minting is rate-limited per caller (429 after the configured threshold) — the with-email
+/// path is an outbound-mail vector, so it is throttled like forgot-password but partitioned by user.</summary>
+public class InviteRateLimitTests : IClassFixture<InviteRateLimitedApiFactory>
+{
+    private const string Password = "P@ssw0rd!23";
+    private readonly HttpClient _client;
+
+    public InviteRateLimitTests(InviteRateLimitedApiFactory factory)
+    {
+        factory.EnsureDatabaseMigrated();
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Invite_minting_is_rate_limited_after_threshold()
+    {
+        var email = $"invite-rl-{Guid.NewGuid():N}@example.test";
+        (await _client.PostAsJsonAsync("/api/auth/register", new { email, password = Password })).EnsureSuccessStatusCode();
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<LoginBody>())!.AccessToken;
+
+        HttpRequestMessage InvitePost()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/households/invites");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            return request;
+        }
+
+        var create = new HttpRequestMessage(HttpMethod.Post, "/api/households");
+        create.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        create.Content = JsonContent.Create(new { name = "RL House" });
+        (await _client.SendAsync(create)).EnsureSuccessStatusCode();
+
+        // PermitLimit = 3 per window: the first three mints pass, the fourth (same user) is rejected.
+        for (var i = 0; i < 3; i++)
+        {
+            var ok = await _client.SendAsync(InvitePost());
+            Assert.Equal(HttpStatusCode.Created, ok.StatusCode);
+        }
+
+        var limited = await _client.SendAsync(InvitePost());
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+    }
+
+    private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);
 }

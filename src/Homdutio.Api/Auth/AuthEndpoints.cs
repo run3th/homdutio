@@ -218,6 +218,10 @@ public sealed record ResetPasswordRequest(string Email, string Token, string New
 public static class RateLimitPolicies
 {
     public const string ForgotPassword = "forgot-password";
+
+    /// <summary>Caps invite minting per caller — the with-email path is an outbound-email vector (email
+    /// bombing / ACS quota), so it gets the same treatment as forgot-password but partitioned by user.</summary>
+    public const string Invite = "invite";
 }
 
 /// <summary>
@@ -230,6 +234,21 @@ public sealed class ForgotPasswordRateLimitOptions
     public const string SectionName = "RateLimiting:ForgotPassword";
 
     public int PermitLimit { get; set; } = 5;
+
+    public int WindowSeconds { get; set; } = 900;
+}
+
+/// <summary>
+/// Invite rate-limit settings bound from <c>RateLimiting:Invite</c> (non-secret, committed in
+/// appsettings.json). Read via <c>IOptions</c> inside the policy so config overrides (e.g. the test host)
+/// apply. Forgiving for humans (generating + emailing a few invites), but bounds an authenticated caller
+/// from blasting invite mail at arbitrary addresses.
+/// </summary>
+public sealed class InviteRateLimitOptions
+{
+    public const string SectionName = "RateLimiting:Invite";
+
+    public int PermitLimit { get; set; } = 10;
 
     public int WindowSeconds { get; set; } = 900;
 }

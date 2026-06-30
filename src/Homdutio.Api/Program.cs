@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Homdutio.Api.Auth;
@@ -118,6 +119,8 @@ else
 // merges its overrides. Forgiving for humans, still bounds abuse.
 builder.Services.Configure<ForgotPasswordRateLimitOptions>(
     builder.Configuration.GetSection(ForgotPasswordRateLimitOptions.SectionName));
+builder.Services.Configure<InviteRateLimitOptions>(
+    builder.Configuration.GetSection(InviteRateLimitOptions.SectionName));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -127,6 +130,22 @@ builder.Services.AddRateLimiter(options =>
             .GetRequiredService<IOptions<ForgotPasswordRateLimitOptions>>().Value;
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = limits.PermitLimit,
+                Window = TimeSpan.FromSeconds(limits.WindowSeconds),
+                QueueLimit = 0,
+            });
+    });
+    // Invite minting is authenticated, so partition by the caller's user id (sub) — the limiter runs after
+    // UseAuthentication, so the principal is populated. Bounds the with-email outbound-mail vector per user.
+    options.AddPolicy(RateLimitPolicies.Invite, httpContext =>
+    {
+        var limits = httpContext.RequestServices
+            .GetRequiredService<IOptions<InviteRateLimitOptions>>().Value;
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirstValue("sub")
+                ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = limits.PermitLimit,

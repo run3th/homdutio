@@ -32,6 +32,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>
     /// <summary>Forgot-password rate-limit threshold for the test host. High by default so functional tests never trip it; a derived host lowers it to assert the 429.</summary>
     protected virtual int ForgotPasswordPermitLimit => 1000;
 
+    /// <summary>Invite rate-limit threshold for the test host. High by default so functional tests never trip it; a derived host lowers it to assert the 429.</summary>
+    protected virtual int InvitePermitLimit => 1000;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -46,6 +49,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>
                 ["Jwt:SigningKey"] = "homdutio-integration-test-signing-key-0123456789",
                 ["Jwt:AccessTokenMinutes"] = "120",
                 ["RateLimiting:ForgotPassword:PermitLimit"] = ForgotPasswordPermitLimit.ToString(),
+                ["RateLimiting:Invite:PermitLimit"] = InvitePermitLimit.ToString(),
             });
         });
 

@@ -1,5 +1,7 @@
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Homdutio.Api.Auth;
 using Homdutio.Api.Email;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
@@ -98,6 +100,17 @@ public static class HouseholdEndpoints
                 return Results.NotFound();
             }
 
+            // Validate the optional recipient email server-side (not just in the SPA) and BEFORE minting, so
+            // a malformed address fails fast with a 400 rather than leaving a dangling invite + a wasted send.
+            var recipientEmail = request?.RecipientEmail?.Trim();
+            if (!string.IsNullOrEmpty(recipientEmail) && !MailAddress.TryCreate(recipientEmail, out _))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["RecipientEmail"] = ["Enter a valid email address."],
+                });
+            }
+
             var now = DateTime.UtcNow;
             var invite = new HouseholdInvite
             {
@@ -115,8 +128,7 @@ public static class HouseholdEndpoints
             // Optionally email the invite. The token is already persisted, so a send failure is non-fatal —
             // the caller still gets the token back and can copy/share the link. The link is built here from
             // AppBaseUrl (server-side, never client-supplied), mirroring the reset-email link pattern.
-            var recipientEmail = request?.RecipientEmail?.Trim();
-            if (!string.IsNullOrWhiteSpace(recipientEmail))
+            if (!string.IsNullOrEmpty(recipientEmail))
             {
                 var baseUrl = (configuration["AppBaseUrl"] ?? string.Empty).TrimEnd('/');
                 var inviteLink = $"{baseUrl}/join/{invite.Token}";
@@ -134,7 +146,8 @@ public static class HouseholdEndpoints
             }
 
             return Results.Created($"/api/households/invites/{invite.Token}", new InviteResponse(invite.Token, invite.ExpiresAtUtc));
-        });
+        })
+        .RequireRateLimiting(RateLimitPolicies.Invite);
 
         // GET /api/households/invites/{token} — public preview so a recipient sees which household they're
         // joining before they have an account. Leaks only the household name (US-02).
