@@ -1,5 +1,46 @@
-/* The dialog leans on the global `.modal`, `.field`, and `.btn` primitives (styles.scss); only the
-   helper line under the name field is scoped here. */
+/* The dialog leans on the global `.modal`, `.field`, and `.btn` primitives (styles.scss); the photo
+   block and the helper line under the name field are scoped here. */
+/* Matches the global `.field label` look, since this group heading can't be a <label>. */
+.settings-photo-heading {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: 0.78125rem;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.settings-photo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.settings-photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+/* Compact, content-width action buttons (the global `.btn` is full-width). */
+.settings-photo-actions .btn {
+  width: auto;
+  padding: 0.4rem var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* The cropper is bounded so it never overflows the modal; the round preview keeps it on-brand. */
+.settings-cropper {
+  display: block;
+  width: 12rem;
+  max-width: 100%;
+}
+
+/* The file input lives inside this label; the label is styled as a button (the input is hidden). */
+.settings-upload {
+  cursor: pointer;
+}
+
 .settings-hint {
   margin: var(--space-2) 0 0;
   font-size: 0.75rem;

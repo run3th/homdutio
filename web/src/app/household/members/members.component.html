@@ -12,7 +12,7 @@
       @for (member of roster(); track member.userId) {
         <li class="member-row">
           <div class="member-identity">
-            <span class="member-avatar" aria-hidden="true">{{ initialOf(member) }}</span>
+            <app-user-avatar [name]="member.displayName" [avatarUrl]="member.avatarUrl" size="md" />
             <div class="member-text">
               <span class="member-name">
                 {{ member.displayName }}

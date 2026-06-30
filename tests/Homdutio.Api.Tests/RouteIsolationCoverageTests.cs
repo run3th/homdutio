@@ -49,6 +49,9 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
         "GET /api/households/invites/{token}",          // anonymous, token-scoped preview (S-06)
         "POST /api/households/invites/{token}/accept",  // token-scoped join (S-06)
         "PUT /api/profile/me",                          // updates the caller's own profile (sub-scoped, S-09)
+        "PUT /api/profile/me/avatar",                   // stores the caller's own avatar (sub-scoped, S-09)
+        "DELETE /api/profile/me/avatar",                // clears the caller's own avatar (sub-scoped, S-09)
+        "GET /api/users/{id}/avatar",                   // anonymous public avatar serving (no household surface, S-09)
     };
 
     /// <summary>

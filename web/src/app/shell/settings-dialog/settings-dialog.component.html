@@ -17,6 +17,48 @@
     }
 
     <div class="field">
+      <span id="settings-photo-label" class="settings-photo-heading">Profile photo</span>
+      <div class="settings-photo" role="group" aria-labelledby="settings-photo-label">
+        @if (fileEvent(); as event) {
+          <image-cropper
+            class="settings-cropper"
+            [imageChangedEvent]="event"
+            [maintainAspectRatio]="true"
+            [aspectRatio]="1"
+            [roundCropper]="true"
+            [resizeToWidth]="256"
+            [onlyScaleDown]="true"
+            format="png"
+            output="blob"
+            (imageCropped)="onCropped($event)"
+          />
+        } @else {
+          <app-user-avatar [name]="displayName()" [avatarUrl]="previewAvatarUrl()" size="lg" />
+        }
+
+        <div class="settings-photo-actions">
+          <label class="btn btn--ghost settings-upload">
+            {{ fileEvent() ? 'Choose another' : 'Upload photo' }}
+            <input
+              type="file"
+              accept="image/png,image/jpeg"
+              (change)="onFileSelected($event)"
+              hidden
+            />
+          </label>
+          @if (canRemove()) {
+            <button type="button" class="btn btn--ghost" (click)="requestRemove()">
+              Remove photo
+            </button>
+          }
+        </div>
+      </div>
+      @if (avatarError(); as message) {
+        <span class="field-error" role="alert">{{ message }}</span>
+      }
+    </div>
+
+    <div class="field">
       <label for="settings-display-name">Display name</label>
       <input
         id="settings-display-name"

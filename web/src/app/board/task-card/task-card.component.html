@@ -81,16 +81,12 @@
 
 <dl class="task-meta">
   <div class="meta-row">
-    <span class="avatar" aria-hidden="true" [style.background]="avatarColor(task.createdByName)">{{
-      initial(task.createdByName)
-    }}</span>
+    <app-user-avatar [name]="task.createdByName" [avatarUrl]="task.createdByAvatarUrl" size="sm" />
     <span>Created by <b>{{ task.createdByName }}</b></span>
   </div>
   @if (task.claimerName) {
     <div class="meta-row">
-      <span class="avatar" aria-hidden="true" [style.background]="avatarColor(task.claimerName)">{{
-        initial(task.claimerName)
-      }}</span>
+      <app-user-avatar [name]="task.claimerName" [avatarUrl]="task.claimerAvatarUrl" size="sm" />
       <span>Claimed by <b>{{ task.claimerName }}</b></span>
     </div>
   }

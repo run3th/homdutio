@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using Homdutio.Api.Email;
+using Homdutio.Api.Users;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -94,22 +95,22 @@ public static class AuthEndpoints
             return Results.Ok();
         });
 
-        // The header/menu and Settings prefill need the real display name, which is no longer derivable
-        // from claims alone (a rename would leave the token stale) — so read it from the user record.
-        // avatarUrl is null until S-09 Phase 3 adds avatar storage.
+        // The header/menu and Settings prefill need the real display name + avatar, which are no longer
+        // derivable from claims alone (a rename/new photo would leave the token stale) — so read them from
+        // the user record. Selecting AvatarData != null (not the bytes) keeps the probe cheap.
         group.MapGet("/me", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
             var userId = principal.FindFirstValue("sub");
-            var displayName = await db.Users.AsNoTracking()
+            var user = await db.Users.AsNoTracking()
                 .Where(u => u.Id == userId)
-                .Select(u => u.DisplayName)
+                .Select(u => new { u.DisplayName, HasAvatar = u.AvatarData != null, u.AvatarVersion })
                 .SingleOrDefaultAsync();
 
             return Results.Ok(new MeResponse(
                 userId,
                 principal.FindFirstValue("email"),
-                displayName,
-                null));
+                user?.DisplayName,
+                user is null ? null : UserAvatarEndpoints.BuildUrl(userId!, user.HasAvatar, user.AvatarVersion)));
         })
             .RequireAuthorization();
 

@@ -4,6 +4,7 @@ import { Dialog } from '@angular/cdk/dialog';
 
 import { Member, MemberRole, MemberService } from '../member.service';
 import { RemoveMemberConfirmComponent } from './remove-member-confirm.component';
+import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 
 /**
  * The household members page (S-09). Lists the roster with each member's name, email, and role. For rows
@@ -16,7 +17,7 @@ import { RemoveMemberConfirmComponent } from './remove-member-confirm.component'
  */
 @Component({
   selector: 'app-members',
-  imports: [],
+  imports: [UserAvatarComponent],
   templateUrl: './members.component.html',
   styleUrl: './members.component.scss',
 })
@@ -35,11 +36,6 @@ export class MembersComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-  }
-
-  /** First letter of a member's display name for the avatar glyph. */
-  initialOf(member: Member): string {
-    return member.displayName ? member.displayName.charAt(0).toUpperCase() : '?';
   }
 
   /** Promote a member to admin (FR-008) — immediate, then refetch. */

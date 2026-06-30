@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using Homdutio.Api.Auth;
 using Homdutio.Api.Email;
+using Homdutio.Api.Users;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -174,10 +175,14 @@ public static class HouseholdEndpoints
             var inviter = await db.Users
                 .AsNoTracking()
                 .Where(u => u.Id == invite.CreatedById)
-                .Select(u => new { u.Id, u.DisplayName })
+                .Select(u => new { u.Id, u.DisplayName, HasAvatar = u.AvatarData != null, u.AvatarVersion })
                 .SingleAsync();
 
-            return Results.Ok(new InvitePreviewResponse(invite.Household!.Name, inviter.DisplayName, inviter.Id));
+            return Results.Ok(new InvitePreviewResponse(
+                invite.Household!.Name,
+                inviter.DisplayName,
+                inviter.Id,
+                UserAvatarEndpoints.BuildUrl(inviter.Id, inviter.HasAvatar, inviter.AvatarVersion)));
         })
         .AllowAnonymous();
 
@@ -255,7 +260,7 @@ public static class HouseholdEndpoints
                     db.Users.AsNoTracking(),
                     m => m.UserId,
                     u => u.Id,
-                    (m, u) => new { m.UserId, u.DisplayName, u.Email, m.Role })
+                    (m, u) => new { m.UserId, u.DisplayName, u.Email, m.Role, HasAvatar = u.AvatarData != null, u.AvatarVersion })
                 .ToListAsync();
 
             var members = rows
@@ -267,7 +272,8 @@ public static class HouseholdEndpoints
                     r.Email ?? string.Empty,
                     r.Role.ToString(),
                     r.UserId == caller.UserId,
-                    callerIsAdmin && r.UserId != caller.UserId))
+                    callerIsAdmin && r.UserId != caller.UserId,
+                    UserAvatarEndpoints.BuildUrl(r.UserId, r.HasAvatar, r.AvatarVersion)))
                 .ToList();
 
             return Results.Ok(members);
@@ -348,7 +354,8 @@ public static class HouseholdEndpoints
 
             var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == userId);
             return Results.Ok(new MemberResponse(
-                target.UserId, user.DisplayName, user.Email ?? string.Empty, target.Role.ToString(), IsSelf: false, CanManage: true));
+                target.UserId, user.DisplayName, user.Email ?? string.Empty, target.Role.ToString(), IsSelf: false, CanManage: true,
+                UserAvatarEndpoints.BuildUrl(user.Id, user.AvatarData != null, user.AvatarVersion)));
         });
 
         // DELETE /api/households/members/{userId} — remove a member (FR-009). Admin-only; target scoped to
@@ -496,8 +503,8 @@ public sealed record HouseholdResponse(Guid Id, string Name, string Role);
 
 public sealed record InviteResponse(string Token, DateTime ExpiresAtUtc);
 
-public sealed record InvitePreviewResponse(string HouseholdName, string InviterName, string InviterId);
+public sealed record InvitePreviewResponse(string HouseholdName, string InviterName, string InviterId, string? InviterAvatarUrl);
 
-public sealed record MemberResponse(string UserId, string DisplayName, string Email, string Role, bool IsSelf, bool CanManage);
+public sealed record MemberResponse(string UserId, string DisplayName, string Email, string Role, bool IsSelf, bool CanManage, string? AvatarUrl);
 
 public sealed record UpdateMemberRoleRequest(string Role);

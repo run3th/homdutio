@@ -48,6 +48,8 @@ export class JoinComponent implements OnInit {
   readonly householdName = signal<string | null>(null);
   /** The inviter named on the join screens; resolved from the public preview. */
   readonly inviterName = signal<string | null>(null);
+  /** The inviter's avatar URL from the preview; null when they have no photo (the badge shows their initial). */
+  readonly inviterAvatarUrl = signal<string | null>(null);
   readonly joining = signal(false);
   /** A join-time error message (e.g. the invite was consumed between preview and accept). */
   readonly joinError = signal<string | null>(null);
@@ -84,6 +86,7 @@ export class JoinComponent implements OnInit {
       next: (preview) => {
         this.householdName.set(preview.householdName);
         this.inviterName.set(preview.inviterName);
+        this.inviterAvatarUrl.set(preview.inviterAvatarUrl ?? null);
         this.previewState.set('valid');
         // Resolve membership so the authenticated branch knows join vs. already-in-household.
         if (this.isAuthenticated()) {

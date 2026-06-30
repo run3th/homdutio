@@ -18,6 +18,8 @@ export interface Member {
   role: MemberRole;
   isSelf: boolean;
   canManage: boolean;
+  /** The member's versioned avatar URL (S-09); null when they have no photo (render the initial). */
+  avatarUrl?: string | null;
 }
 
 /**

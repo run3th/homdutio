@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Homdutio.Api.Users;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -552,8 +553,11 @@ public static class TaskEndpoints
         return (max ?? -1) + 1;
     }
 
-    /// <summary>Resolves the display names referenced by a set of tasks (creator + claimer) in one query — no N+1.</summary>
-    private static async Task<Dictionary<string, string>> ResolveNamesAsync(
+    /// <summary>
+    /// Resolves the display name + versioned avatar URL referenced by a set of tasks (creator + claimer) in
+    /// one query — no N+1. Selecting <c>AvatarData != null</c> (not the bytes) keeps the projection cheap.
+    /// </summary>
+    private static async Task<Dictionary<string, UserRef>> ResolveNamesAsync(
         ApplicationDbContext db, IReadOnlyCollection<HouseholdTask> tasks)
     {
         var ids = tasks.Select(t => t.CreatedById)
@@ -563,13 +567,10 @@ public static class TaskEndpoints
 
         if (ids.Count == 0)
         {
-            return new Dictionary<string, string>();
+            return new Dictionary<string, UserRef>();
         }
 
-        return await db.Users
-            .AsNoTracking()
-            .Where(u => ids.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
+        return await ResolveUserRefsAsync(db, ids);
     }
 
     /// <summary>Grouped comment count per task in one query (no N+1) — backs the board's per-card 💬 badge.</summary>
@@ -616,29 +617,49 @@ public static class TaskEndpoints
                 g => g.Select(r => r.Value).OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
-    /// <summary>Resolves the display names of a set of comments' authors in one query — no N+1.</summary>
-    private static async Task<Dictionary<string, string>> ResolveCommentNamesAsync(
+    /// <summary>Resolves the display name + avatar URL of a set of comments' authors in one query — no N+1.</summary>
+    private static async Task<Dictionary<string, UserRef>> ResolveCommentNamesAsync(
         ApplicationDbContext db, IReadOnlyCollection<TaskComment> comments)
     {
         var ids = comments.Select(c => c.AuthorId).Distinct().ToList();
         if (ids.Count == 0)
         {
-            return new Dictionary<string, string>();
+            return new Dictionary<string, UserRef>();
         }
 
-        return await db.Users
-            .AsNoTracking()
-            .Where(u => ids.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
+        return await ResolveUserRefsAsync(db, ids);
     }
 
-    private static CommentResponse ToCommentResponse(TaskComment comment, IReadOnlyDictionary<string, string> names) =>
-        new(
+    /// <summary>
+    /// The shared id → {name, versioned avatar URL} lookup. Materializes the cheap projection (id, name,
+    /// has-avatar flag, version) then builds each avatar URL in memory via the one canonical
+    /// {@link UserAvatarEndpoints.BuildUrl}.
+    /// </summary>
+    private static async Task<Dictionary<string, UserRef>> ResolveUserRefsAsync(
+        ApplicationDbContext db, IReadOnlyCollection<string> ids)
+    {
+        var rows = await db.Users
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.Id))
+            .Select(u => new { u.Id, u.DisplayName, HasAvatar = u.AvatarData != null, u.AvatarVersion })
+            .ToListAsync();
+
+        return rows.ToDictionary(
+            r => r.Id,
+            r => new UserRef(r.DisplayName, UserAvatarEndpoints.BuildUrl(r.Id, r.HasAvatar, r.AvatarVersion)));
+    }
+
+    private static CommentResponse ToCommentResponse(TaskComment comment, IReadOnlyDictionary<string, UserRef> names)
+    {
+        var author = names.GetValueOrDefault(comment.AuthorId);
+        return new CommentResponse(
             comment.Id,
             comment.Body,
             comment.Kind.ToString(),
-            names.TryGetValue(comment.AuthorId, out var author) ? author : string.Empty,
+            author?.DisplayName ?? string.Empty,
+            author?.AvatarUrl,
             comment.CreatedAtUtc);
+    }
 
     private static TaskEvent NewEvent(Guid taskId, TaskEventType type, string actorId, DateTime occurredAtUtc) =>
         new()
@@ -653,7 +674,7 @@ public static class TaskEndpoints
     private static TaskResponse ToResponse(
         HouseholdTask task,
         CallerContext caller,
-        IReadOnlyDictionary<string, string> names,
+        IReadOnlyDictionary<string, UserRef> names,
         IReadOnlyDictionary<Guid, int> counts,
         IReadOnlyDictionary<Guid, string[]> tags)
     {
@@ -669,14 +690,19 @@ public static class TaskEndpoints
         var canEdit = caller.Role == HouseholdRole.Admin;
         var canDelete = task.Status == HouseholdTaskStatus.ToDo;
 
+        var creator = names.GetValueOrDefault(task.CreatedById);
+        var claimer = task.ClaimedById is not null ? names.GetValueOrDefault(task.ClaimedById) : null;
+
         return new TaskResponse(
             task.Id,
             task.Title,
             task.Description,
             tags.TryGetValue(task.Id, out var taskTags) ? taskTags : [],
             task.Status.ToString(),
-            names.TryGetValue(task.CreatedById, out var creator) ? creator : string.Empty,
-            task.ClaimedById is not null && names.TryGetValue(task.ClaimedById, out var claimer) ? claimer : null,
+            creator?.DisplayName ?? string.Empty,
+            creator?.AvatarUrl,
+            claimer?.DisplayName,
+            claimer?.AvatarUrl,
             task.CreatedAtUtc,
             canClaim,
             canMarkDone,
@@ -705,6 +731,7 @@ public sealed record CommentResponse(
     string Body,
     string Kind,
     string AuthorName,
+    string? AuthorAvatarUrl,
     DateTime CreatedAtUtc);
 
 public sealed record TaskResponse(
@@ -714,7 +741,9 @@ public sealed record TaskResponse(
     string[] Tags,
     string Status,
     string CreatedByName,
+    string? CreatedByAvatarUrl,
     string? ClaimerName,
+    string? ClaimerAvatarUrl,
     DateTime CreatedAtUtc,
     bool CanClaim,
     bool CanMarkDone,

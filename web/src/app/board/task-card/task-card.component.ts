@@ -12,7 +12,8 @@ import { DatePipe } from '@angular/common';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { Task } from '../task.service';
-import { avatarColor, tagColor } from '../tag-color';
+import { tagColor } from '../tag-color';
+import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 
 /**
  * A presentational, Claude-style pastel task card (S-11). Renders the title (an explicit open-detail
@@ -27,7 +28,7 @@ import { avatarColor, tagColor } from '../tag-color';
  */
 @Component({
   selector: 'app-task-card',
-  imports: [DatePipe, DragDropModule],
+  imports: [DatePipe, DragDropModule, UserAvatarComponent],
   templateUrl: './task-card.component.html',
   styleUrl: './task-card.component.scss',
   host: { class: 'task-card' },
@@ -51,14 +52,8 @@ export class TaskCardComponent {
 
   private readonly host = inject(ElementRef<HTMLElement>);
 
-  /** Deterministic chip/avatar colors (mockup parity); template helpers. */
+  /** Deterministic tag-chip colors (mockup parity); template helper. Avatars render via UserAvatarComponent. */
   readonly tagColor = tagColor;
-  readonly avatarColor = avatarColor;
-
-  /** Uppercase first letter for an avatar glyph. */
-  initial(name: string | null | undefined): string {
-    return (name ?? '?').charAt(0).toUpperCase();
-  }
 
   /** Whether the per-task ⋯ overflow menu is open. */
   readonly menuOpen = signal(false);

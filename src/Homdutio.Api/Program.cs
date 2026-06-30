@@ -6,6 +6,7 @@ using Homdutio.Api.Email;
 using Homdutio.Api.Households;
 using Homdutio.Api.Profile;
 using Homdutio.Api.Tasks;
+using Homdutio.Api.Users;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -180,6 +181,7 @@ app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapHouseholdEndpoints();
 app.MapProfileEndpoints();
+app.MapUserAvatarEndpoints();
 app.MapTaskEndpoints();
 
 app.MapFallbackToFile("index.html");

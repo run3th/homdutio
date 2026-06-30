@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { DialogRef } from '@angular/cdk/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
+import type { ImageCroppedEvent } from 'ngx-image-cropper';
 
 import { SettingsDialogComponent } from './settings-dialog.component';
 import { AuthService } from '../../auth/auth.service';
@@ -10,20 +11,24 @@ import { ProfileService } from '../../profile/profile.service';
 
 describe('SettingsDialogComponent', () => {
   const displayName = signal<string | null>('Molly Weasley');
+  const avatarUrl = signal<string | null>(null);
   let updateProfile: ReturnType<typeof vi.fn>;
+  let uploadAvatar: ReturnType<typeof vi.fn>;
+  let removeAvatar: ReturnType<typeof vi.fn>;
   let close: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     displayName.set('Molly Weasley');
-    updateProfile = vi.fn((name: string) =>
-      of({ id: 'u1', displayName: name, avatarUrl: null }),
-    );
+    avatarUrl.set(null);
+    updateProfile = vi.fn((name: string) => of({ id: 'u1', displayName: name, avatarUrl: avatarUrl() }));
+    uploadAvatar = vi.fn(() => of({ avatarUrl: '/api/users/u1/avatar?v=1' }));
+    removeAvatar = vi.fn(() => of(void 0));
     close = vi.fn();
     TestBed.configureTestingModule({
       imports: [SettingsDialogComponent],
       providers: [
-        { provide: AuthService, useValue: { displayName } },
-        { provide: ProfileService, useValue: { updateProfile } },
+        { provide: AuthService, useValue: { displayName, avatarUrl } },
+        { provide: ProfileService, useValue: { updateProfile, uploadAvatar, removeAvatar } },
         { provide: DialogRef, useValue: { close } },
       ],
     });
@@ -47,6 +52,8 @@ describe('SettingsDialogComponent', () => {
     fixture.componentInstance.save();
 
     expect(updateProfile).toHaveBeenCalledWith('Molly W.'); // trimmed
+    expect(uploadAvatar).not.toHaveBeenCalled();
+    expect(removeAvatar).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalled();
   });
 
@@ -68,6 +75,32 @@ describe('SettingsDialogComponent', () => {
 
     expect(updateProfile).not.toHaveBeenCalled();
     expect(fixture.componentInstance.form.invalid).toBe(true);
+  });
+
+  it('uploads a cropped photo then saves the name, and closes', () => {
+    const fixture = render();
+    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' });
+
+    fixture.componentInstance.onCropped({ blob } as ImageCroppedEvent);
+    fixture.componentInstance.save();
+
+    expect(uploadAvatar).toHaveBeenCalledWith(blob);
+    expect(updateProfile).toHaveBeenCalled();
+    expect(removeAvatar).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
+  });
+
+  it('removes the photo then saves the name, and closes', () => {
+    avatarUrl.set('/api/users/u1/avatar?v=2'); // a current photo exists to remove
+    const fixture = render();
+
+    fixture.componentInstance.requestRemove();
+    fixture.componentInstance.save();
+
+    expect(removeAvatar).toHaveBeenCalled();
+    expect(uploadAvatar).not.toHaveBeenCalled();
+    expect(updateProfile).toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
   });
 
   it('surfaces validation messages from a 400 and stays open', () => {

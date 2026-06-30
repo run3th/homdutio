@@ -14,7 +14,11 @@ export interface Task {
   tags: string[];
   status: TaskStatus;
   createdByName: string;
+  /** Creator's versioned avatar URL (S-09); null when they have no photo (render the initial). */
+  createdByAvatarUrl?: string | null;
   claimerName?: string | null;
+  /** Claimer's versioned avatar URL (S-09); null when unclaimed or they have no photo. */
+  claimerAvatarUrl?: string | null;
   createdAtUtc: string;
   /** Server-computed affordance flags — the single source of truth for which actions the caller may take. */
   canClaim: boolean;
@@ -38,6 +42,8 @@ export interface Comment {
   /** `Member` is a free-form note; `SendBack` is the reason an admin attached when returning a Done task. */
   kind: 'Member' | 'SendBack';
   authorName: string;
+  /** Author's versioned avatar URL (S-09); null when they have no photo. */
+  authorAvatarUrl?: string | null;
   createdAtUtc: string;
 }
 

@@ -15,8 +15,10 @@ export interface InvitePreview {
   householdName: string;
   /** The inviter's display name, shown on the join screens. */
   inviterName: string;
-  /** The inviter's user id — used to build their versioned avatar URL (Phase 3); shows their initial until then. */
+  /** The inviter's user id — used to build their versioned avatar URL; shows their initial when they have no photo. */
   inviterId: string;
+  /** The inviter's versioned avatar URL (S-09); null when they have no photo (render the initial). */
+  inviterAvatarUrl?: string | null;
 }
 
 /**

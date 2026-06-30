@@ -5,6 +5,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 
 import { Comment, Task, TaskService } from '../task.service';
+import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 
 /**
  * The per-task comment thread (S-05), opened from the card's 💬 button via `@angular/cdk/dialog`. Split out
@@ -15,7 +16,7 @@ import { Comment, Task, TaskService } from '../task.service';
  */
 @Component({
   selector: 'app-comments',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, UserAvatarComponent],
   templateUrl: './comments.component.html',
   styleUrl: './comments.component.scss',
 })

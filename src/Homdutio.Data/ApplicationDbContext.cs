@@ -42,6 +42,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             // Required so every account has a card-ready name; the migration backfills existing rows.
             user.Property(u => u.DisplayName).IsRequired().HasMaxLength(100);
+
+            // Avatar (S-09): bytes are nullable varbinary(max); content-type is a short MIME string.
+            // AvatarVersion defaults to 0 so existing rows (added by the migration) start un-versioned.
+            user.Property(u => u.AvatarContentType).HasMaxLength(100);
+            user.Property(u => u.AvatarVersion).HasDefaultValue(0);
         });
 
         builder.Entity<Household>(household =>

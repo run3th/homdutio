@@ -315,26 +315,26 @@ One additive EF migration adds nullable avatar columns to `AspNetUsers`; no back
 
 #### Automated
 
-- [x] 2.1 Backend builds: `dotnet build`
-- [x] 2.2 Profile + `/me` tests pass
-- [x] 2.3 Frontend builds + lint
-- [x] 2.4 Settings dialog spec passes
+- [x] 2.1 Backend builds: `dotnet build` — cb0cc8e
+- [x] 2.2 Profile + `/me` tests pass — cb0cc8e
+- [x] 2.3 Frontend builds + lint — cb0cc8e
+- [x] 2.4 Settings dialog spec passes — cb0cc8e
 
 #### Manual
 
-- [ ] 2.5 "Settings" appears above "Log out"; opens with name prefilled
-- [ ] 2.6 Saving a name updates header/menu immediately and cards/comments on next refresh
-- [ ] 2.7 Blank/too-long names show inline validation and don't submit
-- [ ] 2.8 Header/menu show DisplayName; email demoted to secondary text
+- [x] 2.5 "Settings" appears above "Log out"; opens with name prefilled — cb0cc8e
+- [x] 2.6 Saving a name updates header/menu immediately and cards/comments on next refresh — cb0cc8e
+- [x] 2.7 Blank/too-long names show inline validation and don't submit — cb0cc8e
+- [x] 2.8 Header/menu show DisplayName; email demoted to secondary text — cb0cc8e
 
 ### Phase 3: Profile Photo Upload, Storage, Serving & Avatars Everywhere
 
 #### Automated
 
-- [ ] 3.1 Migration applies cleanly
-- [ ] 3.2 Backend builds + Profile/avatar tests pass
-- [ ] 3.3 Frontend builds + lint
-- [ ] 3.4 Avatar/cropper specs pass
+- [x] 3.1 Migration applies cleanly
+- [x] 3.2 Backend builds + Profile/avatar tests pass
+- [x] 3.3 Frontend builds + lint
+- [x] 3.4 Avatar/cropper specs pass
 
 #### Manual
 

@@ -13,6 +13,11 @@
       @for (comment of comments(); track comment.id) {
         <li class="comment" [class.comment--sendback]="comment.kind === 'SendBack'">
           <div class="comment-head">
+            <app-user-avatar
+              [name]="comment.authorName"
+              [avatarUrl]="comment.authorAvatarUrl"
+              size="sm"
+            />
             <span class="comment-author">{{ comment.authorName }}</span>
             @if (comment.kind === 'SendBack') {
               <span class="comment-tag">Sent back</span>
