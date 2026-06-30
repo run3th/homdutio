@@ -1,7 +1,7 @@
 ---
 change_id: join-flow-and-user-settings
 title: Invite join-household flow screens + user settings (display name & profile photo)
-status: implementing
+status: implemented
 created: 2026-06-30
 updated: 2026-06-30
 archived_at: null

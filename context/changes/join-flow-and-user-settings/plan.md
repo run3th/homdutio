@@ -331,15 +331,15 @@ One additive EF migration adds nullable avatar columns to `AspNetUsers`; no back
 
 #### Automated
 
-- [x] 3.1 Migration applies cleanly
-- [x] 3.2 Backend builds + Profile/avatar tests pass
-- [x] 3.3 Frontend builds + lint
-- [x] 3.4 Avatar/cropper specs pass
+- [x] 3.1 Migration applies cleanly — 1d6c175
+- [x] 3.2 Backend builds + Profile/avatar tests pass — 1d6c175
+- [x] 3.3 Frontend builds + lint — 1d6c175
+- [x] 3.4 Avatar/cropper specs pass — 1d6c175
 
 #### Manual
 
-- [ ] 3.5 Upload+crop shows preview; avatar appears on header, menu, cards, comments, members
-- [ ] 3.6 Remove reverts every surface to the colored initial
-- [ ] 3.7 Second user / next poll sees updated photo on shared cards/comments
-- [ ] 3.8 Join `join` screen shows inviter's real photo (initials if none)
-- [ ] 3.9 Cached photo on reload (no flicker); fresh upload busts cache
+- [x] 3.5 Upload+crop shows preview; avatar appears on header, menu, cards, comments, members — 1d6c175
+- [x] 3.6 Remove reverts every surface to the colored initial — 1d6c175
+- [x] 3.7 Second user / next poll sees updated photo on shared cards/comments — 1d6c175
+- [x] 3.8 Join `join` screen shows inviter's real photo (initials if none) — 1d6c175
+- [x] 3.9 Cached photo on reload (no flicker); fresh upload busts cache — 1d6c175
