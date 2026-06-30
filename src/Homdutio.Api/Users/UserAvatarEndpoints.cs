@@ -43,6 +43,11 @@ public static class UserAvatarEndpoints
             // version, so the next DTO carries a new URL and busts the cache.
             response.Headers.CacheControl = "public, max-age=31536000, immutable";
 
+            // These are anonymous, user-uploaded bytes served from our own origin. Forbid MIME sniffing so a
+            // mislabeled payload can never be re-interpreted as HTML/script (stored-XSS defense; the upload
+            // path also validates the byte signature against the declared type).
+            response.Headers.XContentTypeOptions = "nosniff";
+
             return Results.File(
                 avatar.AvatarData!,
                 contentType: avatar.AvatarContentType ?? "application/octet-stream",

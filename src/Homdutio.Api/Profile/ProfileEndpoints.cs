@@ -100,19 +100,39 @@ public static class ProfileEndpoints
                 return AvatarTooLarge();
             }
 
+            // The declared content-type is attacker-controlled; verify the bytes actually start with the
+            // matching image signature so an HTML/script payload can't be stored under an image MIME type.
+            var bytes = buffer.ToArray();
+            if (!HasMatchingImageSignature(bytes, contentType))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["avatar"] = ["The file is not a valid PNG or JPEG image."],
+                });
+            }
+
             var userId = principal.FindFirstValue("sub");
-            var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId);
-            if (user is null)
+
+            // Store the bytes and bump the version in one UPDATE so the increment can't lose a concurrent
+            // write (the version is the cache-busting signal — it must advance on every write). Re-read the
+            // resulting version to build the fresh URL.
+            var affected = await db.Users
+                .Where(u => u.Id == userId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.AvatarData, bytes)
+                    .SetProperty(u => u.AvatarContentType, contentType)
+                    .SetProperty(u => u.AvatarVersion, u => u.AvatarVersion + 1));
+            if (affected == 0)
             {
                 return Results.Unauthorized();
             }
 
-            user.AvatarData = buffer.ToArray();
-            user.AvatarContentType = contentType;
-            user.AvatarVersion++;
-            await db.SaveChangesAsync();
+            var version = await db.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.AvatarVersion)
+                .SingleAsync();
 
-            return Results.Ok(new AvatarResponse(AvatarUrlOf(user)));
+            return Results.Ok(new AvatarResponse(UserAvatarEndpoints.BuildUrl(userId!, hasAvatar: true, version)));
         });
 
         // DELETE /api/profile/me/avatar — clear the caller's photo, bumping the version so any cached image
@@ -120,16 +140,19 @@ public static class ProfileEndpoints
         group.MapDelete("/me/avatar", async (ClaimsPrincipal principal, ApplicationDbContext db) =>
         {
             var userId = principal.FindFirstValue("sub");
-            var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId);
-            if (user is null)
+
+            // Clear the photo and bump the version atomically (same reason as upload — the version must
+            // advance even when racing another write so cached bytes are abandoned).
+            var affected = await db.Users
+                .Where(u => u.Id == userId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.AvatarData, (byte[]?)null)
+                    .SetProperty(u => u.AvatarContentType, (string?)null)
+                    .SetProperty(u => u.AvatarVersion, u => u.AvatarVersion + 1));
+            if (affected == 0)
             {
                 return Results.Unauthorized();
             }
-
-            user.AvatarData = null;
-            user.AvatarContentType = null;
-            user.AvatarVersion++;
-            await db.SaveChangesAsync();
 
             return Results.NoContent();
         });
@@ -140,6 +163,23 @@ public static class ProfileEndpoints
     /// <summary>The caller's versioned avatar URL, or null when they have no photo.</summary>
     private static string? AvatarUrlOf(Data.Entities.ApplicationUser user) =>
         UserAvatarEndpoints.BuildUrl(user.Id, user.AvatarData != null, user.AvatarVersion);
+
+    /// <summary>
+    /// True when <paramref name="bytes"/> begins with the magic-byte signature of the declared
+    /// <paramref name="contentType"/> (PNG or JPEG). Guards against a mislabeled (e.g. HTML/SVG) payload
+    /// declared as an image — the bytes are later served verbatim from an anonymous origin URL.
+    /// </summary>
+    private static bool HasMatchingImageSignature(byte[] bytes, string contentType) =>
+        contentType.ToLowerInvariant() switch
+        {
+            // 89 50 4E 47 0D 0A 1A 0A
+            "image/png" => bytes.Length >= 8 &&
+                bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 &&
+                bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A,
+            // FF D8 FF
+            "image/jpeg" => bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
+            _ => false,
+        };
 
     private static IResult AvatarTooLarge() =>
         Results.ValidationProblem(new Dictionary<string, string[]>
