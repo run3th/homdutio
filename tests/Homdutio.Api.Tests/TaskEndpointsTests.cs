@@ -280,9 +280,14 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         // A *different* member claiming an already-InProgress task is rejected via the in-handler status read
         // (TaskEndpoints.cs:143) — the logical 409. Distinct from the same-claimer re-claim at :246.
         // NOTE: this proves only the *logical* conflict. HouseholdTask has no rowversion / optimistic-
-        // concurrency token, so a *true simultaneous* double-claim is not provable at this layer — that
-        // concurrent race belongs to Phase 3 / Risk #3 (cf. lessons.md "Guard min-count invariants with an
-        // atomic check-and-mutate": the codebase locks where it cares about races, deliberately not on claim).
+        // concurrency token, so a *true simultaneous* double-claim is not provable at this layer.
+        // RE-PARKED: Phase 3 (Risk #3) covers strictly the last-admin zero-admin race — which is already
+        // guarded pessimistically and is now proven by
+        // HouseholdMemberAdminTests.Concurrent_demote_and_remove_cannot_drive_the_household_below_one_admin.
+        // The concurrent double-claim race is deliberately NOT in Phase 3: observing (and defending) it needs
+        // a rowversion on HouseholdTask — a production entity change + migration, i.e. its own future
+        // hardening slice, not a test phase. (cf. lessons.md "Guard min-count invariants with an atomic
+        // check-and-mutate": the codebase locks where it cares about races, deliberately not on claim.)
         var adminToken = await RegisterAndLoginAsync(NewEmail("dbl-admin"), "Admin");
         var householdId = await CreateHouseholdAsync(adminToken, "Double Claim House");
 

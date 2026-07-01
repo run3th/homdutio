@@ -173,7 +173,14 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.2 Adding a concurrency / invariant test
 
-- TBD — see §3 Phase 3 for the parallel-request pattern that exercises the last-admin (and double-consume) races without a serial false-pass.
+- **Location**: `tests/Homdutio.Api.Tests/HouseholdMemberAdminTests.cs`, same `IClassFixture<AuthApiFactory>` + LocalDB as §6.1. Because DbContext is `Scoped`, two in-process requests genuinely run in separate scopes/connections, so the race is observable — no in-memory provider, no mock.
+- **Parallel-request helper**: `SendConcurrentlyAsync(first, second)` fires two `Authed(...)`-built `HttpRequestMessage`s and awaits both with `Task.WhenAll`, returning them positionally. This is the only parallelism primitive the suite needs; there is no barrier/iteration loop (see determinism below).
+- **Assert the post-state invariant, NOT the guard message** (the risk-map anti-pattern). The **primary** oracle is the persisted invariant read from a fresh `_factory.Services.CreateScope()` → `ApplicationDbContext` (e.g. `admin count == 1`) — a passing status can coexist with a corrupted post-state, so the count is the source of truth. Response codes are a **secondary** check. Derive the loser's expected status from the handler (last-admin rejection is **409 Conflict** at `HouseholdEndpoints.cs` demote/remove), never from intuition.
+- **Determinism**: the last-admin guard serializes via a *held* `UPDLOCK/HOLDLOCK` (pessimistic lock, not retry-on-conflict), so exactly one request wins and one is rejected every run — no synchronization barrier or iteration needed. If such a test flakes, that is the signal the lock regressed.
+- **Build isolated state** (unique emails/household) since the fixture is shared per class. To get a second admin: register (capture the token — roles are resolved live per request, so it stays valid after promotion) → `SeedMemberAsync(email, householdId, Member)` → `SetRoleAsync(adminToken, userId, "Admin")`.
+- **Reference test**: `Concurrent_demote_and_remove_cannot_drive_the_household_below_one_admin` (`HouseholdMemberAdminTests.cs`).
+- **Run**: `dotnet test tests/Homdutio.Api.Tests`.
+- **Concurrent double-claim is deliberately NOT covered here** — `HouseholdTask` has no rowversion, so a true simultaneous double-claim is unobservable at this layer; it is re-parked as its own future hardening slice (would need a production concurrency token + migration), flagged in-code at the logical double-claim test in `TaskEndpointsTests.cs`.
 
 ### 6.3 Adding an audit-durability test
 

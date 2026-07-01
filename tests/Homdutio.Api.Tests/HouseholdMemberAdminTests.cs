@@ -116,6 +116,21 @@ public class HouseholdMemberAdminTests : IClassFixture<AuthApiFactory>
     private Task<HttpResponseMessage> ConfirmAsync(string token, Guid taskId) =>
         _client.SendAsync(Authed(HttpMethod.Post, $"/api/tasks/{taskId}/confirm", token));
 
+    /// <summary>
+    /// Fires two authed requests concurrently and awaits both — the suite's first parallel-request helper.
+    /// DbContext is Scoped, so each in-process request runs in its own DI scope / connection; two requests
+    /// driven this way genuinely race in the server, which is what lets a concurrency test observe the
+    /// last-admin guard (no serial test can). Returns both responses positionally for assertion.
+    /// </summary>
+    private async Task<(HttpResponseMessage First, HttpResponseMessage Second)> SendConcurrentlyAsync(
+        HttpRequestMessage first, HttpRequestMessage second)
+    {
+        var firstTask = _client.SendAsync(first);
+        var secondTask = _client.SendAsync(second);
+        await Task.WhenAll(firstTask, secondTask);
+        return (await firstTask, await secondTask);
+    }
+
     private static string NewEmail(string prefix) => $"{prefix}-{Guid.NewGuid():N}@example.test";
 
     // --- Roster --------------------------------------------------------------------------------------
@@ -382,6 +397,51 @@ public class HouseholdMemberAdminTests : IClassFixture<AuthApiFactory>
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.False(await db.HouseholdMembers.AnyAsync(m => m.UserId == otherId));
         Assert.Equal(1, await db.HouseholdMembers.CountAsync(m => m.HouseholdId == householdId && m.Role == HouseholdRole.Admin));
+    }
+
+    [Fact]
+    public async Task Concurrent_demote_and_remove_cannot_drive_the_household_below_one_admin()
+    {
+        // Risk #3 (the TOCTOU in lessons.md): two admins, A and B. One request DEMOTES A (issued by B); a
+        // *concurrent* request REMOVES B (issued by A). Neither is a self-action, so both reach the
+        // last-admin transaction — and both target a *different* admin, the exact shape that, under a
+        // naive check-then-write guard, would let both pass a stale count and orphan the household at zero
+        // admins. The pessimistic UPDLOCK/HOLDLOCK guard serializes them: the first to commit drops the
+        // admin count to 1, the second blocks, re-reads 1, and is rejected. No serial test can observe this.
+        //
+        // Deterministic by construction — the guard serializes via a *held* lock, not retry-on-conflict, so
+        // exactly one request wins and one gets the last-admin 409 every run. If this ever flakes, that is
+        // itself the signal that the lock regressed.
+        var adminAToken = await RegisterAndLoginAsync(NewEmail("race-a"));
+        var householdId = await CreateHouseholdAsync(adminAToken, "Race House");
+        var adminAId = await UserIdByEmailAsync(await EmailOfTokenAsync(adminAToken));
+
+        // Second admin: register (capture the token — role is resolved live per request, so it stays valid
+        // after promotion), seed as Member, promote to Admin. Household now holds exactly two admins.
+        var adminBEmail = NewEmail("race-b");
+        var adminBToken = await RegisterAndLoginAsync(adminBEmail);
+        await SeedMemberAsync(adminBEmail, householdId, HouseholdRole.Member);
+        var adminBId = await UserIdByEmailAsync(adminBEmail);
+        (await SetRoleAsync(adminAToken, adminBId, "Admin")).EnsureSuccessStatusCode();
+
+        // B demotes A; A removes B — concurrently.
+        var demoteA = Authed(HttpMethod.Post, $"/api/households/members/{adminAId}/role", adminBToken, new { role = "Member" });
+        var removeB = Authed(HttpMethod.Delete, $"/api/households/members/{adminBId}", adminAToken);
+        var (demoteResp, removeResp) = await SendConcurrentlyAsync(demoteA, removeB);
+
+        // PRIMARY oracle: the post-state invariant — exactly one admin remains, queried from a fresh scope.
+        // This is what fails if the guard is ever weakened; a passing status can coexist with a corrupt
+        // post-state, so the count is the source of truth (not the guard message — the risk-map anti-pattern).
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, await db.HouseholdMembers.CountAsync(m => m.HouseholdId == householdId && m.Role == HouseholdRole.Admin));
+
+        // SECONDARY: exactly one mutation succeeded (demote → 200, remove → 204); the loser hit the
+        // last-admin guard, which the demote/remove handlers return as 409 Conflict.
+        var demoteSucceeded = demoteResp.StatusCode == HttpStatusCode.OK;
+        var removeSucceeded = removeResp.StatusCode == HttpStatusCode.NoContent;
+        Assert.True(demoteSucceeded ^ removeSucceeded, "exactly one of the two concurrent mutations must succeed");
+        Assert.Equal(HttpStatusCode.Conflict, demoteSucceeded ? removeResp.StatusCode : demoteResp.StatusCode);
     }
 
     [Fact]
