@@ -232,12 +232,12 @@ None — no schema or data changes.
 
 #### Automated
 
-- [x] 2.1 Build passes: `dotnet build`
-- [x] 2.2 New audit tests pass (`--filter FullyQualifiedName~TaskEndpointsTests`)
-- [x] 2.3 Full backend suite passes: `dotnet test tests/Homdutio.Api.Tests`
-- [x] 2.4 Suite still passes after §6.3 + closeout doc edits
+- [x] 2.1 Build passes: `dotnet build` — 44a4d3b
+- [x] 2.2 New audit tests pass (`--filter FullyQualifiedName~TaskEndpointsTests`) — 44a4d3b
+- [x] 2.3 Full backend suite passes: `dotnet test tests/Homdutio.Api.Tests` — 44a4d3b
+- [x] 2.4 Suite still passes after §6.3 + closeout doc edits — 44a4d3b
 
 #### Manual
 
-- [x] 2.5 Making a recovery handler overwrite/skip an event locally makes a drop-detection test fail, then revert
-- [x] 2.6 §6.3 reads as an actionable recipe; §3 Phase 3 shows `complete`; §6.6 note is accurate
+- [x] 2.5 Making a recovery handler overwrite/skip an event locally makes a drop-detection test fail, then revert — 44a4d3b
+- [x] 2.6 §6.3 reads as an actionable recipe; §3 Phase 3 shows `complete`; §6.6 note is accurate — 44a4d3b
