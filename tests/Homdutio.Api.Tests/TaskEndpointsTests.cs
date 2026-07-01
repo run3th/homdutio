@@ -731,6 +731,22 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
         return await db.HouseholdTasks.AsNoTracking().SingleAsync(t => t.Id == id);
     }
 
+    /// <summary>
+    /// Reads the durable audit record — the full ordered <see cref="TaskEvent"/> chain for a task — from a
+    /// fresh DI scope, never the request's cached context. This is the "durable record, not board view"
+    /// convention: drop/overwrite regressions are only visible against the persisted, ordered set.
+    /// </summary>
+    private async Task<List<TaskEventType>> LoadEventTypesAsync(Guid taskId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await db.TaskEvents
+            .Where(e => e.TaskId == taskId)
+            .OrderBy(e => e.OccurredAtUtc)
+            .Select(e => e.Type)
+            .ToListAsync();
+    }
+
     [Fact]
     public async Task Claimer_unclaims_their_in_progress_task_back_to_to_do_unassigned()
     {
@@ -983,6 +999,97 @@ public class TaskEndpointsTests : IClassFixture<AuthApiFactory>
 
         var sendback = await _client.PostAsJsonAsync($"/api/tasks/{id}/sendback", new { comment = "x" });
         Assert.Equal(HttpStatusCode.Unauthorized, sendback.StatusCode);
+    }
+
+    // --- Phase 3 / Risk #5: audit-durability drop detection -------------------------------------------
+    // The existing recovery tests assert only that the *new* event exists (AnyAsync) — they cannot detect
+    // a drop/overwrite regression, which is the literal risk ("overwrites or drops audit history"). These
+    // tests read the full ordered event chain from a fresh scope and assert the *prior* history survived
+    // intact plus the new event was appended. Closure is a state transition (ClosedAtUtc), never a delete.
+
+    [Fact]
+    public async Task Unclaim_preserves_the_full_prior_event_history()
+    {
+        // After claim → unclaim, the Created and Claimed events must still be present, with Unclaimed
+        // appended — not the AnyAsync(Unclaimed)-only check at :755, which a drop of Created/Claimed passes.
+        var token = await RegisterAndLoginAsync(NewEmail("uc-audit"), "Molly");
+        await CreateHouseholdAsync(token, "Unclaim Audit House");
+        var task = await CreateTaskAsync(token, "Claim then abandon");
+
+        (await ActionAsync(token, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(token, task.Id, "unclaim")).EnsureSuccessStatusCode();
+
+        var events = await LoadEventTypesAsync(task.Id);
+        Assert.Equal(
+            new[] { TaskEventType.Created, TaskEventType.Claimed, TaskEventType.Unclaimed },
+            events);
+    }
+
+    [Fact]
+    public async Task Send_back_preserves_the_full_prior_event_history()
+    {
+        // After claim → done → send-back, the Created / Claimed / MarkedDone events must all survive, with
+        // SentBack appended — the AnyAsync(SentBack)-only check at :838 would miss a dropped MarkedDone.
+        var adminToken = await RegisterAndLoginAsync(NewEmail("sb-audit-admin"), "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Send Back Audit House");
+
+        var memberEmail = NewEmail("sb-audit-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Redo needed");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode();
+        (await SendBackAsync(adminToken, task.Id, "Please redo the corners")).EnsureSuccessStatusCode();
+
+        var events = await LoadEventTypesAsync(task.Id);
+        Assert.Equal(
+            new[] { TaskEventType.Created, TaskEventType.Claimed, TaskEventType.MarkedDone, TaskEventType.SentBack },
+            events);
+    }
+
+    [Fact]
+    public async Task Compound_recovery_sequence_accumulates_events_append_only()
+    {
+        // The strongest drop/overwrite guard: repeated recovery transitions must accumulate append-only.
+        // Drive claim → done → send-back → done → confirm and assert the complete ordered event chain, that
+        // the row closes (ClosedAtUtc != null, a state transition not a delete), and that self-attested is
+        // correctly false on the final Confirmed event (admin confirms the member's work).
+        var adminEmail = NewEmail("compound-admin");
+        var adminToken = await RegisterAndLoginAsync(adminEmail, "Admin");
+        var householdId = await CreateHouseholdAsync(adminToken, "Compound Recovery House");
+
+        var memberEmail = NewEmail("compound-member");
+        var memberToken = await RegisterAndLoginAsync(memberEmail, "Member");
+        await SeedMemberAsync(memberEmail, householdId, HouseholdRole.Member);
+
+        var task = await CreateTaskAsync(adminToken, "Round-tripped work");
+        (await ActionAsync(memberToken, task.Id, "claim")).EnsureSuccessStatusCode();
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode();
+        (await SendBackAsync(adminToken, task.Id, "Not quite there")).EnsureSuccessStatusCode();
+        (await ActionAsync(memberToken, task.Id, "done")).EnsureSuccessStatusCode(); // send-back keeps the member as claimer
+        (await ActionAsync(adminToken, task.Id, "confirm")).EnsureSuccessStatusCode();
+
+        var events = await LoadEventTypesAsync(task.Id);
+        Assert.Equal(
+            new[]
+            {
+                TaskEventType.Created,
+                TaskEventType.Claimed,
+                TaskEventType.MarkedDone,
+                TaskEventType.SentBack,
+                TaskEventType.MarkedDone,
+                TaskEventType.Confirmed,
+            },
+            events);
+
+        var row = await LoadTaskRowAsync(task.Id);
+        Assert.NotNull(row.ClosedAtUtc);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var confirmed = await db.TaskEvents.SingleAsync(e => e.TaskId == task.Id && e.Type == TaskEventType.Confirmed);
+        Assert.False(confirmed.SelfAttested); // admin != claimer (the member) → not self-attested
     }
 
     // --- S-05: comments foundation --------------------------------------------------------------------

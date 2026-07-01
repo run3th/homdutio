@@ -218,26 +218,26 @@ None — no schema or data changes.
 
 #### Automated
 
-- [x] 1.1 Build passes: `dotnet build`
-- [x] 1.2 New concurrency test passes (`--filter FullyQualifiedName~HouseholdMemberAdminTests`)
-- [x] 1.3 Full backend suite passes: `dotnet test tests/Homdutio.Api.Tests`
-- [x] 1.4 Suite still passes after §6.2 + double-claim re-park comment edit
+- [x] 1.1 Build passes: `dotnet build` — 37fd3b6
+- [x] 1.2 New concurrency test passes (`--filter FullyQualifiedName~HouseholdMemberAdminTests`) — 37fd3b6
+- [x] 1.3 Full backend suite passes: `dotnet test tests/Homdutio.Api.Tests` — 37fd3b6
+- [x] 1.4 Suite still passes after §6.2 + double-claim re-park comment edit — 37fd3b6
 
 #### Manual
 
-- [x] 1.5 Weakening the guard locally makes the test fail on the admin-count invariant, then revert
-- [x] 1.6 §6.2 reads as an actionable recipe and the double-claim re-park pointer is unambiguous
+- [x] 1.5 Weakening the guard locally makes the test fail on the admin-count invariant, then revert — 37fd3b6
+- [x] 1.6 §6.2 reads as an actionable recipe and the double-claim re-park pointer is unambiguous — 37fd3b6
 
 ### Phase 2: Audit-durability drop-detection tests (Risk #5)
 
 #### Automated
 
-- [ ] 2.1 Build passes: `dotnet build`
-- [ ] 2.2 New audit tests pass (`--filter FullyQualifiedName~TaskEndpointsTests`)
-- [ ] 2.3 Full backend suite passes: `dotnet test tests/Homdutio.Api.Tests`
-- [ ] 2.4 Suite still passes after §6.3 + closeout doc edits
+- [x] 2.1 Build passes: `dotnet build`
+- [x] 2.2 New audit tests pass (`--filter FullyQualifiedName~TaskEndpointsTests`)
+- [x] 2.3 Full backend suite passes: `dotnet test tests/Homdutio.Api.Tests`
+- [x] 2.4 Suite still passes after §6.3 + closeout doc edits
 
 #### Manual
 
-- [ ] 2.5 Making a recovery handler overwrite/skip an event locally makes a drop-detection test fail, then revert
-- [ ] 2.6 §6.3 reads as an actionable recipe; §3 Phase 3 shows `complete`; §6.6 note is accurate
+- [x] 2.5 Making a recovery handler overwrite/skip an event locally makes a drop-detection test fail, then revert
+- [x] 2.6 §6.3 reads as an actionable recipe; §3 Phase 3 shows `complete`; §6.6 note is accurate
