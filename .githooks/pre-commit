@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Pre-commit gate (Lekcja 3 — cięższa warstwa). Cokolwiek zawiedzie → commit blokowany.
+#  1) ESLint (sprawdzenie, bez --fix) na staged plikach web/ — zawężona, tania bramka.
+#  2) tsc -b --noEmit nad całym projektem — nie da się zawęzić (graf referencji).
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+
+# Staged pliki dodane/zmienione z web/ (bez usuniętych).
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^web/.*\.(ts|html)$' || true)
+
+# Nic z web/ w commicie → nic nie sprawdzamy.
+[ -z "$staged" ] && exit 0
+
+cd "$root/web"
+
+echo "pre-commit: eslint (staged) ..."
+echo "$staged" | sed 's#^web/##' | xargs ./node_modules/.bin/eslint
+
+echo "pre-commit: tsc -b --noEmit (web/) ..."
+./node_modules/.bin/tsc -b --noEmit
