@@ -37,7 +37,7 @@ Build clean (0 warnings); full suite 147/147; `TaskEndpointsTests` 63/63.
 - **Location**: context/changes/testing-concurrency-audit-durability/plan-brief.md
 - **Detail**: Committed as "planned set only", so plan-brief.md stays untracked. `/10x-archive`'s hard-refusal gate blocks on uncommitted paths inside the change folder — this will surface at archive time.
 - **Fix**: Before `/10x-archive`, commit it (e.g. `chore(...): add planning brief`) or remove it if it was a scratch artifact.
-- **Decision**: PENDING
+- **Decision**: FIXED — committed in 69a7d29 (with the review report + change.md status flip)
 
 ### F2 — Ordered-equality assumes OccurredAtUtc monotonicity
 
@@ -47,4 +47,4 @@ Build clean (0 warnings); full suite 147/147; `TaskEndpointsTests` 63/63.
 - **Location**: tests/Homdutio.Api.Tests/TaskEndpointsTests.cs (LoadEventTypesAsync)
 - **Detail**: Ordered assertions are safe today because each event lands in a distinct HTTP request (verified). A future test appending two events within one request/SaveChanges could tie on `OccurredAtUtc` and flake — there's no secondary sort key. Not a defect now; a note for whoever extends the pattern.
 - **Fix**: None needed now. If a same-request multi-event case is ever tested, order by a tiebreaker or assert with Contains.
-- **Decision**: PENDING
+- **Decision**: SKIPPED — safe today (distinct-request timestamps); documented for future maintainers.
