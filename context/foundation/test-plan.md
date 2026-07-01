@@ -93,7 +93,7 @@ orchestrator updates Status as artifacts appear on disk.
 |---|------------|-----------------|---------------|------------|--------|---------------|
 | 1 | Cross-household isolation hardening | Prove no foreign-household read/act/infer, and that a new route cannot ship un-swept | #1 | integration | complete | context/changes/testing-cross-household-isolation/ |
 | 2 | Lifecycle guard completeness | Prove every illegal transition × role × state is blocked and `self-attested` is correct | #2 | integration | complete | context/changes/testing-lifecycle-guard-completeness/ |
-| 3 | Concurrency & audit durability | Prove no zero-admin race and that audit history always appends, never disappears | #3, #5 | integration + concurrency | not started | — |
+| 3 | Concurrency & audit durability | Prove no zero-admin race and that audit history always appends, never disappears | #3, #5 | integration + concurrency | change opened | context/changes/testing-concurrency-audit-durability/ |
 | 4 | Invite/token abuse | Prove reuse / expiry / scoping / double-consume are all rejected | #6 | integration | not started | — |
 | 5 | End-to-end journey + gate wiring | Prove the MVP 8-step flow holds across the stack; wire the e2e gate into CI | #4 | e2e (new Playwright layer) + gates | not started | — |
 
