@@ -306,10 +306,13 @@ body {
 
 button[type='submit'],
 .btn {
+  display: block;
   width: 100%;
   padding: 0.8125rem var(--space-4);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+  text-align: center;
+  text-decoration: none;
   color: var(--color-on-primary);
   background: var(--color-primary);
   border: 0;
@@ -324,8 +327,7 @@ button[type='submit'],
 
 button[type='submit']:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  transform: translateY(-1px);
+  filter: brightness(1.08);
 }
 
 button[type='submit']:disabled {
@@ -348,7 +350,7 @@ button[type='submit']:disabled {
 
 /* Secondary / destructive button variants (dialog footers + members roster). Global so each surface
    reuses one definition rather than redeclaring them. They override the base .btn hover (which lifts
-   and recolors to the primary) since they appear later in source order at equal specificity. */
+   and brightens) since they appear later in source order at equal specificity. */
 .btn--ghost {
   color: var(--color-text-muted);
   background: var(--color-surface-2);
@@ -357,6 +359,7 @@ button[type='submit']:disabled {
 
 .btn--ghost:hover:not(:disabled) {
   background: var(--color-border);
+  filter: none;
   transform: none;
 }
 

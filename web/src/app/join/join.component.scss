@@ -28,23 +28,32 @@
   color: var(--color-text-muted);
 }
 
-/* Inviter avatar with a small house chip tucked into its bottom-right corner. */
+/* Inviter avatar + Homdutio house mark as an overlapping pair: two 52px discs, each ringed in
+   white with a soft shadow, the house pulled 14px onto the avatar (per Auth Pro design). */
 .invite-avatars {
-  position: relative;
-  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.125rem;
+}
+
+.invite-avatars app-user-avatar {
+  border-radius: 50%;
+  border: 3px solid var(--color-surface);
+  box-shadow: 0 2px 8px rgba(28, 35, 48, 0.12);
 }
 
 .house-chip {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
+  box-sizing: border-box;
   display: grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-left: -14px;
   border-radius: var(--radius-pill);
   background: var(--color-primary);
-  border: 2px solid var(--color-surface);
+  border: 3px solid var(--color-surface);
+  box-shadow: 0 2px 8px rgba(28, 35, 48, 0.12);
 }
 
 /* The calm "you're already in" mark: the house in a soft primary disc (no error styling). */
