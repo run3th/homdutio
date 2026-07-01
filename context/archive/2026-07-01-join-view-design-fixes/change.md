@@ -1,10 +1,10 @@
 ---
 change_id: join-view-design-fixes
 title: Fix join-view login link alignment/underline and avatar icon sizing to match design
-status: planned
+status: archived
 created: 2026-07-01
 updated: 2026-07-01
-archived_at: null
+archived_at: 2026-07-01T10:48:04Z
 ---
 
 ## Notes
