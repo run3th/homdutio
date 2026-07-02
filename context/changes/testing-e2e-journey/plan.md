@@ -300,21 +300,21 @@ Add a blocking `e2e` job to the existing workflow on a Windows/LocalDB runner, a
 
 #### Automated
 
-- [x] 2.1 Journey spec passes against the running app
-- [x] 2.2 TypeScript build stays green (`tsc -b --noEmit`)
-- [x] 2.3 Lint passes (`npm run lint`)
+- [x] 2.1 Journey spec passes against the running app — 03df55e
+- [x] 2.2 TypeScript build stays green (`tsc -b --noEmit`) — 03df55e
+- [x] 2.3 Lint passes (`npm run lint`) — 03df55e
 
 #### Manual
 
-- [x] 2.4 Reviewed against the five anti-patterns — none present
-- [x] 2.5 Deliberate-break check: journey goes red when convergence is broken, then reverted
-- [x] 2.6 Both contexts remain visible during cross-member assertions (poll not suppressed)
+- [x] 2.4 Reviewed against the five anti-patterns — none present — 03df55e
+- [x] 2.5 Deliberate-break check: journey goes red when convergence is broken, then reverted — 03df55e
+- [x] 2.6 Both contexts remain visible during cross-member assertions (poll not suppressed) — 03df55e
 
 ### Phase 3: Wire the E2E Gate into CI
 
 #### Automated
 
-- [ ] 3.1 Workflow YAML valid and `e2e` job present
+- [x] 3.1 Workflow YAML valid and `e2e` job present
 - [ ] 3.2 On a PR, the `e2e` job boots the stack against isolated LocalDB and passes green
 
 #### Manual

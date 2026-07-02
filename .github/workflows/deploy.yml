@@ -85,6 +85,91 @@ jobs:
           path: ./publish
           retention-days: 7
 
+  # Blocking E2E gate for the MVP cross-stack journey (Risk #4, test-plan §3 Phase 5).
+  # Runs the Playwright two-member journey against the REAL running stack after build-test.
+  # windows-latest matches build-test: LocalDB is Windows-only, so the same runner keeps
+  # test parity. An isolated, run-scoped LocalDB (homdutio_e2e_<run_id>) means parallel PR
+  # runs on the shared Windows runner pool never collide. Make this a required status check
+  # in branch protection so a red journey blocks the merge.
+  e2e:
+    name: E2E (journey, Risk #4)
+    needs: build-test
+    runs-on: windows-latest
+    # Out-of-band secrets for the API the webServer launches — there is no committed default.
+    # The connection string names a run-scoped LocalDB that `dotnet ef database update` creates.
+    # The signing key is an ephemeral, test-only HMAC key for this throwaway DB — NOT a
+    # production secret (prod's key comes from App Service settings, never the repo).
+    env:
+      ConnectionStrings__DefaultConnection: 'Server=(localdb)\MSSQLLocalDB;Database=homdutio_e2e_${{ github.run_id }};Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True'
+      Jwt__SigningKey: 'e2e-ci-only-signing-key-not-a-production-secret-0123456789abcdef'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # Node must be present before the API launches: Playwright's webServer runs `ng serve`,
+      # and the http launch profile keeps ASPNETCORE_ENVIRONMENT=Development (NoOp email sender).
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Start LocalDB
+        run: sqllocaldb start MSSQLLocalDB
+
+      # Restore the pinned dotnet-ef local tool (.config/dotnet-tools.json) so both this step
+      # and Playwright's global-setup can run `dotnet ef` against the run-scoped DB.
+      - name: Restore dotnet-ef
+        run: dotnet tool restore
+
+      # Migrations are NEVER applied on app startup (src/Homdutio.Data/MIGRATIONS.md): apply them
+      # out-of-band here, creating/targeting the run-scoped DB from the connection string above.
+      # Playwright's global-setup re-runs this (idempotent) before the API boots; running it here
+      # too fails the job early and loudly if migrations don't apply.
+      - name: Apply EF migrations (run-scoped DB)
+        run: >-
+          dotnet ef database update
+          --project src/Homdutio.Data
+          --startup-project src/Homdutio.Api
+
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      # `npm run e2e` = `playwright test`. CI=true (a GitHub Actions default) flips
+      # reuseExistingServer to false, so Playwright's webServer boots a fresh API (:5252) +
+      # ng serve (:4200), gating readiness on the API's /health probe before any spec runs.
+      # The API inherits ConnectionStrings__DefaultConnection + Jwt__SigningKey from the job env.
+      - name: Run Playwright journey
+        working-directory: web
+        run: npm run e2e
+
+      # HTML report (with traces) for triaging a failed journey.
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7
+
+      # Best-effort teardown of the run-scoped DB. The runner is ephemeral, so this is cosmetic;
+      # continue-on-error keeps a drop failure (e.g. lingering connection) from failing the job.
+      - name: Drop run-scoped E2E database
+        if: always()
+        continue-on-error: true
+        run: sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "IF DB_ID('homdutio_e2e_${{ github.run_id }}') IS NOT NULL DROP DATABASE [homdutio_e2e_${{ github.run_id }}]"
+
   deploy:
     name: Deploy (production)
     needs: build-test
