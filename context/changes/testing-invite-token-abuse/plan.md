@@ -252,12 +252,12 @@ None — no schema or production change.
 
 #### Automated
 
-- [x] 1.1 Build passes: `dotnet build`
-- [x] 1.2 Invite test suite passes green on repeated runs: `dotnet test tests/Homdutio.Api.Tests --filter "FullyQualifiedName~HouseholdInviteEndpointsTests"`
-- [x] 1.3 Full API test suite passes (no regression): `dotnet test tests/Homdutio.Api.Tests`
+- [x] 1.1 Build passes: `dotnet build` — 8f1eb1b
+- [x] 1.2 Invite test suite passes green on repeated runs: `dotnet test tests/Homdutio.Api.Tests --filter "FullyQualifiedName~HouseholdInviteEndpointsTests"` — 8f1eb1b
+- [x] 1.3 Full API test suite passes (no regression): `dotnet test tests/Homdutio.Api.Tests` — 8f1eb1b
 
 #### Manual
 
-- [x] 1.4 Concurrent tests pass ≥5× locally with no flake (determinism confirmed)
-- [x] 1.5 Each new test's primary oracle is the persisted post-state invariant from a fresh scope (status codes secondary)
-- [x] 1.6 Consumed-on-preview test asserts 410 and is not softened to match a leaky impl; a leak becomes a follow-up fix change
+- [x] 1.4 Concurrent tests pass ≥5× locally with no flake (determinism confirmed) — 8f1eb1b
+- [x] 1.5 Each new test's primary oracle is the persisted post-state invariant from a fresh scope (status codes secondary) — 8f1eb1b
+- [x] 1.6 Consumed-on-preview test asserts 410 and is not softened to match a leaky impl; a leak becomes a follow-up fix change — 8f1eb1b
