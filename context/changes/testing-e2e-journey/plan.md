@@ -285,30 +285,30 @@ Add a blocking `e2e` job to the existing workflow on a Windows/LocalDB runner, a
 
 #### Automated
 
-- [x] 1.1 @playwright/test present and Chromium installed
-- [x] 1.2 Harness boots and smoke passes (`npm run e2e`)
-- [x] 1.3 TypeScript build stays green (`tsc -b --noEmit`)
-- [x] 1.4 Lint passes (`npm run lint`)
+- [x] 1.1 @playwright/test present and Chromium installed — 4492633
+- [x] 1.2 Harness boots and smoke passes (`npm run e2e`) — 4492633
+- [x] 1.3 TypeScript build stays green (`tsc -b --noEmit`) — 4492633
+- [x] 1.4 Lint passes (`npm run lint`) — 4492633
 
 #### Manual
 
-- [x] 1.5 `npm run e2e:ui` opens with both servers running and smoke visible
-- [x] 1.6 `/health` readiness gate respected (no startup race)
-- [x] 1.7 Migrations applied out-of-band; fresh/empty DB still passes
+- [x] 1.5 `npm run e2e:ui` opens with both servers running and smoke visible — 4492633
+- [x] 1.6 `/health` readiness gate respected (no startup race) — 4492633
+- [x] 1.7 Migrations applied out-of-band; fresh/empty DB still passes — 4492633
 
 ### Phase 2: Two-Member Journey E2E Test (Risk #4)
 
 #### Automated
 
-- [ ] 2.1 Journey spec passes against the running app
-- [ ] 2.2 TypeScript build stays green (`tsc -b --noEmit`)
-- [ ] 2.3 Lint passes (`npm run lint`)
+- [x] 2.1 Journey spec passes against the running app
+- [x] 2.2 TypeScript build stays green (`tsc -b --noEmit`)
+- [x] 2.3 Lint passes (`npm run lint`)
 
 #### Manual
 
-- [ ] 2.4 Reviewed against the five anti-patterns — none present
-- [ ] 2.5 Deliberate-break check: journey goes red when convergence is broken, then reverted
-- [ ] 2.6 Both contexts remain visible during cross-member assertions (poll not suppressed)
+- [x] 2.4 Reviewed against the five anti-patterns — none present
+- [x] 2.5 Deliberate-break check: journey goes red when convergence is broken, then reverted
+- [x] 2.6 Both contexts remain visible during cross-member assertions (poll not suppressed)
 
 ### Phase 3: Wire the E2E Gate into CI
 
