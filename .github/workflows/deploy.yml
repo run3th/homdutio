@@ -97,7 +97,10 @@ jobs:
   # so a red journey blocks the merge; the PR trigger has no paths-ignore so this check always
   # reports (docs-only PRs included) — a single always-running producer, no cross-workflow collision.
   e2e:
-    name: E2E (journey, Risk #4)
+    # Quote the name: an unquoted " #" in YAML starts a comment, which would truncate
+    # the job/check name to "E2E (journey, Risk" and never match the required-check
+    # context "E2E (journey, Risk #4)" (leaving PRs stuck on "Expected — waiting").
+    name: "E2E (journey, Risk #4)"
     needs: build-test
     runs-on: windows-latest
     # Out-of-band secrets for the API the webServer launches — there is no committed default.
