@@ -88,9 +88,12 @@ jobs:
   # Blocking E2E gate for the MVP cross-stack journey (Risk #4, test-plan §3 Phase 5).
   # Runs the Playwright two-member journey against the REAL running stack after build-test.
   # windows-latest matches build-test: LocalDB is Windows-only, so the same runner keeps
-  # test parity. An isolated, run-scoped LocalDB (homdutio_e2e_<run_id>) means parallel PR
-  # runs on the shared Windows runner pool never collide. Make this a required status check
-  # in branch protection so a red journey blocks the merge.
+  # test parity. The DB is run-scoped (homdutio_e2e_<run_id>_<run_attempt>): on GitHub-hosted
+  # runners each job gets a fresh VM (LocalDB is per-VM), so this is belt-and-suspenders there;
+  # the run_attempt suffix keeps a "Re-run failed jobs" from reusing a prior attempt's DB, and
+  # the distinct name is what would isolate concurrent jobs if this ever moved to a self-hosted
+  # runner (a shared LocalDB instance). Make this a required status check in branch protection
+  # so a red journey blocks the merge — see the e2e-gate-shim workflow for the docs-only-PR path.
   e2e:
     name: E2E (journey, Risk #4)
     needs: build-test
@@ -100,7 +103,7 @@ jobs:
     # The signing key is an ephemeral, test-only HMAC key for this throwaway DB — NOT a
     # production secret (prod's key comes from App Service settings, never the repo).
     env:
-      ConnectionStrings__DefaultConnection: 'Server=(localdb)\MSSQLLocalDB;Database=homdutio_e2e_${{ github.run_id }};Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True'
+      ConnectionStrings__DefaultConnection: 'Server=(localdb)\MSSQLLocalDB;Database=homdutio_e2e_${{ github.run_id }}_${{ github.run_attempt }};Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True'
       Jwt__SigningKey: 'e2e-ci-only-signing-key-not-a-production-secret-0123456789abcdef'
     steps:
       - name: Checkout
@@ -150,7 +153,9 @@ jobs:
       # reuseExistingServer to false, so Playwright's webServer boots a fresh API (:5252) +
       # ng serve (:4200), gating readiness on the API's /health probe before any spec runs.
       # The API inherits ConnectionStrings__DefaultConnection + Jwt__SigningKey from the job env.
-      - name: Run Playwright journey
+      # Runs the whole suite (smoke + seed + journey): the journey is the Risk #4 gate,
+      # the others are cheap harness sanity checks.
+      - name: Run Playwright E2E suite
         working-directory: web
         run: npm run e2e
 
@@ -168,7 +173,7 @@ jobs:
       - name: Drop run-scoped E2E database
         if: always()
         continue-on-error: true
-        run: sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "IF DB_ID('homdutio_e2e_${{ github.run_id }}') IS NOT NULL DROP DATABASE [homdutio_e2e_${{ github.run_id }}]"
+        run: sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "IF DB_ID('homdutio_e2e_${{ github.run_id }}_${{ github.run_attempt }}') IS NOT NULL DROP DATABASE [homdutio_e2e_${{ github.run_id }}_${{ github.run_attempt }}]"
 
   deploy:
     name: Deploy (production)
