@@ -1,0 +1,16 @@
+/* TypeScript project for the Playwright E2E layer (web/e2e/).
+ * Isolated from the app (tsconfig.app.json) and Vitest (tsconfig.spec.json) projects
+ * so Playwright + Node types don't collide with Angular/Vitest globals, and so the
+ * pre-commit `tsc -b --noEmit` over web/ typechecks the E2E specs too. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./out-tsc/e2e",
+    "rootDir": "./e2e",
+    "types": ["node"]
+  },
+  "include": [
+    "e2e/**/*.ts"
+  ]
+}

@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-30 (Phase 2 complete)
+> Last updated: 2026-07-02 (Phase 5 e2e gate wired into CI)
 
 ## 1. Strategy
 
@@ -95,7 +95,12 @@ orchestrator updates Status as artifacts appear on disk.
 | 2 | Lifecycle guard completeness | Prove every illegal transition × role × state is blocked and `self-attested` is correct | #2 | integration | complete | context/changes/testing-lifecycle-guard-completeness/ |
 | 3 | Concurrency & audit durability | Prove no zero-admin race and that audit history always appends, never disappears | #3, #5 | integration + concurrency | complete | context/changes/testing-concurrency-audit-durability/ |
 | 4 | Invite/token abuse | Prove reuse / expiry / scoping / double-consume are all rejected | #6 | integration | not started | — |
-| 5 | End-to-end journey + gate wiring | Prove the MVP 8-step flow holds across the stack; wire the e2e gate into CI | #4 | e2e (new Playwright layer) + gates | not started | — |
+| 5 | End-to-end journey + gate wiring | Prove the MVP 8-step flow holds across the stack; wire the e2e gate into CI | #4 | e2e (new Playwright layer) + gates | complete | context/changes/testing-e2e-journey/ |
+
+> **Ordering note (2026-07-02):** Phase 4 (Invite/token abuse) is intentionally
+> deferred; the rollout jumped to Phase 5 to drive the E2E layer first. Phase 4
+> stays `not started` — a future `/10x-test-plan` run will re-select it as the
+> next pending phase. This is a deliberate skip, not an abandoned phase.
 
 **Status vocabulary** (fixed — parser literals):
 
@@ -145,7 +150,7 @@ phase lands; before that, the gate is `planned`.
 |------|-------|-----------|---------|
 | build / typecheck (`dotnet build`, `ng build`/`tsc`) | local + CI | required (wired) | syntactic / type drift across both stacks |
 | unit + integration (`dotnet test` + `npm test` Vitest) | local + CI | required (already wired in `deploy.yml` build-test gate) | logic regressions |
-| e2e on the critical journey | CI on PR | required after §3 Phase 5 | broken MVP cross-stack user path (Risk #4) |
+| e2e on the critical journey | CI on PR | required (wired) — `e2e` job in `deploy.yml`; mark it a required check in branch protection | broken MVP cross-stack user path (Risk #4) |
 | migrate-first + `/health` pre-prod smoke | CI between merge + prod | required (wired) | environment-specific failures, App Service ↔ Azure SQL connectivity |
 | post-edit hook (run affected tests at edit time) | local (agent loop) | recommended (Module 3 Lesson 3) | regressions at edit time |
 | lint (explicit step, e.g. ESLint / analyzers) | local + CI | optional — confirm coverage during §3 Phase 5 | style / lint drift not caught by the compiler |
@@ -201,7 +206,18 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.5 Adding an e2e test (cross-stack journey)
 
-- TBD — see §3 Phase 5 (introduces the Playwright layer for the MVP journey, Risk #4).
+- **Layer & when to reach for it.** E2E is the slowest, flakiest, most expensive layer — use it **only** for a risk no cheaper layer can cover (a real cross-stack seam: frontend ↔ backend ↔ polling). One spec per risk. Do **not** re-implement integration coverage in the browser, and do **not** assert styling/pixels (§7).
+- **Harness location**: `web/playwright.config.ts` (config), `web/e2e/` (specs + `global-setup.ts`), `web/tsconfig.e2e.json` (isolates Playwright types from the Vitest/app TS build so pre-commit `tsc -b --noEmit` stays green). Rules the agent reads before generating live in `web/e2e/CLAUDE.md`; the exemplar every new spec is modeled on is `web/e2e/seed.spec.ts`.
+- **Run locally**: `cd web && npm run e2e` (headless), `npm run e2e:ui` (interactive), `npm run e2e:debug`. Playwright's `webServer` boots **both** servers — the API on `:5252` (`dotnet run --launch-profile http`) and `ng serve` on `:4200` (proxying `/api` → `:5252`) — and gates readiness on the API's `/health` probe before any spec runs. `reuseExistingServer` is on locally, off in CI.
+- **Migrate-first is mandatory.** Migrations are **never** applied on app startup (`src/Homdutio.Data/MIGRATIONS.md`). `web/e2e/global-setup.ts` runs `dotnet ef database update` out-of-band before the API accepts requests. It reads the connection string from the ambient environment (user-secrets locally, env vars in CI) — nothing is passed explicitly.
+- **Secrets out-of-band.** The API needs `ConnectionStrings__DefaultConnection` (LocalDB) and `Jwt__SigningKey` — supplied via user-secrets locally, or job env in CI. The config forwards any that are set in the Playwright process to the spawned API; an unset connection string fails at the first DB hit.
+- **Locator discipline** (this app has **zero `data-testid`**): `getByRole` / `getByLabel` / `getByText` only — never CSS/XPath/DOM structure. Scope shared labels (Login and Register both have "Email"/"Password") by route or heading.
+- **Wait on state, never on time** — no `page.waitForTimeout()`. Use `toBeVisible()`, `waitForURL()`, `waitForResponse(/\/api\/tasks$/)`.
+- **Two members = two `browser.newContext()`** for clean `localStorage` / refresh-token isolation. **Log in through the UI — do NOT use `storageState`**: the access token is an in-memory signal (`auth.service.ts`), so `storageState` can't carry it, and the UI-login → token/refresh seam is exactly what Risk #4 protects. Register does **not** auto-login; it hands off to `/login`.
+- **Cross-member convergence rides a 4 s poll, not a push** (`board.component.ts`, `POLL_INTERVAL_MS = 4000`). To assert one member sees another's change, use a web-first assertion whose timeout comfortably exceeds the poll (e.g. `toBeVisible({ timeout: 15_000 })`) — that waits for *state* and passes the instant the poll converges. **Keep the observing page visible** (`page.bringToFront()` before the assertion): a backgrounded page has `document.hidden === true`, which suppresses the poll so the observer never converges.
+- **Cleanup**: no account/household deletion API exists — isolate by unique per-run ids (timestamp-suffixed emails / household / task names) and tear down only data a spec can remove (e.g. a still-open task).
+- **Reference specs**: `web/e2e/seed.spec.ts` (the exemplar), `web/e2e/journey.spec.ts` (the two-member 8-step journey, Risk #4), `web/e2e/smoke.spec.ts` (harness sanity).
+- **CI gate**: the `e2e` job in `.github/workflows/deploy.yml` (`needs: build-test`, `windows-latest`) runs the suite against a freshly migrated, run-scoped LocalDB on every PR — make it a **required** status check in branch protection so a regressed journey blocks the merge.
 
 ### 6.6 Per-rollout-phase notes
 
