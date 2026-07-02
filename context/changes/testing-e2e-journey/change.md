@@ -1,7 +1,7 @@
 ---
 change_id: testing-e2e-journey
 title: E2E journey + CI gate for the MVP cross-stack flow (Risk #4)
-status: implementing
+status: implemented
 created: 2026-07-02
 updated: 2026-07-02
 archived_at: null

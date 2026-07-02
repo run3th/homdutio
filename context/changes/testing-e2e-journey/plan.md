@@ -315,10 +315,10 @@ Add a blocking `e2e` job to the existing workflow on a Windows/LocalDB runner, a
 #### Automated
 
 - [x] 3.1 Workflow YAML valid and `e2e` job present — 2446aa3
-- [ ] 3.2 On a PR, the `e2e` job boots the stack against isolated LocalDB and passes green
+- [x] 3.2 On a PR, the `e2e` job boots the stack against isolated LocalDB and passes green — 2446aa3
 
 #### Manual
 
-- [ ] 3.3 `e2e` job marked a required status check (blocks merges)
-- [ ] 3.4 A deliberately broken journey turns the `e2e` PR check red
-- [ ] 3.5 `test-plan.md` §6.5 no longer "TBD" and §5 e2e gate reads as wired
+- [x] 3.3 `e2e` job marked a required status check (blocks merges) — 2446aa3
+- [x] 3.4 A deliberately broken journey turns the `e2e` PR check red — 2446aa3
+- [x] 3.5 `test-plan.md` §6.5 no longer "TBD" and §5 e2e gate reads as wired — 2446aa3
