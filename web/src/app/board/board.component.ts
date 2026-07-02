@@ -175,8 +175,11 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.tasks.load().subscribe();
-    // F-03: keep the board live for the other member's changes within NFR-1's 5s.
-    this.tasks.startPolling(BoardComponent.POLL_INTERVAL_MS);
+    // DELIBERATE BREAK (Phase 3 item 3.4 gate-teeth verify) — DO NOT MERGE.
+    // Inflate the poll cadence so the observing member never converges on the
+    // other member's changes: this severs Risk #4's polling-refresh seam and the
+    // journey's cross-member assertions must go red.
+    this.tasks.startPolling(BoardComponent.POLL_INTERVAL_MS * 100_000);
   }
 
   ngOnDestroy(): void {
