@@ -314,7 +314,7 @@ Add a blocking `e2e` job to the existing workflow on a Windows/LocalDB runner, a
 
 #### Automated
 
-- [x] 3.1 Workflow YAML valid and `e2e` job present
+- [x] 3.1 Workflow YAML valid and `e2e` job present — 2446aa3
 - [ ] 3.2 On a PR, the `e2e` job boots the stack against isolated LocalDB and passes green
 
 #### Manual
