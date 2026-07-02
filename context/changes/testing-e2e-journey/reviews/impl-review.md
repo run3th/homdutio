@@ -39,7 +39,7 @@ Success criteria evidence: `npx playwright --version` → 1.61.1; `tsc -b --noEm
   - Tradeoff: Undoes item 3.3 — a red journey no longer blocks a merge, so the gate loses its teeth.
   - Confidence: HIGH — trivially correct, but weakens the intended guarantee.
   - Blind spot: None significant.
-- **Decision**: FIXED via Fix A — added `.github/workflows/e2e-gate-shim.yml` (same-named `E2E (journey, Risk #4)` job on the ignored paths, reports green for docs-only PRs).
+- **Decision**: FIXED (revised). Fix A (a shim workflow emitting the same-named check) was tried first but caused a WORSE deadlock: two workflows producing the required context `E2E (journey, Risk #4)` made GitHub register a phantom "Expected — waiting for status" that blocked even a fully-green mixed PR (#18). Replaced with the robust single-producer approach: removed `paths-ignore` from `deploy.yml`'s `pull_request` trigger (kept on `push`) and deleted the shim, so exactly one workflow always reports the required check on every PR — no docs-only deadlock, no cross-workflow collision. Actions is free on this now-public repo, so docs-only PRs running the pipeline cost only wall-clock.
 
 ### F2 — Run-scoped DB name doesn't vary across re-run attempts; "never collide" is overstated
 

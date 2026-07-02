@@ -3,14 +3,15 @@ name: build-test-deploy
 # Build + test gate on every PR and push to main (Phase 2).
 # A gated, OIDC-authenticated deploy job is appended in Phase 3.
 on:
+  # PRs always run the full gate (build-test + e2e) — no paths-ignore. The `e2e`
+  # job is a REQUIRED status check; a workflow skipped by paths-ignore never reports
+  # its required checks, leaving the PR stuck on "Expected — waiting for status", and
+  # a second workflow emitting the same check name collides into the same stuck state.
+  # One always-running producer avoids both. Actions is free on this public repo, so
+  # running the pipeline on docs-only PRs costs only wall-clock.
   pull_request:
     branches: [main]
-    # Docs/planning-only changes never affect the build artifact — skip the pipeline.
-    # A commit touching any non-ignored path still triggers normally.
-    paths-ignore:
-      - 'context/**'
-      - 'docs/**'
-      - '**/*.md'
+  # Docs-only pushes to main don't change the build artifact — skip build/deploy there.
   push:
     branches: [main]
     paths-ignore:
@@ -93,7 +94,8 @@ jobs:
   # the run_attempt suffix keeps a "Re-run failed jobs" from reusing a prior attempt's DB, and
   # the distinct name is what would isolate concurrent jobs if this ever moved to a self-hosted
   # runner (a shared LocalDB instance). Make this a required status check in branch protection
-  # so a red journey blocks the merge — see the e2e-gate-shim workflow for the docs-only-PR path.
+  # so a red journey blocks the merge; the PR trigger has no paths-ignore so this check always
+  # reports (docs-only PRs included) — a single always-running producer, no cross-workflow collision.
   e2e:
     name: E2E (journey, Risk #4)
     needs: build-test
