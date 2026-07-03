@@ -54,6 +54,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>
                 ["Jwt:AccessTokenMinutes"] = "120",
                 ["RateLimiting:ForgotPassword:PermitLimit"] = ForgotPasswordPermitLimit.ToString(),
                 ["RateLimiting:Invite:PermitLimit"] = InvitePermitLimit.ToString(),
+                // Push is off by default on the test host: clear the VAPID key that appsettings.json now ships,
+                // so `/api/push/key` reports disabled (the no-op sender's contract) and push sends stay faked.
+                // A derived host that needs push "configured" can set this back.
+                ["Vapid:PublicKey"] = "",
             });
         });
 
