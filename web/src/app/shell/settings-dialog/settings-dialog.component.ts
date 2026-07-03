@@ -66,8 +66,17 @@ export class SettingsDialogComponent implements OnInit {
   readonly deviceList = this.notif.deviceList;
   /** The origin the desktop QR encodes so a phone can open the app and turn notifications on there. */
   readonly appOrigin = location.origin;
-  /** Enable is phone-only: a push-capable phone that hasn't granted yet. */
-  readonly canEnable = computed(() => this.notif.canActivate && this.notif.permission() !== 'granted');
+  /**
+   * Enable is phone-only. Offered when the phone hasn't granted yet, OR when consent is already granted but
+   * this browser has no active subscription (e.g. the first attempt ran before the server had a VAPID key, so
+   * `enable()` degraded without subscribing). Without the second clause a granted-but-unsubscribed device is
+   * stuck — the button would hide even though there's nothing registered.
+   */
+  readonly canEnable = computed(
+    () =>
+      this.notif.canActivate &&
+      (this.notif.permission() !== 'granted' || !this.notif.hasCurrentSubscription()),
+  );
   /** Mobile PWA nudge: only on a phone that hasn't granted consent yet. */
   readonly showInstallHint = computed(
     () => this.notif.isMobile && this.notif.permission() !== 'granted',

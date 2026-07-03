@@ -53,11 +53,15 @@ public sealed class WebPushSender : IPushSender
             return;
         }
 
-        // The Service Worker's push handler reads title/body/data.url from this JSON payload.
+        // The Service Worker's push handler reads title/body/icon/badge/data.url from this JSON payload.
+        // icon/badge are the app's own PNGs (served from wwwroot root); the SW falls back to the same
+        // paths if they are ever omitted, so the Angular default favicon is never used for notifications.
         var payload = JsonSerializer.Serialize(new
         {
             title = message.Title,
             body = message.Body,
+            icon = "/icon-192.png",
+            badge = "/badge-72.png",
             data = new { url = message.Url },
         });
 
