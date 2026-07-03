@@ -335,26 +335,26 @@ Negligible for a single household. Inline send adds one round-trip per subscript
 
 #### Automated
 
-- [x] 2.1 Frontend builds & type-checks: `cd web && npm run build`
-- [x] 2.2 Unit tests pass: `cd web && npm test`
-- [x] 2.3 Lint passes: `cd web && npm run lint`
+- [x] 2.1 Frontend builds & type-checks: `cd web && npm run build` — dada6c0
+- [x] 2.2 Unit tests pass: `cd web && npm test` — dada6c0
+- [x] 2.3 Lint passes: `cd web && npm run lint` — dada6c0
 
 #### Manual
 
-- [x] 2.4 Phone browser + dev key: Enable shows real prompt; grant registers SW + persists subscription
-- [x] 2.5 Desktop on the same account shows the phone device in Settings (registry is server-side — bug fixed)
-- [x] 2.6 Remove device unsubscribes + disappears everywhere; desktop shows QR + device list + no enable button; no fake prompt
+- [x] 2.4 Phone browser + dev key: Enable shows real prompt; grant registers SW + persists subscription — dada6c0
+- [x] 2.5 Desktop on the same account shows the phone device in Settings (registry is server-side — bug fixed) — dada6c0
+- [x] 2.6 Remove device unsubscribes + disappears everywhere; desktop shows QR + device list + no enable button; no fake prompt — dada6c0
 
 ### Phase 3: Server-side triggers, delivery & deep-link
 
 #### Automated
 
-- [ ] 3.1 Backend builds & tests pass (trigger tests incl. best-effort + recipient rules): `dotnet build src/Homdutio.Api -c Release && dotnet test`
-- [ ] 3.2 Frontend builds, tests, lint: `cd web && npm run build && npm test && npm run lint`
+- [x] 3.1 Backend builds & tests pass (trigger tests incl. best-effort + recipient rules): `dotnet build src/Homdutio.Api -c Release && dotnet test`
+- [x] 3.2 Frontend builds, tests, lint: `cd web && npm run build && npm test && npm run lint`
 
 #### Manual
 
-- [ ] 3.3 Real key: assignee receives a real push (tab closed); click deep-links to the task
-- [ ] 3.4 Comment on a task you run → push to your other device; self-comment → no self-notify
-- [ ] 3.5 Unsubscribed/dead subscription is pruned on the next send
-- [ ] 3.6 Forced push failure does not break assignment/commenting (best-effort)
+- [x] 3.3 Real key: assignee receives a real push (tab closed); click deep-links to the task
+- [x] 3.4 Comment on a task you run → push to your other device; self-comment → no self-notify
+- [x] 3.5 Unsubscribed/dead subscription is pruned on the next send
+- [x] 3.6 Forced push failure does not break assignment/commenting (best-effort)

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Homdutio.Api.Push;
 using Homdutio.Api.Users;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
@@ -71,7 +72,8 @@ public static class TaskEndpoints
         });
 
         // POST /api/tasks — create a task in the caller's household; it lands unassigned in To do.
-        group.MapPost("/", async (CreateTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        group.MapPost("/", async (CreateTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db,
+            IPushSender pushSender, ILoggerFactory loggerFactory, CancellationToken ct) =>
         {
             var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
@@ -136,6 +138,17 @@ public static class TaskEndpoints
             }));
             await db.SaveChangesAsync();
 
+            // Assign-at-create notifies the assignee's devices (real-web-push), best-effort — skipped on a
+            // self-assign (no point pinging yourself). Same trigger as the dedicated /assign endpoint.
+            if (assignAtCreate && request.AssigneeId != caller.UserId)
+            {
+                var assigner = await ResolvePushActorNameAsync(db, caller.UserId);
+                await TrySendPushAsync(pushSender, loggerFactory, request.AssigneeId!, new PushMessage(
+                    "New task assigned to you",
+                    $"{assigner} assigned you \"{task.Title}\".",
+                    $"/board?task={task.Id}"), ct);
+            }
+
             var names = await ResolveNamesAsync(db, [task]);
             var tags = await ResolveTagsAsync(db, [task]);
             // A brand-new task has no comments yet; an empty count map renders commentCount = 0.
@@ -182,7 +195,8 @@ public static class TaskEndpoints
         // member rather than the caller, so it is admin-gated and appends the distinct Assigned event. The
         // scoped task load runs before the admin gate (like confirm) so a foreign/unknown id is a 404 for
         // everyone — the existence-oracle seal the isolation sweep asserts.
-        group.MapPost("/{id:guid}/assign", async (Guid id, AssignTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        group.MapPost("/{id:guid}/assign", async (Guid id, AssignTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db,
+            IPushSender pushSender, ILoggerFactory loggerFactory, CancellationToken ct) =>
         {
             var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
@@ -227,6 +241,17 @@ public static class TaskEndpoints
             // The actor is the assigning admin (who performed the transition), not the assignee (its subject).
             db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Assigned, caller.UserId, now));
             await db.SaveChangesAsync();
+
+            // Notify the assignee's registered devices (real-web-push), best-effort so a push failure never
+            // turns a persisted assignment into a 500. Skip a self-assign (an admin assigning to themselves).
+            if (request.AssigneeId != caller.UserId)
+            {
+                var assigner = await ResolvePushActorNameAsync(db, caller.UserId);
+                await TrySendPushAsync(pushSender, loggerFactory, request.AssigneeId, new PushMessage(
+                    "New task assigned to you",
+                    $"{assigner} assigned you \"{task.Title}\".",
+                    $"/board?task={task.Id}"), ct);
+            }
 
             var names = await ResolveNamesAsync(db, [task]);
             var counts = await CountCommentsAsync(db, [task]);
@@ -544,7 +569,8 @@ public static class TaskEndpoints
         });
 
         // POST /api/tasks/{id}/comments — any household member posts an immutable comment on a task (S-05).
-        group.MapPost("/{id:guid}/comments", async (Guid id, CreateCommentRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        group.MapPost("/{id:guid}/comments", async (Guid id, CreateCommentRequest request, ClaimsPrincipal principal, ApplicationDbContext db,
+            IPushSender pushSender, ILoggerFactory loggerFactory, CancellationToken ct) =>
         {
             var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
             if (caller is null)
@@ -579,6 +605,17 @@ public static class TaskEndpoints
             };
             db.TaskComments.Add(comment);
             await db.SaveChangesAsync();
+
+            // Notify the task's runner that someone commented (real-web-push), best-effort. No send for an
+            // unclaimed task or a self-comment (the commenter is the claimer) — you don't ping yourself.
+            if (task.ClaimedById is not null && task.ClaimedById != caller.UserId)
+            {
+                var commenter = await ResolvePushActorNameAsync(db, caller.UserId);
+                await TrySendPushAsync(pushSender, loggerFactory, task.ClaimedById, new PushMessage(
+                    "New comment",
+                    $"{commenter} commented on \"{task.Title}\".",
+                    $"/board?task={task.Id}"), ct);
+            }
 
             var names = await ResolveCommentNamesAsync(db, [comment]);
             return Results.Created($"/api/tasks/{task.Id}/comments/{comment.Id}", ToCommentResponse(comment, names));
@@ -721,6 +758,42 @@ public static class TaskEndpoints
         return rows.ToDictionary(
             r => r.Id,
             r => new UserRef(r.DisplayName, UserAvatarEndpoints.BuildUrl(r.Id, r.HasAvatar, r.AvatarVersion)));
+    }
+
+    /// <summary>
+    /// The actor's display name for a push notification body (the assigner / commenter), with a neutral
+    /// fallback when it is unset. One cheap projection — the push path only ever resolves a single id.
+    /// </summary>
+    private static async Task<string> ResolvePushActorNameAsync(ApplicationDbContext db, string userId)
+    {
+        var name = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.DisplayName)
+            .SingleOrDefaultAsync();
+
+        return string.IsNullOrWhiteSpace(name) ? "Someone" : name;
+    }
+
+    /// <summary>
+    /// Delivers a push best-effort: a dead push service, a missing VAPID key, or any other send failure is
+    /// logged and swallowed so it can never turn a successfully-persisted task action into a 500. The live
+    /// <see cref="WebPushSender"/> already swallows per-subscription failures; this is the outer safety net
+    /// (e.g. a DB failure while pruning, or a throwing sender in tests).
+    /// </summary>
+    private static async Task TrySendPushAsync(
+        IPushSender pushSender, ILoggerFactory loggerFactory, string userId, PushMessage message, CancellationToken ct)
+    {
+        try
+        {
+            await pushSender.SendToUserAsync(userId, message, ct);
+        }
+        catch (Exception ex)
+        {
+            loggerFactory
+                .CreateLogger("Homdutio.Api.Tasks.TaskEndpoints")
+                .LogWarning(ex, "Best-effort push notification to {UserId} failed.", userId);
+        }
     }
 
     private static CommentResponse ToCommentResponse(TaskComment comment, IReadOnlyDictionary<string, UserRef> names)

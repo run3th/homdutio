@@ -1,4 +1,5 @@
 using Homdutio.Api.Email;
+using Homdutio.Api.Push;
 using Homdutio.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -29,6 +30,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>
     /// <summary>Captures the reset link/token instead of sending, so reset tests can read what the endpoint built.</summary>
     public CapturingEmailSender EmailSender { get; } = new();
 
+    /// <summary>Captures push sends instead of delivering, so trigger tests can assert who was notified.</summary>
+    public CapturingPushSender PushSender { get; } = new();
+
     /// <summary>Forgot-password rate-limit threshold for the test host. High by default so functional tests never trip it; a derived host lowers it to assert the 429.</summary>
     protected virtual int ForgotPasswordPermitLimit => 1000;
 
@@ -53,11 +57,14 @@ public class AuthApiFactory : WebApplicationFactory<Program>
             });
         });
 
-        // Swap the real ACS sender for a capturing fake — no email ever leaves the test host.
+        // Swap the real senders for capturing fakes — no email or push ever leaves the test host.
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(EmailSender);
+
+            services.RemoveAll<IPushSender>();
+            services.AddSingleton<IPushSender>(PushSender);
         });
     }
 

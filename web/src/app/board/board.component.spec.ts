@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 
@@ -21,6 +22,9 @@ describe('BoardComponent', () => {
   let startPolling: ReturnType<typeof vi.fn>;
   let stopPolling: ReturnType<typeof vi.fn>;
   let setPaused: ReturnType<typeof vi.fn>;
+  let navigate: ReturnType<typeof vi.fn>;
+  // The `?task=<id>` deep-link param the board reads on load (real-web-push); null = no deep-link.
+  let taskQueryParam: string | null;
   // Stubbed so the child NotifBannerComponent renders nothing by default (granted + something enabled).
   let notif: {
     canActivate: boolean;
@@ -75,6 +79,8 @@ describe('BoardComponent', () => {
     startPolling = vi.fn();
     stopPolling = vi.fn();
     setPaused = vi.fn();
+    navigate = vi.fn();
+    taskQueryParam = null;
     notif = {
       canActivate: false,
       isMobile: false,
@@ -108,6 +114,18 @@ describe('BoardComponent', () => {
           },
         },
         { provide: Dialog, useValue: { open } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              // Lazily reads taskQueryParam so a test can set the deep-link before render().
+              get queryParamMap() {
+                return convertToParamMap(taskQueryParam ? { task: taskQueryParam } : {});
+              },
+            },
+          },
+        },
+        { provide: Router, useValue: { navigate } },
       ],
     });
   });
@@ -342,5 +360,41 @@ describe('BoardComponent', () => {
     ).click();
 
     expect(notif.enable).toHaveBeenCalledOnce();
+  });
+
+  it('opens the detail dialog for a task deep-linked via ?task= then clears the param', () => {
+    const task = baseTask({ id: 'deep', status: 'ToDo' });
+    tasks.set([task]);
+    taskQueryParam = 'deep';
+
+    render();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][1]).toEqual({ data: task });
+    // The param is stripped (replaced, merged) so a later poll/refetch/refresh can't reopen it.
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: { task: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  });
+
+  it('a deep-link to a task not on the board opens no dialog but still clears the param', () => {
+    tasks.set([baseTask({ id: 'other' })]);
+    taskQueryParam = 'missing';
+
+    render();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalled();
+  });
+
+  it('with no ?task= param it opens no dialog and does not navigate', () => {
+    tasks.set([baseTask({ id: 'a' })]);
+
+    render();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
