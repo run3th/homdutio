@@ -18,6 +18,7 @@ describe('TaskService', () => {
     claimerName: null,
     createdAtUtc: '2026-06-01T10:00:00Z',
     canClaim: true,
+    canAssign: false,
     canMarkDone: false,
     canConfirm: false,
     willSelfAttest: false,
@@ -76,6 +77,18 @@ describe('TaskService', () => {
     post.flush({ ...task, status: 'InProgress' });
 
     httpMock.expectOne('/api/tasks').flush([{ ...task, status: 'InProgress' }]);
+    expect(service.current()[0].status).toBe('InProgress');
+  });
+
+  it('assign POSTs /api/tasks/{id}/assign with the assignee id then refetches', () => {
+    service.assign('t1', 'u2').subscribe();
+
+    const post = httpMock.expectOne('/api/tasks/t1/assign');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({ assigneeId: 'u2' });
+    post.flush({ ...task, status: 'InProgress', claimerName: 'Molly' });
+
+    httpMock.expectOne('/api/tasks').flush([{ ...task, status: 'InProgress', claimerName: 'Molly' }]);
     expect(service.current()[0].status).toBe('InProgress');
   });
 

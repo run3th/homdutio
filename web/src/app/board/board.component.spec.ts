@@ -32,6 +32,7 @@ describe('BoardComponent', () => {
       claimerName: null,
       createdAtUtc: '2026-06-01T10:00:00Z',
       canClaim: false,
+      canAssign: false,
       canMarkDone: false,
       canConfirm: false,
       willSelfAttest: false,

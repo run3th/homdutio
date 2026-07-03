@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogRef } from '@angular/cdk/dialog';
@@ -6,6 +6,9 @@ import { DialogRef } from '@angular/cdk/dialog';
 import { TaskService } from '../task.service';
 import { TagInputComponent } from '../tag-input/tag-input.component';
 import { mapValidationProblem } from '../../auth/validation-problem';
+import { Member, MemberService } from '../../household/member.service';
+import { HouseholdService } from '../../household/household.service';
+import { FlashService } from '../../shared/flash/flash.service';
 
 /**
  * The create-task dialog (S-03/S-11, FR-010), opened from the topbar's **+ Add task** CTA via
@@ -26,11 +29,16 @@ export class CreateTaskComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly tasks = inject(TaskService);
   private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
+  private readonly members = inject(MemberService);
+  private readonly household = inject(HouseholdService);
+  private readonly flash = inject(FlashService);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
     description: [''],
     tags: [[] as string[]],
+    // '' = "Anyone" (unassigned). Only meaningful when the picker is shown (admin); ignored otherwise.
+    assigneeId: [''],
   });
 
   /** Mapped validation messages from a 400 (or a generic fallback). */
@@ -38,10 +46,17 @@ export class CreateTaskComponent implements OnInit {
   readonly pending = signal(false);
   /** Household tag values for the chip-input autocomplete, fetched when the dialog opens. */
   readonly suggestions = signal<string[]>([]);
+  /** The household roster, loaded when the dialog opens (only used to render the admin-only picker). */
+  readonly roster = signal<Member[]>([]);
+  /** The picker is admin-only (assignment is admin-only, enforced server-side); non-admins never see it. */
+  readonly isAdmin = computed(() => this.household.current()?.role === 'Admin');
 
   ngOnInit(): void {
     // A failed suggestion fetch is non-fatal — the field still works as free-text entry.
     this.tasks.getTagSuggestions().subscribe({ next: (tags) => this.suggestions.set(tags), error: () => {} });
+    if (this.isAdmin()) {
+      this.members.list().subscribe({ next: (list) => this.roster.set(list), error: () => {} });
+    }
   }
 
   submit(): void {
@@ -53,16 +68,20 @@ export class CreateTaskComponent implements OnInit {
     this.errors.set([]);
     this.pending.set(true);
 
-    const { title, description, tags } = this.form.getRawValue();
+    const { title, description, tags, assigneeId } = this.form.getRawValue();
+    // Only send an assignee when an admin actually picked a member (not "Anyone").
+    const assignee = this.isAdmin() && assigneeId ? assigneeId : undefined;
     this.tasks
       .create({
         title: title.trim(),
         description: description.trim() || undefined,
         tags,
+        assigneeId: assignee,
       })
       .subscribe({
         next: () => {
           this.pending.set(false);
+          this.notifyAssignment(assignee);
           this.dialogRef.close();
         },
         error: (error: HttpErrorResponse) => {
@@ -74,6 +93,22 @@ export class CreateTaskComponent implements OnInit {
           );
         },
       });
+  }
+
+  /**
+   * Assignment feedback (push-notifications). When the task was assigned to someone other than the current
+   * user, flash the per-device reminder. Self-assignment fires a push toast instead — wired in Phase 4.
+   */
+  private notifyAssignment(assigneeId: string | undefined): void {
+    if (!assigneeId) {
+      return;
+    }
+    const assignee = this.roster().find((m) => m.userId === assigneeId);
+    if (assignee && !assignee.isSelf) {
+      this.flash.show(
+        `${assignee.displayName} will be notified on any device where they've turned notifications on.`,
+      );
+    }
   }
 
   close(): void {

@@ -147,7 +147,8 @@ body {
   color: var(--color-text-secondary);
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   padding: 0.75rem 0.875rem;
   font-size: var(--text-sm);
@@ -158,11 +159,17 @@ body {
   border-radius: var(--radius-sm);
 }
 
+.field select {
+  appearance: none;
+  cursor: pointer;
+}
+
 .field input::placeholder {
   color: var(--color-text-subtle);
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: none;
   background: var(--color-surface);
   border-color: var(--color-primary);

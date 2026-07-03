@@ -80,8 +80,8 @@ public static class ScopedRouteInventory
     }
 
     /// <summary>
-    /// The 15 household-scoped routes across <c>TaskEndpoints</c> and <c>HouseholdEndpoints</c>:
-    /// 11 <see cref="Behavior.ParityNotFound"/>, 3 <see cref="Behavior.OwnOnlyCollection"/>,
+    /// The 16 household-scoped routes across <c>TaskEndpoints</c> and <c>HouseholdEndpoints</c>:
+    /// 12 <see cref="Behavior.ParityNotFound"/>, 3 <see cref="Behavior.OwnOnlyCollection"/>,
     /// 1 <see cref="Behavior.MixedBatchRejected"/>. Body factories supply only what a handler validates before
     /// its scoped lookup returns 404 — notably the role route, which validates <c>role</c> ahead of the target
     /// lookup, so a foreign-id 404 is only reached with a parseable role.
@@ -96,6 +96,11 @@ public static class ScopedRouteInventory
 
         // --- Task lifecycle (foreign-id 404 + body parity) -------------------------------------------
         new ScopedRoute("POST", "/api/tasks/{id}/claim", IdShape.TaskId, Behavior.ParityNotFound),
+        // Like confirm, /assign loads the scoped task BEFORE its admin gate, so a foreign id is a 404 for
+        // everyone (the sweep's House B caller is a House B admin, so the gate would pass — parity holds on
+        // the scoped lookup, not the gate). The body factory supplies a parseable assignee id.
+        new ScopedRoute("POST", "/api/tasks/{id}/assign", IdShape.TaskId, Behavior.ParityNotFound,
+            () => new { assigneeId = "not-a-member" }),
         new ScopedRoute("POST", "/api/tasks/{id}/done", IdShape.TaskId, Behavior.ParityNotFound),
         new ScopedRoute("POST", "/api/tasks/{id}/confirm", IdShape.TaskId, Behavior.ParityNotFound),
         new ScopedRoute("POST", "/api/tasks/{id}/unclaim", IdShape.TaskId, Behavior.ParityNotFound),
