@@ -4,6 +4,9 @@
     <p class="board-subtitle">Track who's doing what around the house.</p>
   </header>
 
+  <!-- Per-device notification banner (push-notifications): soft-ask on mobile, informational on desktop. -->
+  <app-notif-banner />
+
   <!-- Mobile-only column switcher; hidden on desktop where all three columns show side by side. -->
   <div class="board-tabs" role="tablist">
     @for (column of columns; track column.status) {

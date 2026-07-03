@@ -1,26 +1,30 @@
 import { TestBed } from '@angular/core/testing';
-import { DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
 
 import { SystemPromptComponent } from './system-prompt.component';
 import { NotificationService } from '../notification.service';
 import { FlashService } from '../../shared/flash/flash.service';
+import { DenyHelpComponent } from '../deny-help/deny-help.component';
 
 describe('SystemPromptComponent', () => {
   let close: ReturnType<typeof vi.fn>;
   let grant: ReturnType<typeof vi.fn>;
   let deny: ReturnType<typeof vi.fn>;
   let show: ReturnType<typeof vi.fn>;
+  let open: ReturnType<typeof vi.fn>;
 
   function render() {
     close = vi.fn();
     grant = vi.fn();
     deny = vi.fn();
     show = vi.fn();
+    open = vi.fn();
 
     TestBed.configureTestingModule({
       imports: [SystemPromptComponent],
       providers: [
         { provide: DialogRef, useValue: { close } },
+        { provide: Dialog, useValue: { open } },
         { provide: NotificationService, useValue: { grant, deny } },
         { provide: FlashService, useValue: { show } },
       ],
@@ -46,12 +50,13 @@ describe('SystemPromptComponent', () => {
     expect(close).toHaveBeenCalledWith('granted');
   });
 
-  it("Don't Allow denies and closes with \"denied\"", () => {
+  it("Don't Allow denies, closes with \"denied\", and opens deny-help", () => {
     const fixture = render();
     button(fixture, "Don't Allow").click();
 
     expect(deny).toHaveBeenCalledOnce();
     expect(show).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledWith('denied');
+    expect(open).toHaveBeenCalledWith(DenyHelpComponent);
   });
 });

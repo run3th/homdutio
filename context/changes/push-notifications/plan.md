@@ -345,29 +345,29 @@ None. Assignment reuses the existing `ClaimedById` column; adding a `TaskEventTy
 
 #### Automated
 
-- [x] 2.1 Frontend builds & type-checks: `cd web && npm run build`
-- [x] 2.2 Unit tests pass incl. `NotificationService` gate + localStorage spec: `cd web && npm test`
-- [x] 2.3 Lint passes: `cd web && npm run lint`
+- [x] 2.1 Frontend builds & type-checks: `cd web && npm run build` — 81921bc
+- [x] 2.2 Unit tests pass incl. `NotificationService` gate + localStorage spec: `cd web && npm test` — 81921bc
+- [x] 2.3 Lint passes: `cd web && npm run lint` — 81921bc
 
 #### Manual
 
-- [x] 2.4 Narrow viewport: prompt opens; Allow persists `granted` across reload + toast; Don't-Allow persists `denied`
-- [x] 2.5 Wide viewport: `requestNotifs()` does nothing
-- [x] 2.6 `pushNotify` toast only when narrow + `granted`
+- [x] 2.4 Narrow viewport: prompt opens; Allow persists `granted` across reload + toast; Don't-Allow persists `denied` — 81921bc
+- [x] 2.5 Wide viewport: `requestNotifs()` does nothing — 81921bc
+- [x] 2.6 `pushNotify` toast only when narrow + `granted` — 81921bc
 
 ### Phase 3: Board notification banners
 
 #### Automated
 
-- [ ] 3.1 Frontend builds & type-checks: `cd web && npm run build`
-- [ ] 3.2 Unit tests pass: `cd web && npm test`
-- [ ] 3.3 Lint passes: `cd web && npm run lint`
+- [x] 3.1 Frontend builds & type-checks: `cd web && npm run build`
+- [x] 3.2 Unit tests pass: `cd web && npm test`
+- [x] 3.3 Lint passes: `cd web && npm run lint`
 
 #### Manual
 
-- [ ] 3.4 Narrow + not granted: soft-ask above columns; Enable opens prompt; dismiss hides for session; denied state shows blocked copy + how-to-unblock
-- [ ] 3.5 Wide + nothing enabled: informational banner, no activation button
-- [ ] 3.6 After grant (mobile): soft-ask no longer appears
+- [x] 3.4 Narrow + not granted: soft-ask above columns; Enable opens prompt; dismiss hides for session; denied state shows blocked copy + how-to-unblock
+- [x] 3.5 Wide + nothing enabled: informational banner, no activation button
+- [x] 3.6 After grant (mobile): soft-ask no longer appears
 
 ### Phase 4: Settings notifications section + assign→push wiring
 

@@ -1,0 +1,40 @@
+@if (showSoftAsk()) {
+  @if (softAskDenied()) {
+    <div class="notif-banner notif-banner--blocked" role="status">
+      <span class="notif-banner-icon" aria-hidden="true">🔕</span>
+      <div class="notif-banner-body">
+        <p class="notif-banner-title">Notifications are blocked</p>
+        <p class="notif-banner-text">Turn them back on in your browser to get task alerts here.</p>
+      </div>
+      <button type="button" class="notif-banner-cta" (click)="openDenyHelp()">How to unblock</button>
+      <button type="button" class="notif-banner-dismiss" aria-label="Dismiss" (click)="dismiss()">
+        ✕
+      </button>
+    </div>
+  } @else {
+    <div class="notif-banner" role="status">
+      <span class="notif-banner-icon" aria-hidden="true">🔔</span>
+      <div class="notif-banner-body">
+        <p class="notif-banner-title">Turn on notifications?</p>
+        <p class="notif-banner-text">Get a heads-up when a task is assigned to you.</p>
+      </div>
+      <button type="button" class="notif-banner-cta" (click)="enable()">Enable notifications</button>
+      <button type="button" class="notif-banner-dismiss" aria-label="Dismiss" (click)="dismiss()">
+        ✕
+      </button>
+    </div>
+  }
+} @else if (showDeskBanner()) {
+  <div class="notif-banner notif-banner--desktop" role="status">
+    <span class="notif-banner-icon" aria-hidden="true">📱</span>
+    <div class="notif-banner-body">
+      <p class="notif-banner-title">Get notified on your phone</p>
+      <p class="notif-banner-text">
+        Notifications are per-device. Open Homdutio on your phone and turn them on there.
+      </p>
+    </div>
+    <button type="button" class="notif-banner-dismiss" aria-label="Dismiss" (click)="dismiss()">
+      ✕
+    </button>
+  </div>
+}

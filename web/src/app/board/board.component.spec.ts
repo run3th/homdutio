@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 
 import { BoardComponent } from './board.component';
 import { Task, TaskService } from './task.service';
+import { NotificationService } from '../notifications/notification.service';
 
 describe('BoardComponent', () => {
   const tasks = signal<Task[]>([]);
@@ -20,6 +21,15 @@ describe('BoardComponent', () => {
   let startPolling: ReturnType<typeof vi.fn>;
   let stopPolling: ReturnType<typeof vi.fn>;
   let setPaused: ReturnType<typeof vi.fn>;
+  // Stubbed so the child NotifBannerComponent renders nothing by default (granted + something enabled).
+  let notif: {
+    isMobile: ReturnType<typeof signal<boolean>>;
+    permission: ReturnType<typeof signal<'default' | 'granted' | 'denied'>>;
+    softAskDismissed: ReturnType<typeof signal<boolean>>;
+    anyEnabled: ReturnType<typeof signal<boolean>>;
+    requestNotifs: ReturnType<typeof vi.fn>;
+    dismissSoftAsk: ReturnType<typeof vi.fn>;
+  };
 
   function baseTask(overrides: Partial<Task>): Task {
     return {
@@ -62,9 +72,18 @@ describe('BoardComponent', () => {
     startPolling = vi.fn();
     stopPolling = vi.fn();
     setPaused = vi.fn();
+    notif = {
+      isMobile: signal(false),
+      permission: signal<'default' | 'granted' | 'denied'>('granted'),
+      softAskDismissed: signal(false),
+      anyEnabled: signal(true),
+      requestNotifs: vi.fn(),
+      dismissSoftAsk: vi.fn(),
+    };
     TestBed.configureTestingModule({
       imports: [BoardComponent],
       providers: [
+        { provide: NotificationService, useValue: notif },
         {
           provide: TaskService,
           useValue: {
@@ -290,5 +309,31 @@ describe('BoardComponent', () => {
 
     expect(sendBack).not.toHaveBeenCalled();
     expect(setPaused).toHaveBeenLastCalledWith(false);
+  });
+
+  it('renders no notification banner when granted + enabled elsewhere', () => {
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.notif-banner')).toBeNull();
+  });
+
+  it('shows the mobile soft-ask above the columns; Enable opens the prompt', () => {
+    notif.isMobile.set(true);
+    notif.permission.set('default');
+    const fixture = render();
+    const el = fixture.nativeElement as HTMLElement;
+
+    // The banner precedes the columns in document order.
+    const banner = el.querySelector('.notif-banner');
+    const columns = el.querySelector('.columns');
+    expect(banner?.textContent).toContain('Turn on notifications?');
+    expect(banner?.compareDocumentPosition(columns!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    (
+      Array.from(el.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Enable notifications',
+      ) as HTMLButtonElement
+    ).click();
+
+    expect(notif.requestNotifs).toHaveBeenCalledOnce();
   });
 });
