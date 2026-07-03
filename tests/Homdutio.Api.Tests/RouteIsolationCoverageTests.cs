@@ -52,6 +52,10 @@ public class RouteIsolationCoverageTests : IClassFixture<AuthApiFactory>
         "PUT /api/profile/me/avatar",                   // stores the caller's own avatar (sub-scoped, S-09)
         "DELETE /api/profile/me/avatar",                // clears the caller's own avatar (sub-scoped, S-09)
         "GET /api/users/{id}/avatar",                   // anonymous public avatar serving (no household surface, S-09)
+        "GET /api/push/key",                            // sub-scoped, per-user: returns the public VAPID key (no household surface)
+        "POST /api/push/subscribe",                     // sub-scoped, per-user: upserts the caller's own push subscription
+        "DELETE /api/push/subscribe",                   // sub-scoped, per-user: removes the caller's own push subscription
+        "GET /api/push/devices",                        // sub-scoped, per-user: lists the caller's own registered devices
     };
 
     /// <summary>

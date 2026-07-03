@@ -5,10 +5,12 @@ using Homdutio.Api.Auth;
 using Homdutio.Api.Email;
 using Homdutio.Api.Households;
 using Homdutio.Api.Profile;
+using Homdutio.Api.Push;
 using Homdutio.Api.Tasks;
 using Homdutio.Api.Users;
 using Homdutio.Data;
 using Homdutio.Data.Entities;
+using Lib.Net.Http.WebPush;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -115,6 +117,24 @@ else
     builder.Services.AddScoped<IEmailSender, AcsEmailSender>();
 }
 
+// Web Push (VAPID). PublicKey/Subject are non-secret config; PrivateKey is out-of-band (user-secrets
+// locally, App Service settings in prod), mirroring Jwt:SigningKey. The live WebPushSender is registered
+// only when a private key is present; otherwise a NoOpPushSender logs instead of sending, so local dev and
+// the integration-test host never need a keypair or a reachable push service.
+builder.Services.Configure<VapidOptions>(builder.Configuration.GetSection(VapidOptions.SectionName));
+
+var vapidPrivateKey = builder.Configuration[$"{VapidOptions.SectionName}:{nameof(VapidOptions.PrivateKey)}"];
+if (string.IsNullOrWhiteSpace(vapidPrivateKey))
+{
+    builder.Services.AddScoped<IPushSender, NoOpPushSender>();
+}
+else
+{
+    // Typed HttpClient for the push service; WebPushSender is scoped (it touches the DbContext).
+    builder.Services.AddHttpClient<PushServiceClient>();
+    builder.Services.AddScoped<IPushSender, WebPushSender>();
+}
+
 // Per-IP fixed-window cap on the unauthenticated forgot-password endpoint (email bombing / ACS send
 // quota). The limit is bound via IOptions and read inside the policy (per request, lazily) so the
 // test host's config override applies — an eager read here would run before WebApplicationFactory
@@ -183,6 +203,7 @@ app.MapHouseholdEndpoints();
 app.MapProfileEndpoints();
 app.MapUserAvatarEndpoints();
 app.MapTaskEndpoints();
+app.MapPushEndpoints();
 
 app.MapFallbackToFile("index.html");
 

@@ -1,5 +1,6 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable } from 'rxjs';
@@ -34,6 +35,8 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   private readonly tasks = inject(TaskService);
   private readonly dialog = inject(Dialog);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   /** The three fixed board columns: label, the status they hold, and the mockup status accent (dot color). */
   readonly columns: readonly { label: string; status: TaskStatus; accent: string }[] = [
@@ -175,9 +178,35 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.tasks.load().subscribe();
+    // Open the deep-linked task once the initial board load resolves (real-web-push): a push
+    // notification click lands on `/board?task=<id>`.
+    this.tasks.load().subscribe((tasks) => this.openDeepLinkedTask(tasks));
     // F-03: keep the board live for the other member's changes within NFR-1's 5s.
     this.tasks.startPolling(BoardComponent.POLL_INTERVAL_MS);
+  }
+
+  /**
+   * Deep-link entry (real-web-push): a notification click opens the app at `/board?task=<id>`. If that task
+   * is on the caller's freshly-loaded board, open its detail panel; then strip the `task` param (a replaced
+   * history entry) so a later poll/refetch or a manual refresh can't reopen it. A task that isn't found —
+   * already closed, or not the caller's — falls through silently to the plain board (no error).
+   */
+  private openDeepLinkedTask(tasks: Task[]): void {
+    const taskId = this.route.snapshot.queryParamMap.get('task');
+    if (!taskId) {
+      return;
+    }
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      this.openDetail(task);
+    }
+
+    void this.router.navigate([], {
+      queryParams: { task: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   ngOnDestroy(): void {

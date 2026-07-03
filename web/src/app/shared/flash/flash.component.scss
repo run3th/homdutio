@@ -1,5 +1,5 @@
-/* Transient overlay, docked bottom-centre by FlashService's global position strategy. Two variants share
-   the card shell; the push variant adds a bell + bold title to read as an OS notification. */
+/* Transient overlay, docked bottom-centre by FlashService's global position strategy — a plain dark card
+   with a single-line message and a dismiss button. */
 .flash {
   display: flex;
   align-items: flex-start;
@@ -11,40 +11,6 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   animation: flash-in 0.16s ease-out;
-}
-
-/* The push variant is a floating notification card: the shared push-card supplies the content + padding,
-   so this shell only provides the white surface, border, shadow, and click-to-dismiss affordance. */
-.flash--push {
-  display: block;
-  width: min(24rem, calc(100vw - 2rem));
-  padding: 0;
-  gap: 0;
-  text-align: left;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid #eaecf0;
-  border-radius: 14px;
-  box-shadow: var(--shadow-lg);
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.flash-icon {
-  flex: 0 0 auto;
-  font-size: var(--text-lg);
-  line-height: 1.3;
-}
-
-.flash-body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.flash-title {
-  margin: 0 0 0.125rem;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
 }
 
 .flash-message {

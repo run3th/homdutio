@@ -10,6 +10,7 @@ import { routes } from './app.routes';
 import { bearerInterceptor } from './auth/bearer.interceptor';
 import { unauthorizedInterceptor } from './auth/unauthorized.interceptor';
 import { restoreSession } from './auth/session-restore.initializer';
+import { registerServiceWorker } from './notifications/service-worker.initializer';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,5 +19,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([bearerInterceptor, unauthorizedInterceptor])),
     // Blocking: attempt a silent session restore before the router/guards run (S-10).
     provideAppInitializer(restoreSession),
+    // Non-blocking: register the Web Push Service Worker where supported (real-web-push).
+    provideAppInitializer(() => registerServiceWorker()),
   ],
 };

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 
@@ -21,14 +22,20 @@ describe('BoardComponent', () => {
   let startPolling: ReturnType<typeof vi.fn>;
   let stopPolling: ReturnType<typeof vi.fn>;
   let setPaused: ReturnType<typeof vi.fn>;
+  let navigate: ReturnType<typeof vi.fn>;
+  // The `?task=<id>` deep-link param the board reads on load (real-web-push); null = no deep-link.
+  let taskQueryParam: string | null;
   // Stubbed so the child NotifBannerComponent renders nothing by default (granted + something enabled).
   let notif: {
-    isMobile: ReturnType<typeof signal<boolean>>;
+    canActivate: boolean;
+    isMobile: boolean;
     permission: ReturnType<typeof signal<'default' | 'granted' | 'denied'>>;
-    softAskDismissed: ReturnType<typeof signal<boolean>>;
+    hasCurrentSubscription: ReturnType<typeof signal<boolean>>;
     anyEnabled: ReturnType<typeof signal<boolean>>;
-    requestNotifs: ReturnType<typeof vi.fn>;
+    softAskDismissed: ReturnType<typeof signal<boolean>>;
+    enable: ReturnType<typeof vi.fn>;
     dismissSoftAsk: ReturnType<typeof vi.fn>;
+    refreshDevices: ReturnType<typeof vi.fn>;
   };
 
   function baseTask(overrides: Partial<Task>): Task {
@@ -72,13 +79,18 @@ describe('BoardComponent', () => {
     startPolling = vi.fn();
     stopPolling = vi.fn();
     setPaused = vi.fn();
+    navigate = vi.fn();
+    taskQueryParam = null;
     notif = {
-      isMobile: signal(false),
+      canActivate: false,
+      isMobile: false,
       permission: signal<'default' | 'granted' | 'denied'>('granted'),
-      softAskDismissed: signal(false),
+      hasCurrentSubscription: signal(false),
       anyEnabled: signal(true),
-      requestNotifs: vi.fn(),
+      softAskDismissed: signal(false),
+      enable: vi.fn(),
       dismissSoftAsk: vi.fn(),
+      refreshDevices: vi.fn(),
     };
     TestBed.configureTestingModule({
       imports: [BoardComponent],
@@ -102,6 +114,18 @@ describe('BoardComponent', () => {
           },
         },
         { provide: Dialog, useValue: { open } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              // Lazily reads taskQueryParam so a test can set the deep-link before render().
+              get queryParamMap() {
+                return convertToParamMap(taskQueryParam ? { task: taskQueryParam } : {});
+              },
+            },
+          },
+        },
+        { provide: Router, useValue: { navigate } },
       ],
     });
   });
@@ -316,8 +340,9 @@ describe('BoardComponent', () => {
     expect(el.querySelector('.notif-banner')).toBeNull();
   });
 
-  it('shows the mobile soft-ask above the columns; Enable opens the prompt', () => {
-    notif.isMobile.set(true);
+  it('shows the phone soft-ask above the columns; Enable calls enable()', () => {
+    notif.canActivate = true;
+    notif.isMobile = true;
     notif.permission.set('default');
     const fixture = render();
     const el = fixture.nativeElement as HTMLElement;
@@ -334,6 +359,42 @@ describe('BoardComponent', () => {
       ) as HTMLButtonElement
     ).click();
 
-    expect(notif.requestNotifs).toHaveBeenCalledOnce();
+    expect(notif.enable).toHaveBeenCalledOnce();
+  });
+
+  it('opens the detail dialog for a task deep-linked via ?task= then clears the param', () => {
+    const task = baseTask({ id: 'deep', status: 'ToDo' });
+    tasks.set([task]);
+    taskQueryParam = 'deep';
+
+    render();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][1]).toEqual({ data: task });
+    // The param is stripped (replaced, merged) so a later poll/refetch/refresh can't reopen it.
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: { task: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  });
+
+  it('a deep-link to a task not on the board opens no dialog but still clears the param', () => {
+    tasks.set([baseTask({ id: 'other' })]);
+    taskQueryParam = 'missing';
+
+    render();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalled();
+  });
+
+  it('with no ?task= param it opens no dialog and does not navigate', () => {
+    tasks.set([baseTask({ id: 'a' })]);
+
+    render();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

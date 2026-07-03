@@ -33,6 +33,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         // Identity needs its configuration applied first.
@@ -178,6 +180,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             // Optimistic-concurrency guard that makes consume single-winner under a rotation race (S-10).
             refreshToken.Property(r => r.RowVersion).IsRowVersion();
+
+            // UserId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
+        });
+
+        builder.Entity<PushSubscription>(subscription =>
+        {
+            // The push service URL is the subscription's identity; unique so re-subscribing one browser
+            // upserts its row rather than duplicating it. Capped at 512 so the nvarchar key stays inside
+            // SQL Server's 1700-byte unique-index limit (real endpoints are a few hundred chars).
+            subscription.Property(s => s.Endpoint).IsRequired().HasMaxLength(512);
+            subscription.HasIndex(s => s.Endpoint).IsUnique();
+
+            // Per-user fan-out on send + the Settings device-list read.
+            subscription.HasIndex(s => s.UserId);
+
+            subscription.Property(s => s.P256dh).IsRequired().HasMaxLength(256);
+            subscription.Property(s => s.Auth).IsRequired().HasMaxLength(256);
+            subscription.Property(s => s.DeviceLabel).HasMaxLength(200);
 
             // UserId is a raw AspNetUsers.Id column with no navigation (see HouseholdTask above).
         });

@@ -49,9 +49,9 @@
   line-height: 1.5;
 }
 
-/* Notifications management block (push-notifications) — mirrors the mockup: a status line, bordered
-   per-device rows (status dot + name + sub + On/Off pill or Turn-on), and, on desktop, the "Turn on from
-   your phone" QR frame; on mobile, the dashed install hint. Leans on the global `.field`/`.btn` primitives. */
+/* Notifications management block (real-web-push): a status line, bordered per-device rows (status dot +
+   label + THIS DEVICE badge + Remove), and an Enable button on any supported browser. Leans on the global
+   `.field`/`.btn` primitives. */
 .settings-notifs {
   border-top: 1px solid var(--color-border);
   padding-top: var(--space-4);
@@ -137,25 +137,38 @@
   border-radius: 5px;
 }
 
-.notif-state {
+/* Content-width ghost button to drop a device (the global `.btn` is full-width). */
+.notif-remove {
   flex: 0 0 auto;
-  font-size: 11.5px;
-  font-weight: var(--weight-semibold);
-  color: #9aa1ad;
-}
-
-.notif-state--on {
-  color: var(--color-primary);
+  width: auto;
+  padding: 6px 11px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
 }
 
 /* Content-width accent button (the global `.btn` is full-width). */
 .notif-enable {
-  flex: 0 0 auto;
   width: auto;
-  padding: 7px 13px;
-  font-size: 12.5px;
+  margin-top: 12px;
+  padding: 8px 15px;
+  font-size: 13px;
 }
 
+/* Inline "How to unblock" link styled as text within a hint line. */
+.notif-linkbtn {
+  padding: 0;
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Desktop "Turn on from your phone" frame: instructions beside a scannable QR. */
 .notif-instruct {
   display: flex;
   align-items: center;
@@ -183,8 +196,7 @@
   margin: 0;
 }
 
-/* White padded frame around the QR — supplies the light quiet zone the edge-to-edge SVG needs to scan,
-   and matches the mockup's `qrWrapStyle`. */
+/* White padded frame around the QR — supplies the light quiet zone the edge-to-edge SVG needs to scan. */
 .notif-instruct-qr {
   flex: 0 0 auto;
   display: flex;
@@ -203,48 +215,7 @@
   color: #9aa1ad;
 }
 
-.notif-preview {
-  margin-top: 14px;
-}
-
-.notif-preview-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.notif-preview-label {
-  font-size: 11px;
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: #a9b0bc;
-}
-
-.notif-test {
-  padding: 4px 8px;
-  font-size: 12.5px;
-  font-weight: var(--weight-semibold);
-  color: var(--color-primary);
-  background: transparent;
-  border: 0;
-  border-radius: 7px;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.notif-test:hover {
-  background: var(--color-surface-2);
-}
-
-.notif-preview-card {
-  background: #f7f8fa;
-  border: 1px solid #eaecf0;
-  border-radius: 14px;
-}
-
+/* Mobile PWA install nudge. */
 .notif-install {
   display: flex;
   align-items: center;

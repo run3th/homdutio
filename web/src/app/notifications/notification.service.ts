@@ -1,233 +1,264 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { Dialog } from '@angular/cdk/dialog';
-import { map } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
-import { AuthService } from '../auth/auth.service';
-import { FlashService } from '../shared/flash/flash.service';
-import { SystemPromptComponent } from './system-prompt/system-prompt.component';
-
-/** This device's simulated notification consent — mirrors the browser's `Notification.permission`. */
+/** This browser's real notification consent — mirrors the browser's `Notification.permission`. */
 export type NotifPermission = 'default' | 'granted' | 'denied';
 
-/**
- * A device registered to the account — one only exists once it has turned notifications on at least once
- * (i.e. "subscribed"). `enabled` mirrors web-push reality: `true` = active subscription (On), `false` = a
- * once-on device whose consent was later revoked (Off). We never fabricate Off rows for devices that never
- * subscribed. Persisted (account-wide simulation) in `localStorage['homdutio_devices']`.
- */
-export interface RegisteredDevice {
-  id: string;
-  name: string;
-  enabled: boolean;
-}
-
-/** A device row the Settings section renders (registered devices, plus a synthetic activation row on a phone). */
+/** One registered device row for the Settings list (backed by `GET /api/push/devices`). */
 export interface NotifDeviceRow {
   id: string;
-  name: string;
-  enabled: boolean;
+  /** Human-readable device label (UA-derived at subscribe time). */
+  label: string;
+  /** The push endpoint — used to match/flag the current browser and to unsubscribe. */
+  endpoint: string;
   /** True for this browser's device (gets the THIS DEVICE badge). */
   isCurrent: boolean;
-  /** The only in-list activation affordance: this phone when it isn't currently subscribed. */
-  showEnable: boolean;
 }
 
-/** `localStorage` keys — consent is per-device; the device registry stands in for the account. */
-const PERM_KEY = 'homdutio_notif_perm';
-const DEVICES_KEY = 'homdutio_devices';
-const DEVICE_ID_KEY = 'homdutio_device_id';
-/** The 999px cutoff (reference `isMobile = width < 1000`): at/below is a phone that *can* activate. */
-const MOBILE_QUERY = '(max-width: 999px)';
+/** `GET /api/push/key` — the public VAPID key, or a disabled marker when the server has no keypair. */
+interface PushKeyResponse {
+  publicKey: string | null;
+  enabled: boolean;
+}
+
+/** `GET /api/push/devices` row shape. */
+interface PushDeviceResponse {
+  id: string;
+  label: string | null;
+  endpoint: string;
+  createdAtUtc: string;
+}
+
+const DEVICE_LABEL_FALLBACK = 'Unknown device';
 
 /**
- * Single source of truth for the *simulated* per-device notification state (push-notifications). No real
- * Service Worker / Web Push / backend registry exists — this device's consent lives in `localStorage`, and
- * the account's device registry (devices that have subscribed) lives in `localStorage['homdutio_devices']`.
- * A device appears in Settings only once it has turned notifications on; an Off row means a once-subscribed
- * device whose consent was revoked. The load-bearing rule is applied in one place: {@link pushNotify}
- * delivers only when `isMobile && permission === 'granted'` (a push lands only on a device that turned it on).
+ * Real Web Push adapter (real-web-push) — replaces the former `localStorage` simulation. Thin wrapper over
+ * the browser Push APIs (`Notification`, the Service Worker registration, `PushManager`) and the backend
+ * registry (`/api/push/*`). The device list is server-side, so it is identical across every browser the
+ * account signs into (the bug the simulation had). Activation is **phone-only** (product decision): the
+ * enable affordance requires both a push-capable browser ({@link supported}) and a phone ({@link isMobile},
+ * UA-based) — {@link canActivate}. Desktop can't activate; it shows the device list + a QR to enable from a
+ * phone.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
-  private readonly breakpoints = inject(BreakpointObserver);
-  private readonly dialog = inject(Dialog);
-  private readonly flash = inject(FlashService);
-  private readonly auth = inject(AuthService);
+  private readonly http = inject(HttpClient);
 
-  /** A stable per-browser id so this device can be matched against the persisted registry across reloads. */
-  private readonly currentDeviceId = this.readOrCreateDeviceId();
+  /** Real Web Push needs a Service Worker, the Push API, and the Notification API. */
+  readonly supported =
+    typeof navigator !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    typeof window !== 'undefined' &&
+    'PushManager' in window &&
+    'Notification' in window;
 
-  /** This device's consent, seeded from `localStorage` on construction and persisted on every change. */
+  /** Whether this is a phone (UA-based). Push activation is phone-only; desktop only informs + shows the QR. */
+  readonly isMobile = isMobileUserAgent();
+
+  /** The enable affordance is offered only on a push-capable phone. */
+  readonly canActivate = this.supported && this.isMobile;
+
   private readonly _permission = signal<NotifPermission>(this.readPermission());
   readonly permission = this._permission.asReadonly();
 
-  /**
-   * Whether the viewport is phone-sized (reference's `isMobile`). Desktop never activates — it only informs.
-   * `initialValue` uses a synchronous match so the first read is correct before the observable ticks.
-   */
-  readonly isMobile = toSignal(this.breakpoints.observe(MOBILE_QUERY).pipe(map((s) => s.matches)), {
-    initialValue: this.breakpoints.isMatched(MOBILE_QUERY),
+  /** This browser's current subscription endpoint (null when not subscribed) — flags the current device. */
+  private readonly _currentEndpoint = signal<string | null>(null);
+  readonly hasCurrentSubscription = computed(() => this._currentEndpoint() !== null);
+
+  private readonly _devices = signal<NotifDeviceRow[]>([]);
+
+  /** The device rows Settings renders, each flagged `isCurrent` by matching this browser's endpoint. */
+  readonly deviceList = computed<NotifDeviceRow[]>(() => {
+    const current = this._currentEndpoint();
+    return this._devices().map((d) => ({ ...d, isCurrent: d.endpoint === current }));
   });
 
-  /** The account's registered devices (those that have subscribed at least once), from `localStorage`. */
-  private readonly _devices = signal<RegisteredDevice[]>(this.readDevices());
+  /** Whether any device is registered (every listed device is an active server-side subscription). */
+  readonly anyEnabled = computed(() => this._devices().length > 0);
 
-  /** Session-scoped (not persisted): the soft-ask/desktop banner may return on a later visit. */
+  /** Account-status line for Settings; keyed on how many devices are subscribed. */
+  readonly notifStatusText = computed(() => {
+    const count = this._devices().length;
+    if (count === 0) {
+      return "Notifications aren't on for any of your devices yet.";
+    }
+    return count === 1
+      ? 'Notifications are on for 1 device.'
+      : `Notifications are on for ${count} devices.`;
+  });
+
+  /** Session-scoped (not persisted): the Board soft-ask may return on a later visit. */
   private readonly _softAskDismissed = signal(false);
   readonly softAskDismissed = this._softAskDismissed.asReadonly();
 
-  /**
-   * The device rows Settings renders. Registered devices always show (On, or Off if revoked). On a phone that
-   * hasn't subscribed yet, a synthetic "This phone · Off" activation row leads the list so it can be turned
-   * on; on desktop no synthetic row is added (desktop can't be a push device), so an empty registry = no rows.
-   */
-  readonly deviceList = computed<NotifDeviceRow[]>(() => {
-    const devices = this._devices();
-    const rows: NotifDeviceRow[] = devices.map((d) => ({
-      id: d.id,
-      name: d.name,
-      enabled: d.enabled,
-      isCurrent: d.id === this.currentDeviceId,
-      showEnable: d.id === this.currentDeviceId && !d.enabled,
-    }));
-
-    const currentRegistered = devices.some((d) => d.id === this.currentDeviceId);
-    if (this.isMobile() && !currentRegistered) {
-      rows.unshift({
-        id: this.currentDeviceId,
-        name: 'This phone',
-        enabled: false,
-        isCurrent: true,
-        showEnable: true,
-      });
+  constructor() {
+    // Local-only (no network / no auth): learn whether THIS browser already holds a subscription.
+    if (this.supported) {
+      void this.refreshCurrentEndpoint();
     }
-    return rows;
-  });
-
-  /** Whether notifications are on for any registered device (drives the desktop banner's `!anyEnabled` gate). */
-  readonly anyEnabled = computed(() => this._devices().some((d) => d.enabled));
-
-  /** Account-status line for Settings; two variants keyed on how many devices are subscribed. */
-  readonly notifStatusText = computed(() => {
-    const on = this._devices().filter((d) => d.enabled).length;
-    if (on === 0) {
-      return "Notifications aren't on for any of your devices yet.";
-    }
-    return on === 1
-      ? 'Notifications are on for 1 device.'
-      : `Notifications are on for ${on} devices.`;
-  });
-
-  /**
-   * User-initiated activation. No-op on desktop (can't activate) or when already `granted`; otherwise opens
-   * the simulated OS prompt. Never call any real permission API, and never open the prompt without a click.
-   */
-  requestNotifs(): void {
-    if (!this.isMobile() || this._permission() === 'granted') {
-      return;
-    }
-    this.dialog.open(SystemPromptComponent);
   }
 
-  /** Simulated "Allow" — persist consent and register/re-enable this device's subscription. */
-  grant(): void {
-    this.setPermission('granted');
-    this.subscribeCurrentDevice();
-  }
-
-  /** Simulated "Don't Allow" — persist the denial; if this device had subscribed, mark it revoked (Off). */
-  deny(): void {
-    this.setPermission('denied');
-    this.revokeCurrentDevice();
-  }
-
-  /** Dismiss the soft-ask/desktop banner for this session only. */
+  /** Dismiss the Board soft-ask for this session only. */
   dismissSoftAsk(): void {
     this._softAskDismissed.set(true);
   }
 
   /**
-   * Deliver a simulated push toast — but ONLY to a device that turned notifications on itself
-   * (`isMobile && permission === 'granted'`). This single gate is what makes push "per-device".
+   * User-initiated activation: request real permission, and on grant subscribe this browser via
+   * `PushManager` and persist the subscription to the backend registry. No-op on an unsupported browser,
+   * a denied prompt, or when the server has no VAPID key configured.
    */
-  pushNotify(title: string, body: string): void {
-    if (!(this.isMobile() && this._permission() === 'granted')) {
+  async enable(): Promise<void> {
+    // Phone-only: desktop never subscribes (it shows the QR instead).
+    if (!this.canActivate) {
       return;
     }
-    this.flash.push(title, body);
-  }
 
-  /** Register this device (or re-enable it) as an active subscription in the account registry. */
-  private subscribeCurrentDevice(): void {
-    const devices = this._devices();
-    const existing = devices.find((d) => d.id === this.currentDeviceId);
-    const next = existing
-      ? devices.map((d) => (d.id === this.currentDeviceId ? { ...d, enabled: true } : d))
-      : [...devices, { id: this.currentDeviceId, name: this.currentDeviceName(), enabled: true }];
-    this.setDevices(next);
-  }
-
-  /** Mark this device's subscription revoked (Off) — but only if it had ever subscribed (no fabricated rows). */
-  private revokeCurrentDevice(): void {
-    const devices = this._devices();
-    if (!devices.some((d) => d.id === this.currentDeviceId)) {
+    const permission = await Notification.requestPermission();
+    this._permission.set(permission as NotifPermission);
+    if (permission !== 'granted') {
       return;
     }
-    this.setDevices(devices.map((d) => (d.id === this.currentDeviceId ? { ...d, enabled: false } : d)));
+
+    const registration = await navigator.serviceWorker.ready;
+    const key = await firstValueFrom(this.http.get<PushKeyResponse>('/api/push/key'));
+    if (!key?.enabled || !key.publicKey) {
+      // Server push isn't configured — nothing to subscribe against; degrade gracefully.
+      return;
+    }
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key.publicKey),
+    });
+
+    const json = subscription.toJSON();
+    await firstValueFrom(
+      this.http.post('/api/push/subscribe', {
+        endpoint: subscription.endpoint,
+        keys: { p256dh: json.keys?.['p256dh'], auth: json.keys?.['auth'] },
+        deviceLabel: describeDevice(),
+      }),
+    );
+
+    this._currentEndpoint.set(subscription.endpoint);
+    await this.refreshDevices();
   }
 
-  /** This device's name for the registry — "<display name>'s phone", or "This phone" before `/me` resolves. */
-  private currentDeviceName(): string {
-    const name = this.auth.displayName();
-    return name ? `${name}'s phone` : 'This phone';
+  /**
+   * Remove a device from the registry. For this browser's own subscription it also tears down the local
+   * `PushManager` subscription; for any other device it just deletes the server row (a remote browser's
+   * `PushManager` can only be unsubscribed on that browser).
+   */
+  async disable(endpoint?: string): Promise<void> {
+    let current: PushSubscription | null = null;
+    if (this.supported) {
+      const registration = await navigator.serviceWorker.ready;
+      current = await registration.pushManager.getSubscription();
+    }
+
+    const target = endpoint ?? current?.endpoint;
+    if (!target) {
+      return;
+    }
+
+    if (current && current.endpoint === target) {
+      await current.unsubscribe().catch(() => undefined);
+      this._currentEndpoint.set(null);
+    }
+
+    await firstValueFrom(
+      this.http.request('delete', '/api/push/subscribe', { body: { endpoint: target } }),
+    );
+    await this.refreshDevices();
   }
 
-  private setPermission(permission: NotifPermission): void {
-    this._permission.set(permission);
-    localStorage.setItem(PERM_KEY, permission);
+  /** Reload the account's device list from the backend (the source of truth for the Settings list). */
+  async refreshDevices(): Promise<void> {
+    try {
+      const devices = await firstValueFrom(this.http.get<PushDeviceResponse[]>('/api/push/devices'));
+      this._devices.set(
+        (devices ?? []).map((d) => ({
+          id: d.id,
+          label: d.label ?? DEVICE_LABEL_FALLBACK,
+          endpoint: d.endpoint,
+          isCurrent: false,
+        })),
+      );
+    } catch {
+      // Not signed in / offline — leave the current list untouched.
+    }
   }
 
-  private setDevices(devices: RegisteredDevice[]): void {
-    this._devices.set(devices);
-    localStorage.setItem(DEVICES_KEY, JSON.stringify(devices));
+  private async refreshCurrentEndpoint(): Promise<void> {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      this._currentEndpoint.set(subscription?.endpoint ?? null);
+    } catch {
+      this._currentEndpoint.set(null);
+    }
   }
 
   private readPermission(): NotifPermission {
-    const stored = localStorage.getItem(PERM_KEY);
-    return stored === 'granted' || stored === 'denied' ? stored : 'default';
+    return this.supported ? (Notification.permission as NotifPermission) : 'default';
   }
+}
 
-  private readDevices(): RegisteredDevice[] {
-    try {
-      const raw = localStorage.getItem(DEVICES_KEY);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.filter(
-        (d): d is RegisteredDevice =>
-          !!d &&
-          typeof d.id === 'string' &&
-          typeof d.name === 'string' &&
-          typeof d.enabled === 'boolean',
-      );
-    } catch {
-      return [];
-    }
+/** UA-based phone check — push activation is phone-only (desktop only shows the QR to enable from a phone). */
+function isMobileUserAgent(): boolean {
+  if (typeof navigator === 'undefined' || !navigator.userAgent) {
+    return false;
   }
+  return /Android|iPhone|iPad|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile|Mobile/i.test(
+    navigator.userAgent,
+  );
+}
 
-  private readOrCreateDeviceId(): string {
-    const stored = localStorage.getItem(DEVICE_ID_KEY);
-    if (stored) {
-      return stored;
-    }
-    const id =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `dev-${Date.now().toString(36)}`;
-    localStorage.setItem(DEVICE_ID_KEY, id);
-    return id;
+/** Convert a base64url VAPID public key to the `Uint8Array` `PushManager.subscribe` expects. */
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  // Allocate over a concrete ArrayBuffer so the result is a BufferSource (not ArrayBufferLike-generic).
+  const output = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let i = 0; i < raw.length; i++) {
+    output[i] = raw.charCodeAt(i);
   }
+  return output;
+}
+
+/** A short human label for this device from the User-Agent (e.g. "Chrome on Windows"). */
+function describeDevice(): string {
+  if (typeof navigator === 'undefined' || !navigator.userAgent) {
+    return DEVICE_LABEL_FALLBACK;
+  }
+  const ua = navigator.userAgent;
+
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\/|Opera/.test(ua)
+      ? 'Opera'
+      : /Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Chrome\//.test(ua)
+          ? 'Chrome'
+          : /Safari\//.test(ua)
+            ? 'Safari'
+            : 'Browser';
+
+  const os = /Windows/.test(ua)
+    ? 'Windows'
+    : /Android/.test(ua)
+      ? 'Android'
+      : /iPhone|iPad|iPod/.test(ua)
+        ? 'iOS'
+        : /Mac OS X|Macintosh/.test(ua)
+          ? 'macOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : 'device';
+
+  return `${browser} on ${os}`;
 }

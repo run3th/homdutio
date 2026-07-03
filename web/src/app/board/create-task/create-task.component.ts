@@ -10,7 +10,6 @@ import { mapValidationProblem } from '../../auth/validation-problem';
 import { Member, MemberService } from '../../household/member.service';
 import { HouseholdService } from '../../household/household.service';
 import { FlashService } from '../../shared/flash/flash.service';
-import { NotificationService } from '../../notifications/notification.service';
 
 /**
  * The create-task dialog (S-03/S-11, FR-010), opened from the topbar's **+ Add task** CTA via
@@ -34,7 +33,6 @@ export class CreateTaskComponent implements OnInit {
   private readonly members = inject(MemberService);
   private readonly household = inject(HouseholdService);
   private readonly flash = inject(FlashService);
-  private readonly notif = inject(NotificationService);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
@@ -84,7 +82,7 @@ export class CreateTaskComponent implements OnInit {
       .subscribe({
         next: () => {
           this.pending.set(false);
-          this.notifyAssignment(assignee, title.trim());
+          this.notifyAssignment(assignee);
           this.dialogRef.close();
         },
         error: (error: HttpErrorResponse) => {
@@ -99,25 +97,21 @@ export class CreateTaskComponent implements OnInit {
   }
 
   /**
-   * Assignment feedback (push-notifications). Self-assignment fires a per-device push toast (delivered only
-   * when THIS device is enabled — {@link NotificationService.pushNotify} enforces that gate); assigning to
-   * someone else flashes the per-device reminder instead (the assigner can't know the recipient's consent).
+   * Assignment feedback (real-web-push). Assigning to someone else flashes a per-device reminder; real
+   * delivery to the assignee's registered devices happens server-side (Phase 3). Self-assignment shows no
+   * client flash — the server push (Phase 3) reaches this user's own enabled devices instead.
    */
-  private notifyAssignment(assigneeId: string | undefined, title: string): void {
+  private notifyAssignment(assigneeId: string | undefined): void {
     if (!assigneeId) {
       return;
     }
     const assignee = this.roster().find((m) => m.userId === assigneeId);
-    if (!assignee) {
+    if (!assignee || assignee.isSelf) {
       return;
     }
-    if (assignee.isSelf) {
-      this.notif.pushNotify('New task assigned to you', `${assignee.displayName} assigned you "${title}".`);
-    } else {
-      this.flash.show(
-        `${assignee.displayName} will be notified on any device where they've turned notifications on.`,
-      );
-    }
+    this.flash.show(
+      `${assignee.displayName} will be notified on any device where they've turned notifications on.`,
+    );
   }
 
   close(): void {
