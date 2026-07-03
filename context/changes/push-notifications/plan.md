@@ -329,31 +329,31 @@ None. Assignment reuses the existing `ClaimedById` column; adding a `TaskEventTy
 
 #### Automated
 
-- [x] 1.1 Backend builds: `dotnet build src/Homdutio.Api -c Release`
-- [x] 1.2 Frontend builds & type-checks: `cd web && npm run build`
-- [x] 1.3 Frontend unit tests pass: `cd web && npm test`
-- [x] 1.4 Lint passes: `cd web && npm run lint`
+- [x] 1.1 Backend builds: `dotnet build src/Homdutio.Api -c Release` — 2e65bae
+- [x] 1.2 Frontend builds & type-checks: `cd web && npm run build` — 2e65bae
+- [x] 1.3 Frontend unit tests pass: `cd web && npm test` — 2e65bae
+- [x] 1.4 Lint passes: `cd web && npm run lint` — 2e65bae
 
 #### Manual
 
-- [x] 1.5 Admin create-with-member → In Progress + owner; "Anyone" → normal To-do
-- [x] 1.6 Admin assigns a To-do via detail modal → In Progress + owner + flash
-- [x] 1.7 Non-admin sees no picker; direct `POST /assign` → 403
-- [x] 1.8 Assigning a non-member id or non-`ToDo` task is rejected clearly
+- [x] 1.5 Admin create-with-member → In Progress + owner; "Anyone" → normal To-do — 2e65bae
+- [x] 1.6 Admin assigns a To-do via detail modal → In Progress + owner + flash — 2e65bae
+- [x] 1.7 Non-admin sees no picker; direct `POST /assign` → 403 — 2e65bae
+- [x] 1.8 Assigning a non-member id or non-`ToDo` task is rejected clearly — 2e65bae
 
 ### Phase 2: Notification permission model + simulated system prompt
 
 #### Automated
 
-- [ ] 2.1 Frontend builds & type-checks: `cd web && npm run build`
-- [ ] 2.2 Unit tests pass incl. `NotificationService` gate + localStorage spec: `cd web && npm test`
-- [ ] 2.3 Lint passes: `cd web && npm run lint`
+- [x] 2.1 Frontend builds & type-checks: `cd web && npm run build`
+- [x] 2.2 Unit tests pass incl. `NotificationService` gate + localStorage spec: `cd web && npm test`
+- [x] 2.3 Lint passes: `cd web && npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Narrow viewport: prompt opens; Allow persists `granted` across reload + toast; Don't-Allow persists `denied`
-- [ ] 2.5 Wide viewport: `requestNotifs()` does nothing
-- [ ] 2.6 `pushNotify` toast only when narrow + `granted`
+- [x] 2.4 Narrow viewport: prompt opens; Allow persists `granted` across reload + toast; Don't-Allow persists `denied`
+- [x] 2.5 Wide viewport: `requestNotifs()` does nothing
+- [x] 2.6 `pushNotify` toast only when narrow + `granted`
 
 ### Phase 3: Board notification banners
 
