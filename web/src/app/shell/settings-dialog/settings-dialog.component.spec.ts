@@ -26,6 +26,7 @@ describe('SettingsDialogComponent', () => {
     isMobile: boolean;
     canActivate: boolean;
     permission: ReturnType<typeof signal<NotifPermission>>;
+    hasCurrentSubscription: ReturnType<typeof signal<boolean>>;
     deviceList: ReturnType<typeof signal<NotifDeviceRow[]>>;
     notifStatusText: ReturnType<typeof signal<string>>;
     enable: typeof enable;
@@ -50,6 +51,7 @@ describe('SettingsDialogComponent', () => {
       isMobile: false,
       canActivate: false,
       permission: signal<NotifPermission>('default'),
+      hasCurrentSubscription: signal(false),
       deviceList: signal<NotifDeviceRow[]>([
         { id: 'nd1', label: 'iPhone Rafała', endpoint: 'https://push.test/a', isCurrent: false },
       ]),
@@ -202,5 +204,28 @@ describe('SettingsDialogComponent', () => {
 
     (el.querySelector('.notif-enable') as HTMLButtonElement).click();
     expect(enable).toHaveBeenCalledOnce();
+  });
+
+  it('phone + granted but no active subscription: still offers Enable (unstick the granted-no-sub state)', () => {
+    notif.isMobile = true;
+    notif.canActivate = true;
+    notif.permission.set('granted');
+    notif.hasCurrentSubscription.set(false);
+    const el = render().nativeElement as HTMLElement;
+
+    const enableButton = el.querySelector('.notif-enable') as HTMLButtonElement | null;
+    expect(enableButton).not.toBeNull();
+    enableButton!.click();
+    expect(enable).toHaveBeenCalledOnce();
+  });
+
+  it('phone + granted with an active subscription: no Enable button (already on)', () => {
+    notif.isMobile = true;
+    notif.canActivate = true;
+    notif.permission.set('granted');
+    notif.hasCurrentSubscription.set(true);
+    const el = render().nativeElement as HTMLElement;
+
+    expect(el.querySelector('.notif-enable')).toBeNull();
   });
 });
