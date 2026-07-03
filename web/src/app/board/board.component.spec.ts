@@ -23,12 +23,15 @@ describe('BoardComponent', () => {
   let setPaused: ReturnType<typeof vi.fn>;
   // Stubbed so the child NotifBannerComponent renders nothing by default (granted + something enabled).
   let notif: {
-    isMobile: ReturnType<typeof signal<boolean>>;
+    canActivate: boolean;
+    isMobile: boolean;
     permission: ReturnType<typeof signal<'default' | 'granted' | 'denied'>>;
-    softAskDismissed: ReturnType<typeof signal<boolean>>;
+    hasCurrentSubscription: ReturnType<typeof signal<boolean>>;
     anyEnabled: ReturnType<typeof signal<boolean>>;
-    requestNotifs: ReturnType<typeof vi.fn>;
+    softAskDismissed: ReturnType<typeof signal<boolean>>;
+    enable: ReturnType<typeof vi.fn>;
     dismissSoftAsk: ReturnType<typeof vi.fn>;
+    refreshDevices: ReturnType<typeof vi.fn>;
   };
 
   function baseTask(overrides: Partial<Task>): Task {
@@ -73,12 +76,15 @@ describe('BoardComponent', () => {
     stopPolling = vi.fn();
     setPaused = vi.fn();
     notif = {
-      isMobile: signal(false),
+      canActivate: false,
+      isMobile: false,
       permission: signal<'default' | 'granted' | 'denied'>('granted'),
-      softAskDismissed: signal(false),
+      hasCurrentSubscription: signal(false),
       anyEnabled: signal(true),
-      requestNotifs: vi.fn(),
+      softAskDismissed: signal(false),
+      enable: vi.fn(),
       dismissSoftAsk: vi.fn(),
+      refreshDevices: vi.fn(),
     };
     TestBed.configureTestingModule({
       imports: [BoardComponent],
@@ -316,8 +322,9 @@ describe('BoardComponent', () => {
     expect(el.querySelector('.notif-banner')).toBeNull();
   });
 
-  it('shows the mobile soft-ask above the columns; Enable opens the prompt', () => {
-    notif.isMobile.set(true);
+  it('shows the phone soft-ask above the columns; Enable calls enable()', () => {
+    notif.canActivate = true;
+    notif.isMobile = true;
     notif.permission.set('default');
     const fixture = render();
     const el = fixture.nativeElement as HTMLElement;
@@ -334,6 +341,6 @@ describe('BoardComponent', () => {
       ) as HTMLButtonElement
     ).click();
 
-    expect(notif.requestNotifs).toHaveBeenCalledOnce();
+    expect(notif.enable).toHaveBeenCalledOnce();
   });
 });

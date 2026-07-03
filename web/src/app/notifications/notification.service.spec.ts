@@ -1,53 +1,75 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { Dialog } from '@angular/cdk/dialog';
+import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 
-import { NotificationService, NotifPermission, RegisteredDevice } from './notification.service';
-import { FlashService } from '../shared/flash/flash.service';
-import { AuthService } from '../auth/auth.service';
+import { NotificationService, NotifPermission } from './notification.service';
 
-const PERM_KEY = 'homdutio_notif_perm';
-const DEVICES_KEY = 'homdutio_devices';
+const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit Mobile/15E148';
+const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120';
 
 describe('NotificationService', () => {
-  let flashPush: ReturnType<typeof vi.fn>;
-  let flashShow: ReturnType<typeof vi.fn>;
-  let dialogOpen: ReturnType<typeof vi.fn>;
+  let requestPermission: ReturnType<typeof vi.fn>;
+  let subscribe: ReturnType<typeof vi.fn>;
+  let getSubscription: ReturnType<typeof vi.fn>;
+  let unsubscribeCurrent: ReturnType<typeof vi.fn>;
+  let httpGet: ReturnType<typeof vi.fn>;
+  let httpPost: ReturnType<typeof vi.fn>;
+  let httpRequest: ReturnType<typeof vi.fn>;
 
-  /** Configure a fresh service with a fixed viewport, seeded consent, and a seeded device registry. */
+  const NEW_ENDPOINT = 'https://push.test/new';
+
   function setup(opts: {
     mobile: boolean;
     permission?: NotifPermission;
-    devices?: RegisteredDevice[];
-    displayName?: string;
+    requestResult?: NotificationPermission;
+    keyEnabled?: boolean;
+    devices?: { id: string; label: string | null; endpoint: string; createdAtUtc: string }[];
+    existingEndpoint?: string;
   }): NotificationService {
-    localStorage.clear();
-    if (opts.permission) {
-      localStorage.setItem(PERM_KEY, opts.permission);
-    }
-    if (opts.devices) {
-      localStorage.setItem(DEVICES_KEY, JSON.stringify(opts.devices));
-    }
+    Object.defineProperty(navigator, 'userAgent', {
+      value: opts.mobile ? MOBILE_UA : DESKTOP_UA,
+      configurable: true,
+    });
 
-    flashPush = vi.fn();
-    flashShow = vi.fn();
-    dialogOpen = vi.fn();
+    unsubscribeCurrent = vi.fn(async () => true);
+    const existingSub = opts.existingEndpoint
+      ? { endpoint: opts.existingEndpoint, unsubscribe: unsubscribeCurrent, toJSON: () => ({}) }
+      : null;
+    const newSub = {
+      endpoint: NEW_ENDPOINT,
+      toJSON: () => ({ keys: { p256dh: 'PKEY', auth: 'AKEY' } }),
+      unsubscribe: vi.fn(async () => true),
+    };
+    subscribe = vi.fn(async () => newSub);
+    getSubscription = vi.fn(async () => existingSub);
+
+    const registration = { pushManager: { subscribe, getSubscription } };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: Promise.resolve(registration), register: vi.fn() },
+      configurable: true,
+    });
+
+    requestPermission = vi.fn(async () => opts.requestResult ?? 'granted');
+    vi.stubGlobal('Notification', { permission: opts.permission ?? 'default', requestPermission });
+    vi.stubGlobal('PushManager', class {});
+
+    httpGet = vi.fn((url: string) => {
+      if (url === '/api/push/key') {
+        const enabled = opts.keyEnabled !== false;
+        return of({ publicKey: enabled ? 'QUJD' : null, enabled });
+      }
+      if (url === '/api/push/devices') {
+        return of(opts.devices ?? []);
+      }
+      return of(null);
+    });
+    httpPost = vi.fn(() => of(null));
+    httpRequest = vi.fn(() => of(null));
 
     TestBed.configureTestingModule({
       providers: [
         NotificationService,
-        {
-          provide: BreakpointObserver,
-          useValue: {
-            observe: () => of({ matches: opts.mobile, breakpoints: {} }),
-            isMatched: () => opts.mobile,
-          },
-        },
-        { provide: Dialog, useValue: { open: dialogOpen } },
-        { provide: FlashService, useValue: { push: flashPush, show: flashShow } },
-        { provide: AuthService, useValue: { displayName: signal(opts.displayName ?? 'Rafał') } },
+        { provide: HttpClient, useValue: { get: httpGet, post: httpPost, request: httpRequest } },
       ],
     });
 
@@ -55,134 +77,124 @@ describe('NotificationService', () => {
   }
 
   afterEach(() => {
-    localStorage.clear();
+    vi.unstubAllGlobals();
     TestBed.resetTestingModule();
   });
 
-  describe('permission localStorage round-trip', () => {
-    it('initializes from a stored granted value', () => {
-      expect(setup({ mobile: true, permission: 'granted' }).permission()).toBe('granted');
-    });
-
-    it('defaults to "default" when nothing is stored', () => {
-      expect(setup({ mobile: true }).permission()).toBe('default');
-    });
-
-    it('grant() and deny() persist consent to localStorage', () => {
+  describe('supported / canActivate (phone-only)', () => {
+    it('a phone with the push APIs can activate', () => {
       const service = setup({ mobile: true });
+      expect(service.supported).toBe(true);
+      expect(service.isMobile).toBe(true);
+      expect(service.canActivate).toBe(true);
+    });
 
-      service.grant();
-      expect(service.permission()).toBe('granted');
-      expect(localStorage.getItem(PERM_KEY)).toBe('granted');
-
-      service.deny();
-      expect(service.permission()).toBe('denied');
-      expect(localStorage.getItem(PERM_KEY)).toBe('denied');
+    it('desktop is supported but cannot activate', () => {
+      const service = setup({ mobile: false });
+      expect(service.supported).toBe(true);
+      expect(service.isMobile).toBe(false);
+      expect(service.canActivate).toBe(false);
     });
   });
 
-  describe('pushNotify isMobile && granted gate', () => {
-    it('delivers when mobile and granted', () => {
-      setup({ mobile: true, permission: 'granted' }).pushNotify('Title', 'Body');
-      expect(flashPush).toHaveBeenCalledWith('Title', 'Body');
+  describe('enable()', () => {
+    it('on desktop is a no-op (never prompts or subscribes)', async () => {
+      const service = setup({ mobile: false });
+      await service.enable();
+      expect(requestPermission).not.toHaveBeenCalled();
+      expect(subscribe).not.toHaveBeenCalled();
+      expect(httpPost).not.toHaveBeenCalled();
     });
 
-    it('does nothing when mobile but not granted', () => {
-      setup({ mobile: true, permission: 'denied' }).pushNotify('Title', 'Body');
-      expect(flashPush).not.toHaveBeenCalled();
-    });
-
-    it('does nothing on desktop even when granted', () => {
-      setup({ mobile: false, permission: 'granted' }).pushNotify('Title', 'Body');
-      expect(flashPush).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('requestNotifs is mobile-only and short-circuits when granted', () => {
-    it('opens the prompt on mobile when consent is default', () => {
-      setup({ mobile: true }).requestNotifs();
-      expect(dialogOpen).toHaveBeenCalledOnce();
-    });
-
-    it('does nothing on desktop', () => {
-      setup({ mobile: false }).requestNotifs();
-      expect(dialogOpen).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when already granted', () => {
-      setup({ mobile: true, permission: 'granted' }).requestNotifs();
-      expect(dialogOpen).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('deviceList — devices appear only once subscribed; no fabricated Off rows', () => {
-    it('desktop with an empty registry shows no rows', () => {
-      expect(setup({ mobile: false }).deviceList()).toEqual([]);
-    });
-
-    it('mobile with an empty registry shows a single synthetic "This phone · Off" activation row', () => {
-      const list = setup({ mobile: true }).deviceList();
-      expect(list).toHaveLength(1);
-      expect(list[0]).toMatchObject({
-        name: 'This phone',
-        enabled: false,
-        isCurrent: true,
-        showEnable: true,
-      });
-    });
-
-    it('after granting on mobile, this device is registered On (named from the display name)', () => {
-      const service = setup({ mobile: true, displayName: 'Rafał' });
-      service.grant();
-
-      const list = service.deviceList();
-      expect(list).toHaveLength(1);
-      expect(list[0]).toMatchObject({ name: "Rafał's phone", enabled: true, isCurrent: true, showEnable: false });
-      // Persisted to the account registry.
-      expect(JSON.parse(localStorage.getItem(DEVICES_KEY)!)).toHaveLength(1);
-    });
-
-    it('revoking after granting flips the row to Off and re-offers enable (no extra rows)', () => {
-      const service = setup({ mobile: true });
-      service.grant();
-      service.deny();
-
-      const list = service.deviceList();
-      expect(list).toHaveLength(1);
-      expect(list[0]).toMatchObject({ enabled: false, isCurrent: true, showEnable: true });
-    });
-
-    it('denying without ever granting fabricates no registry row (still just the synthetic prompt row)', () => {
-      const service = setup({ mobile: true });
-      service.deny();
-
-      expect(JSON.parse(localStorage.getItem(DEVICES_KEY) ?? '[]')).toEqual([]);
-      expect(service.deviceList()).toHaveLength(1);
-      expect(service.deviceList()[0].enabled).toBe(false);
-    });
-
-    it('desktop shows a registered phone (from another device) as a non-current On row', () => {
+    it('on a phone requests permission, subscribes, and POSTs the subscription', async () => {
       const service = setup({
-        mobile: false,
-        devices: [{ id: 'other-phone', name: "Rafał's phone", enabled: true }],
+        mobile: true,
+        devices: [
+          { id: 'd1', label: 'iPhone', endpoint: NEW_ENDPOINT, createdAtUtc: '2026-07-03T00:00:00Z' },
+          { id: 'd2', label: 'Old', endpoint: 'https://push.test/other', createdAtUtc: '2026-07-02T00:00:00Z' },
+        ],
       });
-      const list = service.deviceList();
-      expect(list).toHaveLength(1);
-      expect(list[0]).toMatchObject({ name: "Rafał's phone", enabled: true, isCurrent: false, showEnable: false });
+
+      await service.enable();
+
+      expect(requestPermission).toHaveBeenCalledOnce();
+      expect(subscribe).toHaveBeenCalledWith(
+        expect.objectContaining({ userVisibleOnly: true, applicationServerKey: expect.any(Uint8Array) }),
+      );
+      expect(httpPost).toHaveBeenCalledWith('/api/push/subscribe', {
+        endpoint: NEW_ENDPOINT,
+        keys: { p256dh: 'PKEY', auth: 'AKEY' },
+        deviceLabel: expect.any(String),
+      });
+      expect(service.permission()).toBe('granted');
+      expect(service.hasCurrentSubscription()).toBe(true);
+
+      // The devices list renders and flags the current endpoint.
+      const rows = service.deviceList();
+      expect(rows).toHaveLength(2);
+      expect(rows.find((r) => r.endpoint === NEW_ENDPOINT)?.isCurrent).toBe(true);
+      expect(rows.find((r) => r.endpoint === 'https://push.test/other')?.isCurrent).toBe(false);
+    });
+
+    it('on a phone stops (no subscribe) when the prompt is not granted', async () => {
+      const service = setup({ mobile: true, requestResult: 'denied' });
+      await service.enable();
+      expect(service.permission()).toBe('denied');
+      expect(subscribe).not.toHaveBeenCalled();
+      expect(httpPost).not.toHaveBeenCalled();
+    });
+
+    it('on a phone degrades gracefully when the server has no VAPID key', async () => {
+      const service = setup({ mobile: true, keyEnabled: false });
+      await service.enable();
+      expect(requestPermission).toHaveBeenCalledOnce();
+      expect(subscribe).not.toHaveBeenCalled();
+      expect(httpPost).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('disable()', () => {
+    it('unsubscribes the current browser and DELETEs the row', async () => {
+      const service = setup({ mobile: true, existingEndpoint: 'https://push.test/ep1' });
+
+      await service.disable('https://push.test/ep1');
+
+      expect(unsubscribeCurrent).toHaveBeenCalledOnce();
+      expect(httpRequest).toHaveBeenCalledWith('delete', '/api/push/subscribe', {
+        body: { endpoint: 'https://push.test/ep1' },
+      });
+    });
+
+    it('DELETEs a remote device without touching the local subscription', async () => {
+      const service = setup({ mobile: false, existingEndpoint: 'https://push.test/local' });
+
+      await service.disable('https://push.test/remote');
+
+      expect(unsubscribeCurrent).not.toHaveBeenCalled();
+      expect(httpRequest).toHaveBeenCalledWith('delete', '/api/push/subscribe', {
+        body: { endpoint: 'https://push.test/remote' },
+      });
     });
   });
 
   describe('notifStatusText & anyEnabled', () => {
-    it('reads "not on for any" for an empty registry', () => {
-      const service = setup({ mobile: false });
+    it('reads "not on for any" for an empty registry', async () => {
+      const service = setup({ mobile: false, devices: [] });
+      await service.refreshDevices();
       expect(service.notifStatusText()).toBe("Notifications aren't on for any of your devices yet.");
       expect(service.anyEnabled()).toBe(false);
     });
 
-    it('reads a count once a device is subscribed', () => {
-      const service = setup({ mobile: true });
-      service.grant();
-      expect(service.notifStatusText()).toBe('Notifications are on for 1 device.');
+    it('reads a count once devices are registered', async () => {
+      const service = setup({
+        mobile: false,
+        devices: [
+          { id: 'd1', label: 'iPhone', endpoint: 'https://push.test/a', createdAtUtc: '2026-07-03T00:00:00Z' },
+          { id: 'd2', label: 'Pixel', endpoint: 'https://push.test/b', createdAtUtc: '2026-07-03T00:00:00Z' },
+        ],
+      });
+      await service.refreshDevices();
+      expect(service.notifStatusText()).toBe('Notifications are on for 2 devices.');
       expect(service.anyEnabled()).toBe(true);
     });
   });

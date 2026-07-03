@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import type { ImageCroppedEvent } from 'ngx-image-cropper';
@@ -17,15 +17,20 @@ describe('SettingsDialogComponent', () => {
   let uploadAvatar: ReturnType<typeof vi.fn>;
   let removeAvatar: ReturnType<typeof vi.fn>;
   let close: ReturnType<typeof vi.fn>;
-  let requestNotifs: ReturnType<typeof vi.fn>;
-  let pushNotify: ReturnType<typeof vi.fn>;
+  let enable: ReturnType<typeof vi.fn>;
+  let disable: ReturnType<typeof vi.fn>;
+  let refreshDevices: ReturnType<typeof vi.fn>;
+  let dialogOpen: ReturnType<typeof vi.fn>;
   let notif: {
-    isMobile: ReturnType<typeof signal<boolean>>;
+    supported: boolean;
+    isMobile: boolean;
+    canActivate: boolean;
     permission: ReturnType<typeof signal<NotifPermission>>;
     deviceList: ReturnType<typeof signal<NotifDeviceRow[]>>;
     notifStatusText: ReturnType<typeof signal<string>>;
-    requestNotifs: typeof requestNotifs;
-    pushNotify: typeof pushNotify;
+    enable: typeof enable;
+    disable: typeof disable;
+    refreshDevices: typeof refreshDevices;
   };
 
   beforeEach(() => {
@@ -35,18 +40,23 @@ describe('SettingsDialogComponent', () => {
     uploadAvatar = vi.fn(() => of({ avatarUrl: '/api/users/u1/avatar?v=1' }));
     removeAvatar = vi.fn(() => of(void 0));
     close = vi.fn();
-    requestNotifs = vi.fn();
-    pushNotify = vi.fn();
-    // Desktop by default so the profile-form tests render the (dead-row-free) QR path without a mobile prompt.
+    enable = vi.fn();
+    disable = vi.fn();
+    refreshDevices = vi.fn();
+    dialogOpen = vi.fn();
+    // Desktop by default so the profile-form tests render the (enable-free) QR path.
     notif = {
-      isMobile: signal(false),
+      supported: true,
+      isMobile: false,
+      canActivate: false,
       permission: signal<NotifPermission>('default'),
       deviceList: signal<NotifDeviceRow[]>([
-        { id: 'nd1', name: 'iPhone Rafała', enabled: false, isCurrent: false, showEnable: false },
+        { id: 'nd1', label: 'iPhone Rafała', endpoint: 'https://push.test/a', isCurrent: false },
       ]),
       notifStatusText: signal("Notifications aren't on for any of your devices yet."),
-      requestNotifs,
-      pushNotify,
+      enable,
+      disable,
+      refreshDevices,
     };
     TestBed.configureTestingModule({
       imports: [SettingsDialogComponent],
@@ -54,6 +64,7 @@ describe('SettingsDialogComponent', () => {
         { provide: AuthService, useValue: { displayName, avatarUrl } },
         { provide: ProfileService, useValue: { updateProfile, uploadAvatar, removeAvatar } },
         { provide: DialogRef, useValue: { close } },
+        { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: NotificationService, useValue: notif },
       ],
     });
@@ -68,6 +79,11 @@ describe('SettingsDialogComponent', () => {
   it('prefills the field with the current display name', () => {
     const fixture = render();
     expect(fixture.componentInstance.form.controls.displayName.value).toBe('Molly Weasley');
+  });
+
+  it('refreshes the device list on open', () => {
+    render();
+    expect(refreshDevices).toHaveBeenCalledOnce();
   });
 
   it('saves a trimmed name, updates state via the service, and closes', () => {
@@ -155,23 +171,28 @@ describe('SettingsDialogComponent', () => {
     expect(updateProfile).not.toHaveBeenCalled();
   });
 
-  it('desktop: shows the status line + device list, a QR, and no current-device row', () => {
+  it('desktop: shows the status line + device list + QR, and no enable button', () => {
     const el = render().nativeElement as HTMLElement;
 
     expect(el.textContent).toContain("Notifications aren't on for any of your devices yet.");
     expect(el.querySelector('.notif-device')?.textContent).toContain('iPhone Rafała');
     expect(el.querySelector('app-qr svg')).not.toBeNull();
     expect(el.textContent).toContain('Turn on from your phone');
-    // No THIS DEVICE row and no Turn-on button on desktop.
-    expect(el.querySelector('.notif-badge')).toBeNull();
+    // No enable button on desktop.
     expect(el.querySelector('.notif-enable')).toBeNull();
   });
 
-  it('mobile + not granted: current phone shows THIS DEVICE + Turn on, plus the install hint (no QR)', () => {
-    notif.isMobile.set(true);
+  it('removing a device calls disable() with its endpoint', () => {
+    const fixture = render();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.notif-remove')!.click();
+    expect(disable).toHaveBeenCalledWith('https://push.test/a');
+  });
+
+  it('phone + not granted: current device shows THIS DEVICE + Enable + install hint (no QR)', () => {
+    notif.isMobile = true;
+    notif.canActivate = true;
     notif.deviceList.set([
-      { id: 'current', name: 'This phone', enabled: false, isCurrent: true, showEnable: true },
-      { id: 'nd1', name: 'iPhone Rafała', enabled: false, isCurrent: false, showEnable: false },
+      { id: 'current', label: 'iPhone Rafała', endpoint: 'https://push.test/a', isCurrent: true },
     ]);
     const el = render().nativeElement as HTMLElement;
 
@@ -180,31 +201,6 @@ describe('SettingsDialogComponent', () => {
     expect(el.querySelector('app-qr')).toBeNull();
 
     (el.querySelector('.notif-enable') as HTMLButtonElement).click();
-    expect(requestNotifs).toHaveBeenCalledOnce();
-  });
-
-  it('mobile + granted: shows the Preview + "Send a test", which fires the same push content', () => {
-    notif.isMobile.set(true);
-    notif.permission.set('granted');
-    notif.deviceList.set([
-      { id: 'current', name: "Rafał's phone", enabled: true, isCurrent: true, showEnable: false },
-    ]);
-    const el = render().nativeElement as HTMLElement;
-
-    // The preview renders the shared push-card with the exact content the test will send.
-    const preview = el.querySelector('.notif-preview-card app-push-card');
-    expect(preview?.textContent).toContain('New task assigned to you');
-    expect(preview?.textContent).toContain('Kasia assigned you');
-
-    (
-      Array.from(el.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'Send a test',
-      ) as HTMLButtonElement
-    ).click();
-
-    expect(pushNotify).toHaveBeenCalledWith(
-      'New task assigned to you',
-      'Kasia assigned you “Take out the trash”.',
-    );
+    expect(enable).toHaveBeenCalledOnce();
   });
 });

@@ -6,9 +6,9 @@ import { FLASH_DATA, FlashComponent, FlashData } from './flash.component';
 
 /**
  * Renders transient, dismissible overlays via CDK `Overlay` (the overlay CSS is already loaded globally).
- * `show` is the plain single-line flash used for assignment feedback (S-03 / push-notifications); `push`
- * (Phase 2) is the notification-styled toast {@link NotificationService.pushNotify} fires. Each overlay owns
- * an auto-dismiss timer inside {@link FlashComponent} and disposes itself; the caller never tracks refs.
+ * `show` is the plain single-line flash used for assignment feedback (e.g. "<name> will be notified…").
+ * Each overlay owns an auto-dismiss timer inside {@link FlashComponent} and disposes itself; the caller
+ * never tracks refs. (Real push delivery is server-side now — there is no in-app push toast.)
  */
 @Injectable({ providedIn: 'root' })
 export class FlashService {
@@ -17,12 +17,7 @@ export class FlashService {
 
   /** Show a plain transient flash message (e.g. "<name> will be notified…"). */
   show(message: string, durationMs = 4500): void {
-    this.present({ variant: 'flash', message, durationMs });
-  }
-
-  /** Show a push-notification-styled toast with a title + body (Phase 2). */
-  push(title: string, body: string, durationMs = 5000): void {
-    this.present({ variant: 'push', title, message: body, durationMs });
+    this.present({ message, durationMs });
   }
 
   private present(data: Omit<FlashData, 'dismiss'>): void {

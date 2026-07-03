@@ -1,6 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import {
   AbstractControl,
   FormBuilder,
@@ -16,8 +16,8 @@ import { ProfileService } from '../../profile/profile.service';
 import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 import { mapValidationProblem } from '../../auth/validation-problem';
 import { NotificationService } from '../../notifications/notification.service';
+import { DenyHelpComponent } from '../../notifications/deny-help/deny-help.component';
 import { QrComponent } from '../../notifications/qr/qr.component';
-import { PushCardComponent } from '../../notifications/push-card/push-card.component';
 
 /** Display-name length cap — mirrors the backend's `ProfileEndpoints.MaxDisplayNameLength`. */
 export const MAX_DISPLAY_NAME_LENGTH = 60;
@@ -44,48 +44,65 @@ function nonBlank(control: AbstractControl): ValidationErrors | null {
  */
 @Component({
   selector: 'app-settings-dialog',
-  imports: [
-    ReactiveFormsModule,
-    ImageCropperComponent,
-    UserAvatarComponent,
-    QrComponent,
-    PushCardComponent,
-  ],
+  imports: [ReactiveFormsModule, ImageCropperComponent, UserAvatarComponent, QrComponent],
   templateUrl: './settings-dialog.component.html',
   styleUrl: './settings-dialog.component.scss',
 })
-export class SettingsDialogComponent {
+export class SettingsDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly profile = inject(ProfileService);
   private readonly auth = inject(AuthService);
   private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
   private readonly notif = inject(NotificationService);
+  private readonly dialog = inject(Dialog);
 
   readonly maxLength = MAX_DISPLAY_NAME_LENGTH;
 
-  // Notifications management (push-notifications) — a read/act surface, not part of the profile form's Save.
+  // Notifications management (real-web-push) — a read/act surface, not part of the profile form's Save.
+  readonly supported = this.notif.supported;
+  readonly isMobile = this.notif.isMobile;
+  readonly permission = this.notif.permission;
   readonly notifStatusText = this.notif.notifStatusText;
   readonly deviceList = this.notif.deviceList;
-  readonly isMobile = this.notif.isMobile;
   /** The origin the desktop QR encodes so a phone can open the app and turn notifications on there. */
   readonly appOrigin = location.origin;
-  /** Mobile PWA nudge: only when this phone hasn't granted consent yet. */
+  /** Enable is phone-only: a push-capable phone that hasn't granted yet. */
+  readonly canEnable = computed(() => this.notif.canActivate && this.notif.permission() !== 'granted');
+  /** Mobile PWA nudge: only on a phone that hasn't granted consent yet. */
   readonly showInstallHint = computed(
-    () => this.notif.isMobile() && this.notif.permission() !== 'granted',
+    () => this.notif.isMobile && this.notif.permission() !== 'granted',
   );
-  /** This device is subscribed (mobile + granted) — gates the Preview + "Send a test" affordance. */
-  readonly currentEnabled = computed(
-    () => this.notif.isMobile() && this.notif.permission() === 'granted',
-  );
+  /** In-flight guard for the enable/remove buttons. */
+  readonly notifBusy = signal(false);
 
-  /** Re-open the simulated OS prompt for the current phone (the only in-Settings activation, mobile-only). */
-  enableNotifs(): void {
-    this.notif.requestNotifs();
+  ngOnInit(): void {
+    // The device list is server-side; load it whenever Settings opens.
+    void this.notif.refreshDevices();
   }
 
-  /** Fire a sample push to this device — its content is exactly what the Preview card shows. */
-  sendTest(): void {
-    this.notif.pushNotify('New task assigned to you', 'Kasia assigned you “Take out the trash”.');
+  /** Request real permission and subscribe this browser (real browser prompt). */
+  async enableNotifs(): Promise<void> {
+    this.notifBusy.set(true);
+    try {
+      await this.notif.enable();
+    } finally {
+      this.notifBusy.set(false);
+    }
+  }
+
+  /** Remove a device from the account registry (unsubscribes locally if it's this browser). */
+  async removeDevice(endpoint: string): Promise<void> {
+    this.notifBusy.set(true);
+    try {
+      await this.notif.disable(endpoint);
+    } finally {
+      this.notifBusy.set(false);
+    }
+  }
+
+  /** Explain how to re-enable notifications after a browser-level denial. */
+  openDenyHelp(): void {
+    this.dialog.open(DenyHelpComponent);
   }
 
   readonly form = this.fb.nonNullable.group({

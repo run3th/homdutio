@@ -8,7 +8,7 @@ Replace the merged **simulation** (`context/changes/push-notifications/`) with *
 2. **Browser Service Worker + subscription** — a minimal `sw.js`, real `Notification.requestPermission()` + `PushManager.subscribe(...)`, with the subscription persisted to the backend; the Settings device list now reads from the database.
 3. **Server-side triggers → delivery** — assigning a task and commenting on a task send a Web Push to the recipient's registered devices; clicking the notification deep-links to the task; dead subscriptions self-prune.
 
-Activation is allowed on **any supported browser (desktop included)** — the simulation's "phone-only + QR" model is removed. **iOS/iPhone is explicitly out of scope** (no PWA install flow this change — see Open Risks).
+Activation is **phone-only** (a real push subscription is created only on a phone, detected by User-Agent); desktop can't activate — it shows the account's device list plus a **QR code** to open the app on a phone. Real push replaces the simulation's *fake* pieces (the `localStorage` registry and simulated OS prompt), but the phone-only gate and the QR are **retained** as a product decision. **iOS/iPhone is explicitly out of scope** (no PWA install flow this change — see Open Risks).
 
 ## Current State Analysis
 
@@ -38,11 +38,11 @@ Backend (`src/`, .NET 9, EF Core + SQL Server, `IdentityDbContext`):
 - `IEmailSender`/`NoOpEmailSender` conditional registration (`Program.cs:107-116`) is the exact pattern for `IPushSender`/`NoOpPushSender` — dev with no VAPID key runs the no-op and never fails.
 - The bearer interceptor already authorizes `/api/push/*` calls — no new client auth code.
 - New `/api/push/*` routes must be added to `RouteIsolationCoverageTests.Exempt` (`:43-55`) or the coverage test fails the build.
-- The simulation's `isMobile` gate and QR exist only because fake push was "phone-only"; real push works on desktop, so both are removed.
+- Real push stays gated to phones (product decision): the phone gate (now **UA-based**) and the QR are retained; only the *fake* `localStorage` registry and simulated OS prompt are removed (real `PushManager` subscription + the real permission prompt replace them).
 
 ## Desired End State
 
-- On any supported browser (incl. desktop), a user clicks "Enable notifications", the browser permission prompt appears, and on grant the device is registered server-side. The device shows in Settings on **that** device **and on every other browser/device** the user logs into (registry is in the DB).
+- On a supported **phone** browser, a user clicks "Enable notifications", the real browser permission prompt appears, and on grant the device is registered server-side. The device shows in Settings on **that** phone **and on every other browser/device** the user logs into (registry is in the DB). **Desktop cannot activate** — it shows the device list plus a QR to enable from a phone, with no enable button.
 - When an admin assigns a task to a member, that member's registered devices receive a real OS/browser push ("New task assigned to you — …") even if the app is closed; clicking it opens the app focused on that task. Same for a comment on a task the user is running.
 - Disabling on a device removes its subscription from the DB (and it disappears from the list everywhere). Subscriptions that the push service reports as gone (404/410) are pruned automatically on the next send.
 - **Verification:** `dotnet build src/Homdutio.Api -c Release` and `cd web && npm run build` succeed; `dotnet test` and `cd web && npm test` + `npm run lint` pass; with a real VAPID keypair configured, the assign/comment flows deliver a push to a subscribed Chrome/Android/desktop browser and the click deep-links to the task.
@@ -147,7 +147,7 @@ Add the DB-backed subscription registry, VAPID configuration, the push sender ab
 
 ### Overview
 
-Swap the client from simulation to real Web Push: register a minimal Service Worker, request real permission, subscribe via `PushManager`, persist the subscription to the backend, and render the Settings device list from `/api/push/devices`. Rip out the `localStorage` registry, the fake OS prompt, the `isMobile` phone-only gate, and the QR.
+Swap the client from simulation to real Web Push: register a minimal Service Worker, request real permission, subscribe via `PushManager`, persist the subscription to the backend, and render the Settings device list from `/api/push/devices`. Rip out the `localStorage` registry and the fake OS prompt; **keep** the phone-only gate (now UA-based) and the QR (desktop shows it to enable from a phone).
 
 ### Changes Required:
 
@@ -175,19 +175,19 @@ Swap the client from simulation to real Web Push: register a minimal Service Wor
 
 **Contract**: Replace the `localStorage` registry and `isMobile` gate with:
 - `permission` signal sourced from `Notification.permission` (+ live updates after a request).
-- `supported` computed (`'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window`) — replaces `isMobile` for gating the enable affordance (desktop now supported).
-- `enable()` (replaces `requestNotifs`/`grant`): `Notification.requestPermission()` → on `granted`, get the SW registration, fetch the public key from `GET /api/push/key`, `pushManager.subscribe({ userVisibleOnly:true, applicationServerKey })`, `POST /api/push/subscribe` with the serialized subscription + a UA-derived `deviceLabel`.
+- `supported` computed (`'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window`) AND `isMobile` (UA-based) — the enable affordance requires **both** (phone-only): `canActivate = supported && isMobile`.
+- `enable()` (replaces `requestNotifs`/`grant`): no-op unless `canActivate`; else `Notification.requestPermission()` → on `granted`, get the SW registration, fetch the public key from `GET /api/push/key`, `pushManager.subscribe({ userVisibleOnly:true, applicationServerKey })`, `POST /api/push/subscribe` with the serialized subscription + a UA-derived `deviceLabel`.
 - `disable()` (replaces `deny`'s registry side): `pushManager.getSubscription()?.unsubscribe()` + `DELETE /api/push/subscribe`.
 - `devices` signal from `GET /api/push/devices` (marks the current endpoint `isCurrent`); `notifStatusText` derived from it.
 - Remove `pushNotify` (delivery is now server-side) — its callers move to Phase 3.
 
 #### 4. Rewire consumers; delete simulation-only pieces
 
-**File**: `web/src/app/shell/settings-dialog/settings-dialog.component.*`, `web/src/app/notifications/notif-banner/notif-banner.component.*`, delete/repurpose `web/src/app/notifications/system-prompt/*`, `web/src/app/notifications/qr/*`, `web/src/app/notifications/push-card/*`; keep `deny-help` for the real denied state
+**File**: `web/src/app/shell/settings-dialog/settings-dialog.component.*`, `web/src/app/notifications/notif-banner/notif-banner.component.*`, delete `web/src/app/notifications/system-prompt/*` and `web/src/app/notifications/push-card/*`; **keep** `web/src/app/notifications/qr/*` and `deny-help/*`
 
-**Intent**: Point the UI at the real service; remove the phone-only + QR simulation model.
+**Intent**: Point the UI at the real service while keeping the phone-only + QR model.
 
-**Contract**: Settings "Notifications" section: show `notifStatusText`, render `devices` (with THIS DEVICE badge on the current endpoint and a "Remove" action → `disable()` for that device), and a single "Enable notifications" button when `supported && permission !== 'granted'` (no QR, no phone-only text; when `permission === 'denied'` show the deny-help link). Board banner: show an enable prompt when `supported && permission === 'default'` and no current subscription; drop the desktop-only informational variant and the `isMobile` branching. Delete the fake `system-prompt` and `qr`/`push-card` components and their imports. `sendTest` (`settings-dialog.component.ts:88`) either calls a new dev-only `POST /api/push/test` (optional) or is removed.
+**Contract**: Settings "Notifications" section: show `notifStatusText`, render `devices` (with THIS DEVICE badge on the current endpoint and a "Remove" action → `disable()` for that device). On a **phone**: an "Enable notifications" button when `canActivate && permission !== 'granted'` (when `permission === 'denied'` show the deny-help link), plus the install hint when not yet granted. On **desktop**: no enable button — show the "Turn on from your phone" QR frame alongside the (server-side) device list. Board banner: phone soft-ask (Enable → `enable()`) when `canActivate && permission === 'default'` and no current subscription; desktop informational banner (QR reference, **no** activation CTA) when nothing is enabled. Delete the fake `system-prompt` and `push-card`; keep `qr` (real scannable code) and `deny-help`. `sendTest`/in-app preview is removed (real push has no client-side toast).
 
 #### 5. Frontend tests
 
@@ -207,10 +207,10 @@ Swap the client from simulation to real Web Push: register a minimal Service Wor
 
 #### Manual Verification:
 
-- In desktop Chrome with a dev VAPID key configured: clicking "Enable notifications" shows the real browser prompt; granting registers the SW and persists a subscription (visible in `GET /api/push/devices`).
-- Logging into the same account in a second browser shows the first browser's device in the Settings list (registry is server-side) — the original bug is fixed.
-- "Remove" on a device unsubscribes it and it disappears from the list in both browsers.
-- No QR, no "phone only" copy, and the fake OS prompt no longer appears.
+- On a phone browser with a dev VAPID key configured: clicking "Enable notifications" shows the real browser prompt; granting registers the SW and persists a subscription (visible in `GET /api/push/devices`).
+- Logging into the same account on desktop shows the phone's device in the Settings list (registry is server-side) — the original bug is fixed.
+- "Remove" on a device unsubscribes it (locally if it's this browser) and it disappears from the list everywhere.
+- Desktop shows the QR "Turn on from your phone" frame + the device list and **no** enable button; the fake OS prompt no longer appears.
 
 **Implementation Note**: Pause for human confirmation before Phase 3.
 
@@ -322,28 +322,28 @@ Negligible for a single household. Inline send adds one round-trip per subscript
 
 #### Automated
 
-- [x] 1.1 Migration applies: `dotnet ef database update --project src/Homdutio.Data --startup-project src/Homdutio.Api`
-- [x] 1.2 Backend builds: `dotnet build src/Homdutio.Api -c Release`
-- [x] 1.3 Backend tests pass (PushEndpointsTests + route-coverage): `dotnet test`
+- [x] 1.1 Migration applies: `dotnet ef database update --project src/Homdutio.Data --startup-project src/Homdutio.Api` — 044824f
+- [x] 1.2 Backend builds: `dotnet build src/Homdutio.Api -c Release` — 044824f
+- [x] 1.3 Backend tests pass (PushEndpointsTests + route-coverage): `dotnet test` — 044824f
 
 #### Manual
 
-- [x] 1.4 No `Vapid:PrivateKey` → API starts, `GET /api/push/key` reports disabled, no-op sender registered
-- [x] 1.5 With dev VAPID key → `/api/push/key` returns public key; manual subscribe persists; `/api/push/devices` returns it
+- [x] 1.4 No `Vapid:PrivateKey` → API starts, `GET /api/push/key` reports disabled, no-op sender registered — 044824f
+- [x] 1.5 With dev VAPID key → `/api/push/key` returns public key; manual subscribe persists; `/api/push/devices` returns it — 044824f
 
 ### Phase 2: Browser Service Worker + real subscription + DB-backed registry
 
 #### Automated
 
-- [ ] 2.1 Frontend builds & type-checks: `cd web && npm run build`
-- [ ] 2.2 Unit tests pass: `cd web && npm test`
-- [ ] 2.3 Lint passes: `cd web && npm run lint`
+- [x] 2.1 Frontend builds & type-checks: `cd web && npm run build`
+- [x] 2.2 Unit tests pass: `cd web && npm test`
+- [x] 2.3 Lint passes: `cd web && npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Desktop Chrome + dev key: Enable shows real prompt; grant registers SW + persists subscription
-- [ ] 2.5 Second browser on the same account shows the first device in Settings (registry is server-side — bug fixed)
-- [ ] 2.6 Remove device unsubscribes + disappears from the list in both browsers; no QR / no phone-only copy / no fake prompt
+- [x] 2.4 Phone browser + dev key: Enable shows real prompt; grant registers SW + persists subscription
+- [x] 2.5 Desktop on the same account shows the phone device in Settings (registry is server-side — bug fixed)
+- [x] 2.6 Remove device unsubscribes + disappears everywhere; desktop shows QR + device list + no enable button; no fake prompt
 
 ### Phase 3: Server-side triggers, delivery & deep-link
 

@@ -8,33 +8,32 @@ import { DenyHelpComponent } from '../deny-help/deny-help.component';
 
 describe('NotifBannerComponent', () => {
   let open: ReturnType<typeof vi.fn>;
-  let requestNotifs: ReturnType<typeof vi.fn>;
+  let enable: ReturnType<typeof vi.fn>;
   let dismissSoftAsk: ReturnType<typeof vi.fn>;
-  let notif: {
-    isMobile: ReturnType<typeof signal<boolean>>;
-    permission: ReturnType<typeof signal<NotifPermission>>;
-    softAskDismissed: ReturnType<typeof signal<boolean>>;
-    anyEnabled: ReturnType<typeof signal<boolean>>;
-    requestNotifs: typeof requestNotifs;
-    dismissSoftAsk: typeof dismissSoftAsk;
-  };
+  let refreshDevices: ReturnType<typeof vi.fn>;
 
   function setup(opts: {
     mobile: boolean;
     permission?: NotifPermission;
+    hasCurrentSubscription?: boolean;
     anyEnabled?: boolean;
     dismissed?: boolean;
   }) {
     open = vi.fn();
-    requestNotifs = vi.fn();
+    enable = vi.fn();
     dismissSoftAsk = vi.fn();
-    notif = {
-      isMobile: signal(opts.mobile),
+    refreshDevices = vi.fn();
+    const notif = {
+      // A push-capable phone can activate; desktop cannot.
+      canActivate: opts.mobile,
+      isMobile: opts.mobile,
       permission: signal<NotifPermission>(opts.permission ?? 'default'),
-      softAskDismissed: signal(opts.dismissed ?? false),
+      hasCurrentSubscription: signal(opts.hasCurrentSubscription ?? false),
       anyEnabled: signal(opts.anyEnabled ?? false),
-      requestNotifs,
+      softAskDismissed: signal(opts.dismissed ?? false),
+      enable,
       dismissSoftAsk,
+      refreshDevices,
     };
 
     TestBed.configureTestingModule({
@@ -56,16 +55,16 @@ describe('NotifBannerComponent', () => {
     ) as HTMLButtonElement | undefined;
   }
 
-  it('mobile + not granted: shows the soft-ask; Enable opens the prompt', () => {
+  it('phone + not granted: shows the soft-ask; Enable calls enable()', () => {
     const fixture = setup({ mobile: true, permission: 'default' });
     const el = fixture.nativeElement as HTMLElement;
 
     expect(el.textContent).toContain('Turn on notifications?');
     byText(fixture, 'Enable notifications')!.click();
-    expect(requestNotifs).toHaveBeenCalledOnce();
+    expect(enable).toHaveBeenCalledOnce();
   });
 
-  it('mobile + denied: shows the blocked state; How to unblock opens deny-help', () => {
+  it('phone + denied: shows the blocked state; How to unblock opens deny-help', () => {
     const fixture = setup({ mobile: true, permission: 'denied' });
     const el = fixture.nativeElement as HTMLElement;
 
@@ -76,8 +75,13 @@ describe('NotifBannerComponent', () => {
     expect(open).toHaveBeenCalledWith(DenyHelpComponent);
   });
 
-  it('mobile + granted: renders nothing', () => {
+  it('phone + granted: renders nothing', () => {
     const fixture = setup({ mobile: true, permission: 'granted' });
+    expect((fixture.nativeElement as HTMLElement).querySelector('.notif-banner')).toBeNull();
+  });
+
+  it('phone + already subscribed: renders nothing', () => {
+    const fixture = setup({ mobile: true, permission: 'default', hasCurrentSubscription: true });
     expect((fixture.nativeElement as HTMLElement).querySelector('.notif-banner')).toBeNull();
   });
 
@@ -95,7 +99,7 @@ describe('NotifBannerComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.notif-banner')).toBeNull();
   });
 
-  it('dismissed: renders nothing even on mobile without consent', () => {
+  it('dismissed: renders nothing even on a phone without consent', () => {
     const fixture = setup({ mobile: true, permission: 'default', dismissed: true });
     expect((fixture.nativeElement as HTMLElement).querySelector('.notif-banner')).toBeNull();
   });

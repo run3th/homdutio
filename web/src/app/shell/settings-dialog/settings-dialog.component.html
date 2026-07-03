@@ -84,52 +84,45 @@
       <span class="settings-photo-heading">Notifications</span>
       <p class="notif-status">{{ notifStatusText() }}</p>
 
-      <ul class="notif-devices">
-        @for (device of deviceList(); track device.id) {
-          <li class="notif-device" [class.notif-device--current]="device.isCurrent">
-            <span
-              class="notif-device-dot"
-              [class.notif-device-dot--on]="device.enabled"
-              aria-hidden="true"
-            ></span>
-            <div class="notif-device-main">
-              <span class="notif-device-nameline">
-                <span class="notif-device-name">{{ device.name }}</span>
-                @if (device.isCurrent) {
-                  <span class="notif-badge">THIS DEVICE</span>
-                }
-              </span>
-              <span class="notif-device-sub">Phone · {{ device.enabled ? 'On' : 'Off' }}</span>
-            </div>
-            @if (device.showEnable) {
-              <button type="button" class="btn notif-enable" (click)="enableNotifs()">
-                Turn on
+      @if (deviceList().length) {
+        <ul class="notif-devices">
+          @for (device of deviceList(); track device.id) {
+            <li class="notif-device" [class.notif-device--current]="device.isCurrent">
+              <span class="notif-device-dot notif-device-dot--on" aria-hidden="true"></span>
+              <div class="notif-device-main">
+                <span class="notif-device-nameline">
+                  <span class="notif-device-name">{{ device.label }}</span>
+                  @if (device.isCurrent) {
+                    <span class="notif-badge">THIS DEVICE</span>
+                  }
+                </span>
+                <span class="notif-device-sub">On</span>
+              </div>
+              <button
+                type="button"
+                class="btn notif-remove"
+                [disabled]="notifBusy()"
+                (click)="removeDevice(device.endpoint)"
+              >
+                Remove
               </button>
-            } @else {
-              <span class="notif-state" [class.notif-state--on]="device.enabled">
-                {{ device.enabled ? 'On' : 'Off' }}
-              </span>
-            }
-          </li>
-        }
-      </ul>
-
-      @if (currentEnabled()) {
-        <div class="notif-preview">
-          <div class="notif-preview-head">
-            <span class="notif-preview-label">Preview</span>
-            <button type="button" class="notif-test" (click)="sendTest()">Send a test</button>
-          </div>
-          <div class="notif-preview-card">
-            <app-push-card
-              title="New task assigned to you"
-              body="Kasia assigned you “Take out the trash”."
-            />
-          </div>
-        </div>
+            </li>
+          }
+        </ul>
       }
 
-      @if (isMobile()) {
+      @if (isMobile) {
+        @if (canEnable()) {
+          <button type="button" class="btn notif-enable" [disabled]="notifBusy()" (click)="enableNotifs()">
+            Enable notifications
+          </button>
+          @if (permission() === 'denied') {
+            <p class="settings-hint">
+              Notifications are blocked for this site.
+              <button type="button" class="notif-linkbtn" (click)="openDenyHelp()">How to unblock</button>
+            </p>
+          }
+        }
         @if (showInstallHint()) {
           <div class="notif-install">
             <span class="notif-install-icon" aria-hidden="true">↧</span>
