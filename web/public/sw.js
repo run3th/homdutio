@@ -15,8 +15,11 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'Homdutio';
   const options = {
     body: payload.body || '',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    // App icon shown in the notification. PNG (not .ico) — Chrome ignores/poorly scales .ico here.
+    // Payload may override; otherwise fall back to the app's own icon (never the Angular default favicon).
+    icon: payload.icon || '/icon-192.png',
+    // Small monochrome mask Android renders next to the app name; transparent PNG.
+    badge: payload.badge || '/badge-72.png',
     data: { url: (payload.data && payload.data.url) || '/' },
   };
 
