@@ -1,14 +1,12 @@
 @if (data.variant === 'push') {
-  <div class="flash flash--push" role="status" aria-live="polite">
-    <span class="flash-icon" aria-hidden="true">🔔</span>
-    <div class="flash-body">
-      @if (data.title) {
-        <p class="flash-title">{{ data.title }}</p>
-      }
-      <p class="flash-message">{{ data.message }}</p>
-    </div>
-    <button type="button" class="flash-close" aria-label="Dismiss" (click)="dismiss()">✕</button>
-  </div>
+  <button
+    type="button"
+    class="flash flash--push"
+    aria-label="Dismiss notification"
+    (click)="dismiss()"
+  >
+    <app-push-card [title]="data.title ?? ''" [body]="data.message" />
+  </button>
 } @else {
   <div class="flash flash--plain" role="status" aria-live="polite">
     <p class="flash-message">{{ data.message }}</p>

@@ -7,6 +7,7 @@ import { TaskDetailComponent } from './task-detail.component';
 import { Task, TaskService } from '../task.service';
 import { Member, MemberService } from '../../household/member.service';
 import { FlashService } from '../../shared/flash/flash.service';
+import { NotificationService } from '../../notifications/notification.service';
 
 describe('TaskDetailComponent', () => {
   let update: ReturnType<typeof vi.fn>;
@@ -16,6 +17,7 @@ describe('TaskDetailComponent', () => {
   let addComment: ReturnType<typeof vi.fn>;
   let list: ReturnType<typeof vi.fn>;
   let show: ReturnType<typeof vi.fn>;
+  let pushNotify: ReturnType<typeof vi.fn>;
   let close: ReturnType<typeof vi.fn>;
 
   const roster: Member[] = [
@@ -57,6 +59,7 @@ describe('TaskDetailComponent', () => {
     addComment = vi.fn(() => of({}));
     list = vi.fn(() => of(roster));
     show = vi.fn();
+    pushNotify = vi.fn();
     close = vi.fn();
     TestBed.configureTestingModule({
       imports: [TaskDetailComponent],
@@ -69,6 +72,7 @@ describe('TaskDetailComponent', () => {
         },
         { provide: MemberService, useValue: { list } },
         { provide: FlashService, useValue: { show } },
+        { provide: NotificationService, useValue: { pushNotify } },
       ],
     });
   }
@@ -212,6 +216,21 @@ describe('TaskDetailComponent', () => {
 
     expect(update).toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('self-assignment fires the per-device push toast (not the flash)', () => {
+    const fixture = render(baseTask({ id: 't1', title: 'Take out bins', canEdit: true, canAssign: true }));
+    const component = fixture.componentInstance;
+    component.form.controls.assigneeId.setValue('me');
+
+    component.save();
+
+    expect(assign).toHaveBeenCalledWith('t1', 'me');
+    expect(pushNotify).toHaveBeenCalledWith(
+      'New task assigned to you',
+      'Rafał assigned you "Take out bins".',
+    );
     expect(show).not.toHaveBeenCalled();
   });
 });

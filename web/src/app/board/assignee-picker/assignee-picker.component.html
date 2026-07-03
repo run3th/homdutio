@@ -1,0 +1,14 @@
+<div class="assign-chips" role="group" aria-label="Assign to">
+  @for (chip of chips(); track chip.id) {
+    <button
+      type="button"
+      class="assign-chip"
+      [class.assign-chip--selected]="value() === chip.id"
+      [attr.aria-pressed]="value() === chip.id"
+      (click)="select(chip.id)"
+    >
+      <span class="assign-chip-avatar" [style.background]="chip.color">{{ chip.initial }}</span>
+      <span class="assign-chip-name">{{ chip.name }}</span>
+    </button>
+  }
+</div>

@@ -48,3 +48,232 @@
   color: var(--color-text-subtle);
   line-height: 1.5;
 }
+
+/* Notifications management block (push-notifications) — mirrors the mockup: a status line, bordered
+   per-device rows (status dot + name + sub + On/Off pill or Turn-on), and, on desktop, the "Turn on from
+   your phone" QR frame; on mobile, the dashed install hint. Leans on the global `.field`/`.btn` primitives. */
+.settings-notifs {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+}
+
+.notif-status {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  color: #8a92a0;
+  line-height: 1.5;
+}
+
+.notif-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notif-device {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  background: #fbfbfc;
+  border: 1px solid #e7eaef;
+  border-radius: 11px;
+}
+
+.notif-device--current {
+  background: #f5faf8;
+  border-color: #d3e3de;
+}
+
+.notif-device-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c7ccd4;
+}
+
+.notif-device-dot--on {
+  background: #3a7d52;
+}
+
+.notif-device-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.notif-device-nameline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.notif-device-name {
+  font-size: 13.5px;
+  font-weight: var(--weight-semibold);
+  color: #1c2330;
+}
+
+.notif-device-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: #9aa1ad;
+}
+
+.notif-badge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+  background: rgba(44, 110, 99, 0.09);
+  border-radius: 5px;
+}
+
+.notif-state {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: var(--weight-semibold);
+  color: #9aa1ad;
+}
+
+.notif-state--on {
+  color: var(--color-primary);
+}
+
+/* Content-width accent button (the global `.btn` is full-width). */
+.notif-enable {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 7px 13px;
+  font-size: 12.5px;
+}
+
+.notif-instruct {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 15px;
+  background: #f7f8fa;
+  border: 1px solid #e7eaef;
+  border-radius: 12px;
+}
+
+.notif-instruct-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.notif-instruct-title {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  font-weight: var(--weight-semibold);
+  color: #1c2330;
+}
+
+.notif-instruct .settings-hint {
+  margin: 0;
+}
+
+/* White padded frame around the QR — supplies the light quiet zone the edge-to-edge SVG needs to scan,
+   and matches the mockup's `qrWrapStyle`. */
+.notif-instruct-qr {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e7eaef;
+  border-radius: 12px;
+}
+
+.notif-instruct-scan {
+  font-size: 10.5px;
+  font-weight: var(--weight-semibold);
+  color: #9aa1ad;
+}
+
+.notif-preview {
+  margin-top: 14px;
+}
+
+.notif-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.notif-preview-label {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #a9b0bc;
+}
+
+.notif-test {
+  padding: 4px 8px;
+  font-size: 12.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.notif-test:hover {
+  background: var(--color-surface-2);
+}
+
+.notif-preview-card {
+  background: #f7f8fa;
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+}
+
+.notif-install {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 11px 13px;
+  background: #fbfbfc;
+  border: 1px dashed #cfd4dc;
+  border-radius: 11px;
+}
+
+.notif-install-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  color: #5a6273;
+  background: #eef0f4;
+  border-radius: 7px;
+}
+
+.notif-install-text {
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  color: #5a6273;
+  line-height: 1.45;
+}
+

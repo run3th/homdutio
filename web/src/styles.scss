@@ -141,7 +141,10 @@ body {
   margin-bottom: var(--space-4);
 }
 
-.field label {
+/* `.field-label` is for group fields (e.g. the assign chip-picker) whose control isn't a single labelable
+   element, so a real `<label>` can't associate — it renders identically to a field `<label>`. */
+.field label,
+.field .field-label {
   font-size: 0.78125rem; /* 12.5px */
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);

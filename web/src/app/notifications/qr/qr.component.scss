@@ -1,0 +1,9 @@
+:host {
+  display: inline-block;
+  line-height: 0;
+}
+
+.qr {
+  display: block;
+  border-radius: var(--radius-sm);
+}

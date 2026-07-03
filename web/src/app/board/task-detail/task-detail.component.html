@@ -57,15 +57,13 @@
 
       @if (task.canAssign) {
         <div class="field">
-          <label for="detail-assignee">Assign to <span class="optional">(optional)</span></label>
-          <select id="detail-assignee" formControlName="assigneeId">
-            <option value="">Anyone</option>
-            @for (member of roster(); track member.userId) {
-              <option [value]="member.userId">
-                {{ member.displayName }}{{ member.isSelf ? ' (you)' : '' }}
-              </option>
-            }
-          </select>
+          <span class="field-label">Assign to <span class="optional">(optional)</span></span>
+          <app-assignee-picker
+            id="detail-assignee"
+            [members]="roster()"
+            [value]="form.controls.assigneeId.value"
+            (valueChange)="form.controls.assigneeId.setValue($event)"
+          />
         </div>
       }
 

@@ -1,46 +1,56 @@
-/* A deliberately OS-like card (not the app's .modal) so it reads as a *system* prompt: centered stack,
-   bell glyph, divided two-button footer. Purely simulated — no real permission API is touched. */
+/* Mirrors the mockup's iOS-style permission sheet: a narrow light-grey card, centered accent app-icon
+   badge, and a divided two-button footer in the accent colour. Purely simulated — no real permission API. */
 .sys-prompt {
   display: block;
-  width: min(20rem, calc(100vw - 3rem));
-  padding: var(--space-5) var(--space-4) 0;
-  text-align: center;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  width: 300px;
+  max-width: 100%;
+  background: #f3f3f6;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+}
+
+.sys-prompt-body {
+  padding: 20px 18px 16px;
+  text-align: center;
 }
 
 .sys-prompt-icon {
-  display: block;
-  font-size: var(--text-xl);
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 11px;
+  background: var(--color-primary);
 }
 
 .sys-prompt-title {
-  margin: var(--space-3) 0 var(--space-2);
-  font-size: var(--text-base);
+  margin: 0;
+  font-size: 14.5px;
   font-weight: var(--weight-semibold);
+  color: #1c2330;
   line-height: 1.35;
 }
 
 .sys-prompt-text {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  line-height: 1.5;
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  color: #8a92a0;
+  line-height: 1.4;
 }
 
 .sys-prompt-actions {
   display: flex;
-  margin: 0 calc(var(--space-4) * -1);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid #dedee3;
 }
 
 .sys-prompt-btn {
-  flex: 1 1 0;
-  padding: var(--space-3);
-  font-size: var(--text-sm);
+  flex: 1;
+  padding: 13px;
+  font-size: 15px;
   font-weight: var(--weight-medium);
   color: var(--color-primary);
   background: transparent;
@@ -49,13 +59,13 @@
 }
 
 .sys-prompt-btn + .sys-prompt-btn {
-  border-left: 1px solid var(--color-border);
+  border-left: 1px solid #dedee3;
 }
 
 .sys-prompt-btn--primary {
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
 }
 
 .sys-prompt-btn:hover {
-  background: var(--color-surface-2);
+  background: rgba(0, 0, 0, 0.03);
 }

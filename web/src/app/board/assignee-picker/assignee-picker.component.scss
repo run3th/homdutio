@@ -1,0 +1,52 @@
+:host {
+  display: block;
+}
+
+/* Chip row mirrors the mockup's assign selector: rounded pills with a colored avatar + name; the selected
+   chip tints to the accent. */
+.assign-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.assign-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 5px;
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  color: #5a6273;
+  background: #f7f8fa;
+  border: 1.5px solid #e2e5eb;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.assign-chip--selected {
+  color: var(--color-primary);
+  background: rgba(44, 110, 99, 0.08);
+  border-color: var(--color-primary);
+}
+
+.assign-chip-avatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: #fff;
+  border-radius: 50%;
+}
+
+.assign-chip-name {
+  white-space: nowrap;
+}

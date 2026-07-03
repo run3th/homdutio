@@ -8,6 +8,7 @@ import { TaskService } from '../task.service';
 import { Member, MemberService } from '../../household/member.service';
 import { HouseholdService } from '../../household/household.service';
 import { FlashService } from '../../shared/flash/flash.service';
+import { NotificationService } from '../../notifications/notification.service';
 
 describe('CreateTaskComponent', () => {
   let create: ReturnType<typeof vi.fn>;
@@ -15,6 +16,7 @@ describe('CreateTaskComponent', () => {
   let getTagSuggestions: ReturnType<typeof vi.fn>;
   let list: ReturnType<typeof vi.fn>;
   let show: ReturnType<typeof vi.fn>;
+  let pushNotify: ReturnType<typeof vi.fn>;
 
   const roster: Member[] = [
     { userId: 'me', displayName: 'Rafał', email: 'r@x', role: 'Admin', isSelf: true, canManage: false },
@@ -29,6 +31,7 @@ describe('CreateTaskComponent', () => {
     getTagSuggestions = vi.fn(() => of([]));
     list = vi.fn(() => of(roster));
     show = vi.fn();
+    pushNotify = vi.fn();
     TestBed.configureTestingModule({
       imports: [CreateTaskComponent],
       providers: [
@@ -37,6 +40,7 @@ describe('CreateTaskComponent', () => {
         { provide: MemberService, useValue: { list } },
         { provide: HouseholdService, useValue: { current: () => (role ? { id: 'h', name: 'H', role } : null) } },
         { provide: FlashService, useValue: { show } },
+        { provide: NotificationService, useValue: { pushNotify } },
       ],
     });
   }
@@ -150,9 +154,9 @@ describe('CreateTaskComponent', () => {
     expect(show).not.toHaveBeenCalled();
   });
 
-  it('self-assignment does not flash the "will be notified" reminder (push toast is Phase 4)', () => {
+  it('self-assignment fires the per-device push toast (not the flash)', () => {
     const { component } = instance('Admin');
-    component.form.setValue({ title: 'Dishes', description: '', tags: [], assigneeId: 'me' });
+    component.form.setValue({ title: '  Dishes  ', description: '', tags: [], assigneeId: 'me' });
 
     component.submit();
 
@@ -162,6 +166,7 @@ describe('CreateTaskComponent', () => {
       tags: [],
       assigneeId: 'me',
     });
+    expect(pushNotify).toHaveBeenCalledWith('New task assigned to you', 'Rafał assigned you "Dishes".');
     expect(show).not.toHaveBeenCalled();
   });
 });

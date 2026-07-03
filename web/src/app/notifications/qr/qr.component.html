@@ -1,0 +1,15 @@
+<svg
+  class="qr"
+  xmlns="http://www.w3.org/2000/svg"
+  [attr.width]="size()"
+  [attr.height]="size()"
+  [attr.viewBox]="'0 0 ' + total() + ' ' + total()"
+  shape-rendering="crispEdges"
+  role="img"
+  aria-label="QR code linking to Homdutio"
+>
+  <rect [attr.width]="total()" [attr.height]="total()" fill="#ffffff" />
+  @for (cell of cells(); track $index) {
+    <rect [attr.x]="cell.x" [attr.y]="cell.y" width="1" height="1" fill="#1c2330" />
+  }
+</svg>

@@ -359,26 +359,26 @@ None. Assignment reuses the existing `ClaimedById` column; adding a `TaskEventTy
 
 #### Automated
 
-- [x] 3.1 Frontend builds & type-checks: `cd web && npm run build`
-- [x] 3.2 Unit tests pass: `cd web && npm test`
-- [x] 3.3 Lint passes: `cd web && npm run lint`
+- [x] 3.1 Frontend builds & type-checks: `cd web && npm run build` — ae78d18
+- [x] 3.2 Unit tests pass: `cd web && npm test` — ae78d18
+- [x] 3.3 Lint passes: `cd web && npm run lint` — ae78d18
 
 #### Manual
 
-- [x] 3.4 Narrow + not granted: soft-ask above columns; Enable opens prompt; dismiss hides for session; denied state shows blocked copy + how-to-unblock
-- [x] 3.5 Wide + nothing enabled: informational banner, no activation button
-- [x] 3.6 After grant (mobile): soft-ask no longer appears
+- [x] 3.4 Narrow + not granted: soft-ask above columns; Enable opens prompt; dismiss hides for session; denied state shows blocked copy + how-to-unblock — ae78d18
+- [x] 3.5 Wide + nothing enabled: informational banner, no activation button — ae78d18
+- [x] 3.6 After grant (mobile): soft-ask no longer appears — ae78d18
 
 ### Phase 4: Settings notifications section + assign→push wiring
 
 #### Automated
 
-- [ ] 4.1 Frontend builds & type-checks: `cd web && npm run build`
-- [ ] 4.2 Unit tests pass: `cd web && npm test`
-- [ ] 4.3 Lint passes: `cd web && npm run lint`
+- [x] 4.1 Frontend builds & type-checks: `cd web && npm run build`
+- [x] 4.2 Unit tests pass: `cd web && npm test`
+- [x] 4.3 Lint passes: `cd web && npm run lint`
 
 #### Manual
 
-- [ ] 4.4 Settings shows status + device list; current phone shows THIS DEVICE + Turn-on; desktop omits current-device row
-- [ ] 4.5 Desktop QR opens app origin when scanned; mobile-without-consent shows install hint
-- [ ] 4.6 Self-assign on enabled mobile → push toast; assign to other → flash
+- [x] 4.4 Settings shows status + device list; current phone shows THIS DEVICE + Turn-on; desktop omits current-device row
+- [x] 4.5 Desktop QR opens app origin when scanned; mobile-without-consent shows install hint
+- [x] 4.6 Self-assign on enabled mobile → push toast; assign to other → flash

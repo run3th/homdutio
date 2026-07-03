@@ -1,5 +1,7 @@
 import { Component, InjectionToken, OnDestroy, OnInit, inject, signal } from '@angular/core';
 
+import { PushCardComponent } from '../../notifications/push-card/push-card.component';
+
 /**
  * The two visual shapes a transient overlay takes:
  * - `flash` — a plain single-line confirmation (Phase 1: assignment feedback).
@@ -30,6 +32,7 @@ export const FLASH_DATA = new InjectionToken<FlashData>('FLASH_DATA');
  */
 @Component({
   selector: 'app-flash',
+  imports: [PushCardComponent],
   templateUrl: './flash.component.html',
   styleUrl: './flash.component.scss',
 })

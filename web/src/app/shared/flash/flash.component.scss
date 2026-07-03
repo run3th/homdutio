@@ -13,10 +13,21 @@
   animation: flash-in 0.16s ease-out;
 }
 
+/* The push variant is a floating notification card: the shared push-card supplies the content + padding,
+   so this shell only provides the white surface, border, shadow, and click-to-dismiss affordance. */
 .flash--push {
-  background: var(--color-surface);
+  display: block;
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 0;
+  gap: 0;
+  text-align: left;
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  overflow: hidden;
 }
 
 .flash-icon {
