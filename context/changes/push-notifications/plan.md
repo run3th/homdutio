@@ -373,12 +373,12 @@ None. Assignment reuses the existing `ClaimedById` column; adding a `TaskEventTy
 
 #### Automated
 
-- [x] 4.1 Frontend builds & type-checks: `cd web && npm run build`
-- [x] 4.2 Unit tests pass: `cd web && npm test`
-- [x] 4.3 Lint passes: `cd web && npm run lint`
+- [x] 4.1 Frontend builds & type-checks: `cd web && npm run build` — cae0cf0
+- [x] 4.2 Unit tests pass: `cd web && npm test` — cae0cf0
+- [x] 4.3 Lint passes: `cd web && npm run lint` — cae0cf0
 
 #### Manual
 
-- [x] 4.4 Settings shows status + device list; current phone shows THIS DEVICE + Turn-on; desktop omits current-device row
-- [x] 4.5 Desktop QR opens app origin when scanned; mobile-without-consent shows install hint
-- [x] 4.6 Self-assign on enabled mobile → push toast; assign to other → flash
+- [x] 4.4 Settings shows status + device list; current phone shows THIS DEVICE + Turn-on; desktop omits current-device row — cae0cf0
+- [x] 4.5 Desktop QR opens app origin when scanned; mobile-without-consent shows install hint — cae0cf0
+- [x] 4.6 Self-assign on enabled mobile → push toast; assign to other → flash — cae0cf0

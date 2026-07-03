@@ -1,7 +1,7 @@
 ---
 change_id: push-notifications
 title: Per-device push notifications and admin task assignment
-status: implementing
+status: implemented
 created: 2026-07-03
 updated: 2026-07-03
 archived_at: null
