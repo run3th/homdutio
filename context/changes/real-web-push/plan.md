@@ -349,12 +349,12 @@ Negligible for a single household. Inline send adds one round-trip per subscript
 
 #### Automated
 
-- [x] 3.1 Backend builds & tests pass (trigger tests incl. best-effort + recipient rules): `dotnet build src/Homdutio.Api -c Release && dotnet test`
-- [x] 3.2 Frontend builds, tests, lint: `cd web && npm run build && npm test && npm run lint`
+- [x] 3.1 Backend builds & tests pass (trigger tests incl. best-effort + recipient rules): `dotnet build src/Homdutio.Api -c Release && dotnet test` — 6a570d9
+- [x] 3.2 Frontend builds, tests, lint: `cd web && npm run build && npm test && npm run lint` — 6a570d9
 
 #### Manual
 
-- [x] 3.3 Real key: assignee receives a real push (tab closed); click deep-links to the task
-- [x] 3.4 Comment on a task you run → push to your other device; self-comment → no self-notify
-- [x] 3.5 Unsubscribed/dead subscription is pruned on the next send
-- [x] 3.6 Forced push failure does not break assignment/commenting (best-effort)
+- [x] 3.3 Real key: assignee receives a real push (tab closed); click deep-links to the task — 6a570d9
+- [x] 3.4 Comment on a task you run → push to your other device; self-comment → no self-notify — 6a570d9
+- [x] 3.5 Unsubscribed/dead subscription is pruned on the next send — 6a570d9
+- [x] 3.6 Forced push failure does not break assignment/commenting (best-effort) — 6a570d9

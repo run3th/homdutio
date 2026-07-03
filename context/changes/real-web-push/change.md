@@ -1,7 +1,7 @@
 ---
 change_id: real-web-push
 title: Real Web Push (VAPID) with a database-backed subscription registry
-status: implementing
+status: implemented
 created: 2026-07-03
 updated: 2026-07-03
 archived_at: null
