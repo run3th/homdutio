@@ -1,0 +1,56 @@
+:host {
+  display: block;
+}
+
+/* Content only — the container (Settings preview frame / floating toast) supplies background + shadow. */
+.push-card {
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.push-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.push-card-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--color-primary);
+}
+
+.push-card-app {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.07em;
+  color: #8a92a0;
+}
+
+.push-card-time {
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: #a9b0bc;
+}
+
+.push-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--weight-bold);
+  color: #1c2330;
+  line-height: 1.35;
+}
+
+.push-card-body {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  color: #5a6273;
+  line-height: 1.4;
+}

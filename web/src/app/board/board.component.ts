@@ -4,6 +4,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable } from 'rxjs';
 
+import { NotifBannerComponent } from '../notifications/notif-banner/notif-banner.component';
 import { TaskColumnComponent } from './task-column/task-column.component';
 import { TaskDetailComponent } from './task-detail/task-detail.component';
 import { CommentsComponent } from './comments/comments.component';
@@ -23,7 +24,7 @@ import { Task, TaskService, TaskStatus } from './task.service';
  */
 @Component({
   selector: 'app-board',
-  imports: [TaskColumnComponent],
+  imports: [TaskColumnComponent, NotifBannerComponent],
   templateUrl: './board.component.html',
   styleUrl: './board.component.scss',
 })

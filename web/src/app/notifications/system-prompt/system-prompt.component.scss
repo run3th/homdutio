@@ -1,0 +1,71 @@
+/* Mirrors the mockup's iOS-style permission sheet: a narrow light-grey card, centered accent app-icon
+   badge, and a divided two-button footer in the accent colour. Purely simulated — no real permission API. */
+.sys-prompt {
+  display: block;
+  width: 300px;
+  max-width: 100%;
+  background: #f3f3f6;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+}
+
+.sys-prompt-body {
+  padding: 20px 18px 16px;
+  text-align: center;
+}
+
+.sys-prompt-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 11px;
+  background: var(--color-primary);
+}
+
+.sys-prompt-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: var(--weight-semibold);
+  color: #1c2330;
+  line-height: 1.35;
+}
+
+.sys-prompt-text {
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  color: #8a92a0;
+  line-height: 1.4;
+}
+
+.sys-prompt-actions {
+  display: flex;
+  border-top: 1px solid #dedee3;
+}
+
+.sys-prompt-btn {
+  flex: 1;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: var(--weight-medium);
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.sys-prompt-btn + .sys-prompt-btn {
+  border-left: 1px solid #dedee3;
+}
+
+.sys-prompt-btn--primary {
+  font-weight: var(--weight-bold);
+}
+
+.sys-prompt-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+}

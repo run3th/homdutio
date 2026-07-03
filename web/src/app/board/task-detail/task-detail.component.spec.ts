@@ -5,13 +5,25 @@ import { of, throwError } from 'rxjs';
 
 import { TaskDetailComponent } from './task-detail.component';
 import { Task, TaskService } from '../task.service';
+import { Member, MemberService } from '../../household/member.service';
+import { FlashService } from '../../shared/flash/flash.service';
+import { NotificationService } from '../../notifications/notification.service';
 
 describe('TaskDetailComponent', () => {
   let update: ReturnType<typeof vi.fn>;
+  let assign: ReturnType<typeof vi.fn>;
   let deleteTask: ReturnType<typeof vi.fn>;
   let getComments: ReturnType<typeof vi.fn>;
   let addComment: ReturnType<typeof vi.fn>;
+  let list: ReturnType<typeof vi.fn>;
+  let show: ReturnType<typeof vi.fn>;
+  let pushNotify: ReturnType<typeof vi.fn>;
   let close: ReturnType<typeof vi.fn>;
+
+  const roster: Member[] = [
+    { userId: 'me', displayName: 'Rafał', email: 'r@x', role: 'Admin', isSelf: true, canManage: false },
+    { userId: 'u2', displayName: 'Molly', email: 'm@x', role: 'Member', isSelf: false, canManage: true },
+  ];
 
   function baseTask(overrides: Partial<Task>): Task {
     return {
@@ -24,6 +36,7 @@ describe('TaskDetailComponent', () => {
       claimerName: null,
       createdAtUtc: '2026-06-01T10:00:00Z',
       canClaim: false,
+      canAssign: false,
       canMarkDone: false,
       canConfirm: false,
       willSelfAttest: false,
@@ -36,11 +49,17 @@ describe('TaskDetailComponent', () => {
     };
   }
 
-  function configure(task: Task) {
-    update = vi.fn(() => of([]));
+  function configure(task: Task, updateImpl?: ReturnType<typeof vi.fn>) {
+    // Reset so a single test may render twice with different task flags (the picker-visibility test does).
+    TestBed.resetTestingModule();
+    update = updateImpl ?? vi.fn(() => of([]));
+    assign = vi.fn(() => of([]));
     deleteTask = vi.fn(() => of([]));
     getComments = vi.fn(() => of([]));
     addComment = vi.fn(() => of({}));
+    list = vi.fn(() => of(roster));
+    show = vi.fn();
+    pushNotify = vi.fn();
     close = vi.fn();
     TestBed.configureTestingModule({
       imports: [TaskDetailComponent],
@@ -49,8 +68,11 @@ describe('TaskDetailComponent', () => {
         { provide: DialogRef, useValue: { close } },
         {
           provide: TaskService,
-          useValue: { update, delete: deleteTask, getComments, addComment, getTagSuggestions: () => of([]) },
+          useValue: { update, assign, delete: deleteTask, getComments, addComment, getTagSuggestions: () => of([]) },
         },
+        { provide: MemberService, useValue: { list } },
+        { provide: FlashService, useValue: { show } },
+        { provide: NotificationService, useValue: { pushNotify } },
       ],
     });
   }
@@ -58,8 +80,8 @@ describe('TaskDetailComponent', () => {
   // `deleteTask` is provided only to satisfy the injector; the edit dialog never calls it (delete moved to
   // the card's ⋯ menu, S-11). The assertions below prove the dialog stays delete-free.
 
-  function render(task: Task) {
-    configure(task);
+  function render(task: Task, updateImpl?: ReturnType<typeof vi.fn>) {
+    configure(task, updateImpl);
     const fixture = TestBed.createComponent(TaskDetailComponent);
     fixture.detectChanges();
     return fixture;
@@ -96,6 +118,7 @@ describe('TaskDetailComponent', () => {
       description: undefined,
       tags: [],
     });
+    expect(assign).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalled();
   });
 
@@ -128,32 +151,18 @@ describe('TaskDetailComponent', () => {
   });
 
   it('maps a 400 and keeps the dialog open', () => {
-    update = vi.fn(() =>
-      throwError(
-        () =>
-          new HttpErrorResponse({
-            status: 400,
-            error: { errors: { Title: ['A task title is required.'] } },
-          }),
+    const fixture = render(
+      baseTask({ canEdit: true }),
+      vi.fn(() =>
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { errors: { Title: ['A task title is required.'] } },
+            }),
+        ),
       ),
     );
-    deleteTask = vi.fn(() => of([]));
-    getComments = vi.fn(() => of([]));
-    addComment = vi.fn(() => of({}));
-    close = vi.fn();
-    TestBed.configureTestingModule({
-      imports: [TaskDetailComponent],
-      providers: [
-        { provide: DIALOG_DATA, useValue: baseTask({ canEdit: true }) },
-        { provide: DialogRef, useValue: { close } },
-        {
-          provide: TaskService,
-          useValue: { update, delete: deleteTask, getComments, addComment, getTagSuggestions: () => of([]) },
-        },
-      ],
-    });
-    const fixture = TestBed.createComponent(TaskDetailComponent);
-    fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
 
     (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
@@ -171,5 +180,57 @@ describe('TaskDetailComponent', () => {
     expect(el.querySelector('#detail-title')).toBeNull();
     expect(el.querySelector('.task-detail-readonly')).not.toBeNull();
     expect(el.querySelector('.comment-form')).toBeNull();
+  });
+
+  it('shows the assignee picker only when the task is assignable (canAssign)', () => {
+    expect(
+      (render(baseTask({ canEdit: true, canAssign: false })).nativeElement as HTMLElement).querySelector(
+        '#detail-assignee',
+      ),
+    ).toBeNull();
+    expect(
+      (render(baseTask({ canEdit: true, canAssign: true })).nativeElement as HTMLElement).querySelector(
+        '#detail-assignee',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('assigns after saving edits when a member is picked, and flashes for another person', () => {
+    const fixture = render(baseTask({ canEdit: true, canAssign: true }));
+    const component = fixture.componentInstance;
+    component.form.controls.assigneeId.setValue('u2');
+
+    component.save();
+
+    expect(update).toHaveBeenCalledWith('t1', { title: 'Take out bins', description: undefined, tags: [] });
+    expect(assign).toHaveBeenCalledWith('t1', 'u2');
+    expect(show).toHaveBeenCalledWith(
+      "Molly will be notified on any device where they've turned notifications on.",
+    );
+    expect(close).toHaveBeenCalled();
+  });
+
+  it('"Anyone" (empty pick) saves without assigning', () => {
+    const fixture = render(baseTask({ canEdit: true, canAssign: true }));
+    fixture.componentInstance.save();
+
+    expect(update).toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('self-assignment fires the per-device push toast (not the flash)', () => {
+    const fixture = render(baseTask({ id: 't1', title: 'Take out bins', canEdit: true, canAssign: true }));
+    const component = fixture.componentInstance;
+    component.form.controls.assigneeId.setValue('me');
+
+    component.save();
+
+    expect(assign).toHaveBeenCalledWith('t1', 'me');
+    expect(pushNotify).toHaveBeenCalledWith(
+      'New task assigned to you',
+      'Rafał assigned you "Take out bins".',
+    );
+    expect(show).not.toHaveBeenCalled();
   });
 });

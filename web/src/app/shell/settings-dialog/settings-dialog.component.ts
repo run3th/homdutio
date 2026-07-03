@@ -15,6 +15,9 @@ import { AuthService } from '../../auth/auth.service';
 import { ProfileService } from '../../profile/profile.service';
 import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 import { mapValidationProblem } from '../../auth/validation-problem';
+import { NotificationService } from '../../notifications/notification.service';
+import { QrComponent } from '../../notifications/qr/qr.component';
+import { PushCardComponent } from '../../notifications/push-card/push-card.component';
 
 /** Display-name length cap — mirrors the backend's `ProfileEndpoints.MaxDisplayNameLength`. */
 export const MAX_DISPLAY_NAME_LENGTH = 60;
@@ -41,7 +44,13 @@ function nonBlank(control: AbstractControl): ValidationErrors | null {
  */
 @Component({
   selector: 'app-settings-dialog',
-  imports: [ReactiveFormsModule, ImageCropperComponent, UserAvatarComponent],
+  imports: [
+    ReactiveFormsModule,
+    ImageCropperComponent,
+    UserAvatarComponent,
+    QrComponent,
+    PushCardComponent,
+  ],
   templateUrl: './settings-dialog.component.html',
   styleUrl: './settings-dialog.component.scss',
 })
@@ -50,8 +59,34 @@ export class SettingsDialogComponent {
   private readonly profile = inject(ProfileService);
   private readonly auth = inject(AuthService);
   private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
+  private readonly notif = inject(NotificationService);
 
   readonly maxLength = MAX_DISPLAY_NAME_LENGTH;
+
+  // Notifications management (push-notifications) — a read/act surface, not part of the profile form's Save.
+  readonly notifStatusText = this.notif.notifStatusText;
+  readonly deviceList = this.notif.deviceList;
+  readonly isMobile = this.notif.isMobile;
+  /** The origin the desktop QR encodes so a phone can open the app and turn notifications on there. */
+  readonly appOrigin = location.origin;
+  /** Mobile PWA nudge: only when this phone hasn't granted consent yet. */
+  readonly showInstallHint = computed(
+    () => this.notif.isMobile() && this.notif.permission() !== 'granted',
+  );
+  /** This device is subscribed (mobile + granted) — gates the Preview + "Send a test" affordance. */
+  readonly currentEnabled = computed(
+    () => this.notif.isMobile() && this.notif.permission() === 'granted',
+  );
+
+  /** Re-open the simulated OS prompt for the current phone (the only in-Settings activation, mobile-only). */
+  enableNotifs(): void {
+    this.notif.requestNotifs();
+  }
+
+  /** Fire a sample push to this device — its content is exactly what the Preview card shows. */
+  sendTest(): void {
+    this.notif.pushNotify('New task assigned to you', 'Kasia assigned you “Take out the trash”.');
+  }
 
   readonly form = this.fb.nonNullable.group({
     displayName: ['', [nonBlank, Validators.maxLength(MAX_DISPLAY_NAME_LENGTH)]],

@@ -108,6 +108,38 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
 
     private static string NewEmail(string prefix) => $"{prefix}-{Guid.NewGuid():N}@example.test";
 
+    /// <summary>
+    /// Fires two authed requests concurrently and awaits both — copied per-file from
+    /// <c>HouseholdMemberAdminTests</c> (the suite has no shared base by design). DbContext is Scoped, so each
+    /// in-process request runs in its own DI scope / connection; two requests driven this way genuinely race in
+    /// the server, which is what lets the concurrency tests observe the rowversion single-use seal (no serial
+    /// test can). Returns both responses positionally for assertion.
+    /// </summary>
+    private async Task<(HttpResponseMessage First, HttpResponseMessage Second)> SendConcurrentlyAsync(
+        HttpRequestMessage first, HttpRequestMessage second)
+    {
+        var firstTask = _client.SendAsync(first);
+        var secondTask = _client.SendAsync(second);
+        await Task.WhenAll(firstTask, secondTask);
+        return (await firstTask, await secondTask);
+    }
+
+    /// <summary>Reads the persisted invite row from a fresh DI scope — the primary oracle for the single-use
+    /// seal (mirrors <c>LoadTaskRowAsync</c>). A request's cached context can't be trusted for post-race state.</summary>
+    private async Task<HouseholdInvite> LoadInviteRowAsync(string inviteToken)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await db.HouseholdInvites.AsNoTracking().SingleAsync(i => i.Token == inviteToken);
+    }
+
+    private async Task<string> UserIdByEmailAsync(string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return (await db.Users.SingleAsync(u => u.Email == email)).Id;
+    }
+
     // --- Tests ---------------------------------------------------------------------------------------
 
     [Fact]
@@ -343,6 +375,94 @@ public class HouseholdInviteEndpointsTests : IClassFixture<AuthApiFactory>
         var joiner = await RegisterAndLoginAsync(NewEmail("link-joiner"));
         var accept = await AcceptAsync(joiner, emailedToken);
         Assert.Equal(HttpStatusCode.OK, accept.StatusCode);
+    }
+
+    [Fact]
+    public async Task Concurrent_double_consume_of_one_token_creates_exactly_one_membership()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("race-admin"));
+        var householdId = await CreateHouseholdAsync(adminToken, "Race Once");
+        var invite = await GenerateInviteAsync(adminToken);
+
+        // Two distinct free users race to accept the SAME token.
+        var firstEmail = NewEmail("race-first");
+        var firstToken = await RegisterAndLoginAsync(firstEmail);
+        var secondEmail = NewEmail("race-second");
+        var secondToken = await RegisterAndLoginAsync(secondEmail);
+
+        var (first, second) = await SendConcurrentlyAsync(
+            Authed(HttpMethod.Post, $"/api/households/invites/{invite.Token}/accept", firstToken),
+            Authed(HttpMethod.Post, $"/api/households/invites/{invite.Token}/accept", secondToken));
+
+        // PRIMARY oracle (fresh scope): the token is consumed exactly once, by exactly one of the two racers,
+        // and the household gains exactly one member beyond the admin. This is what fails if the rowversion
+        // single-use seal ever regresses — a passing status can coexist with a corrupt post-state.
+        var firstId = await UserIdByEmailAsync(firstEmail);
+        var secondId = await UserIdByEmailAsync(secondEmail);
+        var row = await LoadInviteRowAsync(invite.Token);
+        Assert.NotNull(row.ConsumedAtUtc);
+        Assert.Contains(row.ConsumedById, new[] { firstId, secondId });
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var memberCount = await db.HouseholdMembers.CountAsync(m => m.HouseholdId == householdId);
+        Assert.Equal(2, memberCount); // admin + exactly one racer
+
+        // SECONDARY: the two statuses are the unordered set {200 OK, 410 Gone}. Never assert which caller won
+        // or which branch (rowversion vs consumed pre-check) produced the 410 — both interleavings are valid.
+        var statuses = new[] { first.StatusCode, second.StatusCode };
+        Assert.Contains(HttpStatusCode.OK, statuses);
+        Assert.Contains(HttpStatusCode.Gone, statuses);
+    }
+
+    [Fact]
+    public async Task Same_user_concurrently_accepting_two_tokens_lands_in_exactly_one_household()
+    {
+        var adminA = await RegisterAndLoginAsync(NewEmail("dj-a"));
+        await CreateHouseholdAsync(adminA, "DoubleJoin A");
+        var inviteA = await GenerateInviteAsync(adminA);
+
+        var adminB = await RegisterAndLoginAsync(NewEmail("dj-b"));
+        await CreateHouseholdAsync(adminB, "DoubleJoin B");
+        var inviteB = await GenerateInviteAsync(adminB);
+
+        // One free user races two valid tokens to different households at once.
+        var joinerEmail = NewEmail("dj-joiner");
+        var joinerToken = await RegisterAndLoginAsync(joinerEmail);
+
+        var (respA, respB) = await SendConcurrentlyAsync(
+            Authed(HttpMethod.Post, $"/api/households/invites/{inviteA.Token}/accept", joinerToken),
+            Authed(HttpMethod.Post, $"/api/households/invites/{inviteB.Token}/accept", joinerToken));
+
+        // PRIMARY oracle (fresh scope): the racing user holds exactly one membership row — the UserId unique
+        // index backstops FR-007 when both requests beat the AnyAsync pre-check.
+        var joinerId = await UserIdByEmailAsync(joinerEmail);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var membershipCount = await db.HouseholdMembers.CountAsync(m => m.UserId == joinerId);
+        Assert.Equal(1, membershipCount);
+
+        // SECONDARY: the two statuses are the unordered set {200 OK, 409 Conflict}.
+        var statuses = new[] { respA.StatusCode, respB.StatusCode };
+        Assert.Contains(HttpStatusCode.OK, statuses);
+        Assert.Contains(HttpStatusCode.Conflict, statuses);
+    }
+
+    [Fact]
+    public async Task Consumed_token_returns_410_on_anonymous_preview()
+    {
+        var adminToken = await RegisterAndLoginAsync(NewEmail("consumed-admin"));
+        await CreateHouseholdAsync(adminToken, "Consumed Preview House");
+        var invite = await GenerateInviteAsync(adminToken);
+
+        var joiner = await RegisterAndLoginAsync(NewEmail("consumed-joiner"));
+        (await AcceptAsync(joiner, invite.Token)).EnsureSuccessStatusCode(); // consume it
+
+        // Anonymous preview of a now-consumed token must be sealed — no household name / inviter leak. If this
+        // returns 200 with those fields, that is an information-leak finding to escalate as a follow-up fix,
+        // NOT a reason to soften this assertion.
+        var preview = await _client.GetAsync($"/api/households/invites/{invite.Token}");
+        Assert.Equal(HttpStatusCode.Gone, preview.StatusCode);
     }
 
     private sealed record LoginBody(string AccessToken, DateTime ExpiresAtUtc);

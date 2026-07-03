@@ -1,0 +1,24 @@
+:host {
+  display: block;
+}
+
+/* Panel (.modal), title, footer, and .btn all come from the shared global primitives — only the
+   explanatory body and the numbered steps are local. */
+.dialog-body {
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.deny-help-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.deny-help-steps li + li {
+  margin-top: var(--space-2);
+}

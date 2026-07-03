@@ -1,0 +1,26 @@
+<section
+  class="sys-prompt"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="sys-prompt-title"
+>
+  <div class="sys-prompt-body">
+    <span class="sys-prompt-icon" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="24" height="24" fill="none">
+        <path d="M7 25 L24 10 L41 25" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <rect x="20.5" y="29" width="7" height="9" rx="2" fill="#fff" />
+      </svg>
+    </span>
+    <h2 id="sys-prompt-title" class="sys-prompt-title">
+      “homdutio.app” Would Like to Send You Notifications
+    </h2>
+    <p class="sys-prompt-text">Notifications may include task alerts, comments and reminders.</p>
+  </div>
+
+  <div class="sys-prompt-actions">
+    <button type="button" class="sys-prompt-btn" (click)="deny()">Don't Allow</button>
+    <button type="button" class="sys-prompt-btn sys-prompt-btn--primary" (click)="allow()">
+      Allow
+    </button>
+  </div>
+</section>

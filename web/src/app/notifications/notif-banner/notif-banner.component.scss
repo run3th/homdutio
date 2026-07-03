@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+/* Matches the mockup's soft-ask / desktop banner: an accent-tinted rounded card with a filled accent
+   bell badge, sitting above the board columns. Soft-ask and desktop share the shell; only the actions
+   differ (desktop has no activation CTA). */
+.notif-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 15px;
+  background: rgba(44, 110, 99, 0.05);
+  border: 1px solid rgba(44, 110, 99, 0.22);
+  border-radius: 14px;
+}
+
+.notif-banner-bell {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--color-primary);
+}
+
+.notif-banner-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.notif-banner-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--weight-bold);
+  color: #1c2330;
+}
+
+.notif-banner-text {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  color: #5a6273;
+  line-height: 1.45;
+}
+
+.notif-banner-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notif-banner-cta {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.notif-banner-cta:hover {
+  filter: brightness(1.08);
+}
+
+.notif-banner-dismiss {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+  color: #9aa1ad;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notif-banner-dismiss:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}

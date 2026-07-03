@@ -1,0 +1,23 @@
+<section
+  class="modal deny-help"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="deny-help-heading"
+>
+  <h2 id="deny-help-heading" class="modal-title">Notifications are blocked</h2>
+  <p class="dialog-body">
+    You (or this browser) turned notifications off for Homdutio. To turn them back on, re-enable them in
+    the browser, then reload:
+  </p>
+
+  <ol class="deny-help-steps">
+    <li>Tap the <strong>lock</strong> (or <strong>aA</strong>) icon in the address bar.</li>
+    <li>Open <strong>Website settings</strong> and find <strong>Notifications</strong>.</li>
+    <li>Switch it to <strong>Allow</strong>.</li>
+    <li>Reload Homdutio and turn notifications on again.</li>
+  </ol>
+
+  <div class="modal-actions">
+    <button type="button" class="btn" (click)="close()">Got it</button>
+  </div>
+</section>

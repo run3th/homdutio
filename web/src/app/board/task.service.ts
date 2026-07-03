@@ -22,6 +22,8 @@ export interface Task {
   createdAtUtc: string;
   /** Server-computed affordance flags — the single source of truth for which actions the caller may take. */
   canClaim: boolean;
+  /** Admin-only, To-do-only: the caller may assign this task's owner to a member (push-notifications). */
+  canAssign: boolean;
   canMarkDone: boolean;
   canConfirm: boolean;
   willSelfAttest: boolean;
@@ -52,6 +54,8 @@ export interface CreateTaskRequest {
   title: string;
   description?: string;
   tags: string[];
+  /** Admin-only optional assignee (push-notifications): a member id lands the task directly In progress. */
+  assigneeId?: string;
 }
 
 /** Body for `PUT /api/tasks/{id}` (matches the C# UpdateTaskRequest). */
@@ -128,6 +132,16 @@ export class TaskService {
   /** `POST /api/tasks/{id}/claim` then refetch. */
   claim(id: string): Observable<Task[]> {
     return this.http.post<Task>(`/api/tasks/${id}/claim`, {}).pipe(switchMap(() => this.load()));
+  }
+
+  /**
+   * `POST /api/tasks/{id}/assign` then refetch — an admin sets a To-do task's owner to a member and starts
+   * it (push-notifications). Rejected server-side (403) for non-admins; the client picker is UI-only.
+   */
+  assign(id: string, assigneeId: string): Observable<Task[]> {
+    return this.http
+      .post<Task>(`/api/tasks/${id}/assign`, { assigneeId })
+      .pipe(switchMap(() => this.load()));
   }
 
   /** `POST /api/tasks/{id}/done` then refetch. */

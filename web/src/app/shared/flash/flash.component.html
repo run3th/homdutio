@@ -1,0 +1,15 @@
+@if (data.variant === 'push') {
+  <button
+    type="button"
+    class="flash flash--push"
+    aria-label="Dismiss notification"
+    (click)="dismiss()"
+  >
+    <app-push-card [title]="data.title ?? ''" [body]="data.message" />
+  </button>
+} @else {
+  <div class="flash flash--plain" role="status" aria-live="polite">
+    <p class="flash-message">{{ data.message }}</p>
+    <button type="button" class="flash-close" aria-label="Dismiss" (click)="dismiss()">✕</button>
+  </div>
+}

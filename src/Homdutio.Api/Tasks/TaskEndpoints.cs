@@ -94,21 +94,38 @@ public static class TaskEndpoints
             }
 
             var now = DateTime.UtcNow;
+
+            // Optional assign-at-create (admin-only, S-03 + push-notifications): a valid member id lands the
+            // task directly In progress with that member as claimer. Lenient here (an absent/invalid id or a
+            // non-admin caller simply falls back to an unassigned To-do) — the dedicated /assign endpoint is
+            // the strict path that rejects a bad id.
+            var assignAtCreate = !string.IsNullOrEmpty(request.AssigneeId)
+                && caller.Role == HouseholdRole.Admin
+                && await db.HouseholdMembers.AnyAsync(
+                    m => m.UserId == request.AssigneeId && m.HouseholdId == caller.HouseholdId);
+            var status = assignAtCreate ? HouseholdTaskStatus.InProgress : HouseholdTaskStatus.ToDo;
+
             var task = new HouseholdTask
             {
                 Id = Guid.NewGuid(),
                 HouseholdId = caller.HouseholdId,
                 Title = request.Title.Trim(),
                 Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-                Status = HouseholdTaskStatus.ToDo,
-                // Land at the bottom of "To do" so a manual order is never scrambled by a new task (FR-021).
-                SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, HouseholdTaskStatus.ToDo),
+                Status = status,
+                // Land at the bottom of its column so a manual order is never scrambled by a new task (FR-021).
+                SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, status),
                 CreatedById = caller.UserId,
                 CreatedAtUtc = now,
+                ClaimedById = assignAtCreate ? request.AssigneeId : null,
+                ClaimedAtUtc = assignAtCreate ? now : null,
             };
 
             db.HouseholdTasks.Add(task);
             db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Created, caller.UserId, now));
+            if (assignAtCreate)
+            {
+                db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Assigned, caller.UserId, now));
+            }
             // HouseholdId is copied onto each tag so the suggestion query never needs a join (incl. closed tasks).
             db.TaskTags.AddRange(normalized.Tags.Select(value => new TaskTag
             {
@@ -152,6 +169,63 @@ public static class TaskEndpoints
             // Append to the bottom of the destination column so the task joins its new neighbours in order.
             task.SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, HouseholdTaskStatus.InProgress);
             db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Claimed, caller.UserId, now));
+            await db.SaveChangesAsync();
+
+            var names = await ResolveNamesAsync(db, [task]);
+            var counts = await CountCommentsAsync(db, [task]);
+            var tags = await ResolveTagsAsync(db, [task]);
+            return Results.Ok(ToResponse(task, caller, names, counts, tags));
+        });
+
+        // POST /api/tasks/{id}/assign — an admin sets a To-do task's owner to a member and starts it.
+        // Mirrors claim (To-do → In progress, carrying the owner as claimer) but the owner is a *chosen*
+        // member rather than the caller, so it is admin-gated and appends the distinct Assigned event. The
+        // scoped task load runs before the admin gate (like confirm) so a foreign/unknown id is a 404 for
+        // everyone — the existence-oracle seal the isolation sweep asserts.
+        group.MapPost("/{id:guid}/assign", async (Guid id, AssignTaskRequest request, ClaimsPrincipal principal, ApplicationDbContext db) =>
+        {
+            var caller = await HouseholdScope.ResolveCallerAsync(principal, db);
+            if (caller is null)
+            {
+                return Results.NotFound();
+            }
+
+            var task = await HouseholdScope.LoadScopedTaskAsync(db, id, caller.HouseholdId);
+            if (task is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (caller.Role != HouseholdRole.Admin)
+            {
+                return Results.Forbid();
+            }
+
+            if (task.Status != HouseholdTaskStatus.ToDo)
+            {
+                return Results.Conflict(new { message = "Only a task that is still to do can be assigned." });
+            }
+
+            // The assignee must be a member of the caller's own household — never trust a client-supplied id.
+            var isMember = !string.IsNullOrEmpty(request.AssigneeId)
+                && await db.HouseholdMembers.AnyAsync(
+                    m => m.UserId == request.AssigneeId && m.HouseholdId == caller.HouseholdId);
+            if (!isMember)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["AssigneeId"] = ["The assignee must be a member of your household."],
+                });
+            }
+
+            var now = DateTime.UtcNow;
+            task.ClaimedById = request.AssigneeId;
+            task.ClaimedAtUtc = now;
+            task.Status = HouseholdTaskStatus.InProgress;
+            // Append to the bottom of the destination column so the task joins its new neighbours in order.
+            task.SortOrder = await NextSortOrderAsync(db, caller.HouseholdId, HouseholdTaskStatus.InProgress);
+            // The actor is the assigning admin (who performed the transition), not the assignee (its subject).
+            db.TaskEvents.Add(NewEvent(task.Id, TaskEventType.Assigned, caller.UserId, now));
             await db.SaveChangesAsync();
 
             var names = await ResolveNamesAsync(db, [task]);
@@ -679,6 +753,8 @@ public static class TaskEndpoints
         IReadOnlyDictionary<Guid, string[]> tags)
     {
         var canClaim = task.Status == HouseholdTaskStatus.ToDo;
+        // Assignment is admin-only and only meaningful while the task is still To-do (mirrors the /assign guard).
+        var canAssign = caller.Role == HouseholdRole.Admin && task.Status == HouseholdTaskStatus.ToDo;
         var canMarkDone = task.Status == HouseholdTaskStatus.InProgress && task.ClaimedById == caller.UserId;
         var canConfirm = caller.Role == HouseholdRole.Admin && task.Status == HouseholdTaskStatus.Done;
         var willSelfAttest = canConfirm && task.ClaimedById == caller.UserId;
@@ -705,6 +781,7 @@ public static class TaskEndpoints
             claimer?.AvatarUrl,
             task.CreatedAtUtc,
             canClaim,
+            canAssign,
             canMarkDone,
             canConfirm,
             willSelfAttest,
@@ -716,9 +793,11 @@ public static class TaskEndpoints
     }
 }
 
-public sealed record CreateTaskRequest(string Title, string? Description, string[]? Tags);
+public sealed record CreateTaskRequest(string Title, string? Description, string[]? Tags, string? AssigneeId = null);
 
 public sealed record UpdateTaskRequest(string Title, string? Description, string[]? Tags);
+
+public sealed record AssignTaskRequest(string AssigneeId);
 
 public sealed record ReorderRequest(string Status, Guid[] OrderedIds);
 
@@ -746,6 +825,7 @@ public sealed record TaskResponse(
     string? ClaimerAvatarUrl,
     DateTime CreatedAtUtc,
     bool CanClaim,
+    bool CanAssign,
     bool CanMarkDone,
     bool CanConfirm,
     bool WillSelfAttest,

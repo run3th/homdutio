@@ -50,6 +50,18 @@
       ></app-tag-input>
     </div>
 
+    @if (isAdmin()) {
+      <div class="field">
+        <span class="field-label">Assign to <span class="optional">(optional)</span></span>
+        <app-assignee-picker
+          id="task-assignee"
+          [members]="roster()"
+          [value]="form.controls.assigneeId.value"
+          (valueChange)="form.controls.assigneeId.setValue($event)"
+        />
+      </div>
+    }
+
     <div class="modal-actions">
       <button type="button" class="btn btn--ghost" [disabled]="pending()" (click)="close()">
         Cancel

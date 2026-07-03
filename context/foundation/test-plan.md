@@ -94,13 +94,14 @@ orchestrator updates Status as artifacts appear on disk.
 | 1 | Cross-household isolation hardening | Prove no foreign-household read/act/infer, and that a new route cannot ship un-swept | #1 | integration | complete | context/changes/testing-cross-household-isolation/ |
 | 2 | Lifecycle guard completeness | Prove every illegal transition × role × state is blocked and `self-attested` is correct | #2 | integration | complete | context/changes/testing-lifecycle-guard-completeness/ |
 | 3 | Concurrency & audit durability | Prove no zero-admin race and that audit history always appends, never disappears | #3, #5 | integration + concurrency | complete | context/changes/testing-concurrency-audit-durability/ |
-| 4 | Invite/token abuse | Prove reuse / expiry / scoping / double-consume are all rejected | #6 | integration | not started | — |
+| 4 | Invite/token abuse | Prove reuse / expiry / scoping / double-consume are all rejected | #6 | integration | complete | context/archive/2026-07-02-testing-invite-token-abuse/ |
 | 5 | End-to-end journey + gate wiring | Prove the MVP 8-step flow holds across the stack; wire the e2e gate into CI | #4 | e2e (new Playwright layer) + gates | complete | context/changes/testing-e2e-journey/ |
 
-> **Ordering note (2026-07-02):** Phase 4 (Invite/token abuse) is intentionally
-> deferred; the rollout jumped to Phase 5 to drive the E2E layer first. Phase 4
-> stays `not started` — a future `/10x-test-plan` run will re-select it as the
-> next pending phase. This is a deliberate skip, not an abandoned phase.
+> **Ordering note (2026-07-02):** Phase 4 (Invite/token abuse) was intentionally
+> deferred while the rollout jumped to Phase 5 to drive the E2E layer first. It was
+> then picked back up and completed — implemented, impl-reviewed (APPROVED), and
+> archived at `context/archive/2026-07-02-testing-invite-token-abuse/`. This was a
+> deliberate skip, not an abandoned phase.
 
 **Status vocabulary** (fixed — parser literals):
 

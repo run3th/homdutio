@@ -141,13 +141,17 @@ body {
   margin-bottom: var(--space-4);
 }
 
-.field label {
+/* `.field-label` is for group fields (e.g. the assign chip-picker) whose control isn't a single labelable
+   element, so a real `<label>` can't associate — it renders identically to a field `<label>`. */
+.field label,
+.field .field-label {
   font-size: 0.78125rem; /* 12.5px */
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   padding: 0.75rem 0.875rem;
   font-size: var(--text-sm);
@@ -158,11 +162,17 @@ body {
   border-radius: var(--radius-sm);
 }
 
+.field select {
+  appearance: none;
+  cursor: pointer;
+}
+
 .field input::placeholder {
   color: var(--color-text-subtle);
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: none;
   background: var(--color-surface);
   border-color: var(--color-primary);
