@@ -1,71 +1,71 @@
 # Homdutio
 
-Współdzielona tablica kanban zadań domowych z **pętlą odpowiedzialności**: każde
-działanie w gospodarstwie niesie nazwisko, znacznik czasu i potwierdzenie
-administratora, dzięki czemu wkład i zaległości stają się społecznie widoczne.
-Członkowie zgłaszają zadania, przejmują je („Biorę to"), oznaczają jako wykonane,
-a administrator je potwierdza — zadanie zamyka się i znika z tablicy, ale trwały
-ślad audytowy (kto utworzył / przejął / potwierdził, kiedy) pozostaje.
+A shared household task kanban board built around an **accountability loop**:
+every household action carries a name, a timestamp, and an admin confirmation,
+so contributions and gaps become socially visible. Members add tasks, claim them
+("I've got this"), mark them done, and an admin confirms them — the task closes
+and leaves the board, but a durable audit trail (who created / claimed /
+confirmed, and when) is preserved.
 
-Pełny opis produktu, persony i wymagania znajdują się w
-[`context/foundation/prd.md`](context/foundation/prd.md); strategia testów w
+Full product description, personas, and requirements live in
+[`context/foundation/prd.md`](context/foundation/prd.md); the test strategy in
 [`context/foundation/test-plan.md`](context/foundation/test-plan.md).
 
-## Stos technologiczny
+## Tech stack
 
-| Warstwa | Technologia |
+| Layer | Technology |
 |---|---|
 | Backend API | .NET 9 — Minimal API (`src/Homdutio.Api`) |
-| Dostęp do danych | EF Core + ASP.NET Core Identity, SQL Server / LocalDB (`src/Homdutio.Data`) |
+| Data access | EF Core + ASP.NET Core Identity, SQL Server / LocalDB (`src/Homdutio.Data`) |
 | Frontend | Angular 21 SPA (`web/`) |
-| Autentykacja | JWT (access + rotowany refresh token), RBAC Admin/Member |
-| Powiadomienia | Web Push (VAPID) oraz e-mail przez Azure Communication Services |
-| Testy | xUnit + `WebApplicationFactory` (backend), Vitest (frontend), Playwright (E2E) |
+| Authentication | JWT (access + rotating refresh token), Admin/Member RBAC |
+| Notifications | Web Push (VAPID) and email via Azure Communication Services |
+| Tests | xUnit + `WebApplicationFactory` (backend), Vitest (frontend), Playwright (E2E) |
 | CI/CD | GitHub Actions (`.github/workflows/deploy.yml`) → Azure App Service + Azure SQL |
 
-## Struktura repozytorium
+## Repository layout
 
 ```
 src/Homdutio.Api/     # REST API (Minimal API): auth, households, tasks, push, email
-src/Homdutio.Data/    # DbContext, encje, migracje EF Core
-tests/                # testy backendu (xUnit, integracyjne vs LocalDB)
-web/                  # aplikacja Angular (SPA) + testy Vitest i Playwright (web/e2e)
-context/foundation/   # fundament projektu 10x: PRD, roadmap, tech-stack, plan testów
-context/changes/      # historia zmian (plany, research, przeglądy implementacji)
+src/Homdutio.Data/    # DbContext, entities, EF Core migrations
+tests/                # backend tests (xUnit, integration vs LocalDB)
+web/                  # Angular SPA + Vitest and Playwright tests (web/e2e)
+context/foundation/   # 10x project foundation: PRD, roadmap, tech-stack, test plan
+context/changes/      # change history (plans, research, implementation reviews)
 ```
 
-## Wymagania
+## Prerequisites
 
 - **.NET 9 SDK**
-- **Node.js** (zgodny z Angular 21) + **npm 10**
-- **SQL Server LocalDB** (`(localdb)\MSSQLLocalDB`) — dostępny z Visual Studio /
-  SQL Server Express na Windows
+- **Node.js** (compatible with Angular 21) + **npm 10**
+- **SQL Server LocalDB** (`(localdb)\MSSQLLocalDB`) — available with Visual Studio /
+  SQL Server Express on Windows
 
-## Konfiguracja (sekrety)
+## Configuration (secrets)
 
-Sekrety **nie są commitowane** — dostarcz je przez user-secrets lokalnie
-(lub zmienne środowiskowe w CI). API wymaga co najmniej:
+Secrets are **not committed** — provide them via user-secrets locally
+(or environment variables in CI). The API requires at minimum:
 
 ```powershell
 cd src/Homdutio.Api
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=(localdb)\MSSQLLocalDB;Database=Homdutio;Trusted_Connection=True;MultipleActiveResultSets=true"
-dotnet user-secrets set "Jwt:SigningKey" "<dowolny-długi-losowy-sekret>"
+dotnet user-secrets set "Jwt:SigningKey" "<any-long-random-secret>"
 ```
 
-Niesekretna konfiguracja (issuer JWT, VAPID, rate limiting, ACS) znajduje się w
-`src/Homdutio.Api/appsettings.json`. Wysyłka e-mail (ACS) i realny web-push są
-opcjonalne w środowisku lokalnym — bez konfiguracji działają jako no-op.
+Non-secret configuration (JWT issuer, VAPID, rate limiting, ACS) lives in
+`src/Homdutio.Api/appsettings.json`. Email (ACS) and real web push are optional
+locally — without configuration they run as no-ops.
 
-## Uruchomienie lokalne
+## Running locally
 
-### 1. Baza danych (migracje stosowane ręcznie — nigdy przy starcie aplikacji)
+### 1. Database (migrations applied manually — never on app startup)
 
 ```powershell
 dotnet tool restore
 dotnet ef database update --project src/Homdutio.Data --startup-project src/Homdutio.Api
 ```
 
-Zasady i przepisy migracji: [`src/Homdutio.Data/MIGRATIONS.md`](src/Homdutio.Data/MIGRATIONS.md).
+Migration policy and recipes: [`src/Homdutio.Data/MIGRATIONS.md`](src/Homdutio.Data/MIGRATIONS.md).
 
 ### 2. Backend API (`http://localhost:5252`)
 
@@ -73,7 +73,7 @@ Zasady i przepisy migracji: [`src/Homdutio.Data/MIGRATIONS.md`](src/Homdutio.Dat
 dotnet run --project src/Homdutio.Api --launch-profile http
 ```
 
-Sonda zdrowia: `GET http://localhost:5252/health`.
+Health probe: `GET http://localhost:5252/health`.
 
 ### 3. Frontend (`http://localhost:4200`)
 
@@ -83,27 +83,27 @@ npm install
 npm start
 ```
 
-`ng serve` proxuje `/api` → `http://localhost:5252` (patrz `web/proxy.conf.json`).
+`ng serve` proxies `/api` → `http://localhost:5252` (see `web/proxy.conf.json`).
 
-## Testy
+## Tests
 
 ```powershell
-# Backend (xUnit, integracyjne vs LocalDB)
+# Backend (xUnit, integration vs LocalDB)
 dotnet test
 
 # Frontend (Vitest)
 cd web && npm test
 
-# E2E (Playwright — sam bootuje API + ng serve, migruje bazę out-of-band)
+# E2E (Playwright — boots the API + ng serve itself, migrates the DB out-of-band)
 cd web && npm run e2e
 ```
 
-E2E wymaga tych samych sekretów co API (`ConnectionStrings__DefaultConnection`,
-`Jwt__SigningKey`); szczegóły i reguły pisania testów: [`web/e2e/CLAUDE.md`](web/e2e/CLAUDE.md).
+E2E requires the same secrets as the API (`ConnectionStrings__DefaultConnection`,
+`Jwt__SigningKey`); details and test-authoring rules: [`web/e2e/CLAUDE.md`](web/e2e/CLAUDE.md).
 
-## Budowanie
+## Building
 
 ```powershell
 dotnet build                 # backend
-cd web && npm run build      # frontend (artefakty w web/dist/)
+cd web && npm run build      # frontend (artifacts in web/dist/)
 ```
